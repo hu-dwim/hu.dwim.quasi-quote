@@ -67,4 +67,5 @@
              (:file "configuration" :depends-on ("duplicates"))
              (:file "syntax" :depends-on ("configuration"))
              (:file "string" :depends-on ("syntax"))
-             (:file "xml" :depends-on ("syntax"))))))
+             (:file "xml" :depends-on ("syntax"))
+             (:file "typesetting" :depends-on ("syntax"))))))

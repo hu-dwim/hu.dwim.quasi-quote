@@ -43,7 +43,7 @@
                       :body (bind ((body (body-of qq-xml)))
                               (if (consp body)
                                   (mapcar #'process body)
-                                  (list (process (body-of qq-xml))))))))
+                                  (list (process body)))))))
     (unquote
      (break))))
 

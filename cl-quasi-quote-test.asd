@@ -56,7 +56,8 @@
 	    :components
             ((:file "package")
              (:file "string")
-             (:file "xml")))))
+             (:file "xml")
+             (:file "typesetting")))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)

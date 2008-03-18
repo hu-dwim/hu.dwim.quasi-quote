@@ -15,3 +15,7 @@
 
 (def (class* e) unquote (syntax-node)
   ((form)))
+
+;; TODO: subclass quasi-quote and unquote for each DSL so asserts can help
+;; TODO: DSLs: string, vector, bivalent, XML, XHTML, SQL, JS, typesetting, pdf
+;; TODO: continuation support? what about lazyness? what about computed-class?
