@@ -11,6 +11,7 @@
         :metabang-bind
         :alexandria
         :iterate
-        :defclass-star)
+        :defclass-star
+        :cl-def)
 
   (:export))

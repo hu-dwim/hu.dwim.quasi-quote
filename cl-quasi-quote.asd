@@ -29,6 +29,20 @@
 
 (defvar *load-as-production-p* t)
 
+(defclass local-cl-source-file (cl-source-file)
+  ())
+
+(defmethod perform :around ((op operation) (component local-cl-source-file))
+  (let ((*features* *features*)
+        (*readtable* (copy-readtable *readtable*)))
+    (unless *load-as-production-p*
+      (pushnew :debug *features*))
+    (ignore-errors
+      (let ((setup-readtable-fn (read-from-string "cl-quasi-quote::setup-readtable")))
+        (funcall setup-readtable-fn)
+        t))
+    (call-next-method)))
+
 (defsystem :cl-quasi-quote
   :version "0.1"
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
@@ -39,13 +53,18 @@
 	       "Levente Mészáros <levente.meszaros@gmail.com>")
   :licence "BSD / Public domain"
   :description "Quasi quote transformations"
+  :default-component-class local-cl-source-file
   :depends-on (:metabang-bind
                :alexandria
                :iterate
-               :defclass-star)
+               :defclass-star
+               :cl-def)
   :components
   ((:module "src"
             :components
             ((:file "package")
              (:file "duplicates" :depends-on ("package"))
-             (:file "configuration" :depends-on ("duplicates"))))))
+             (:file "configuration" :depends-on ("duplicates"))
+             (:file "syntax" :depends-on ("configuration"))
+             (:file "string" :depends-on ("syntax"))
+             (:file "xml" :depends-on ("syntax"))))))

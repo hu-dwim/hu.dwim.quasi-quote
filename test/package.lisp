@@ -11,6 +11,7 @@
         :metabang-bind
         :iterate
         :stefil
+        :cl-def
         :cl-quasi-quote))
 
 (in-package :cl-quasi-quote-test)

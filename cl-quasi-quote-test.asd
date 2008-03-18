@@ -29,16 +29,34 @@
 
 (setf *load-as-production-p* nil)
 
+(defclass local-cl-source-file (cl-source-file)
+  ())
+
+(defmethod perform :around ((op operation) (component local-cl-source-file))
+  (let ((*features* *features*)
+        (*readtable* (copy-readtable *readtable*)))
+    (unless *load-as-production-p*
+      (pushnew :debug *features*))
+    (ignore-errors
+      (let ((setup-readtable-fn (read-from-string "cl-quasi-quote::setup-readtable")))
+        (funcall setup-readtable-fn)
+        t))
+    (call-next-method)))
+
 (defsystem :cl-quasi-quote-test
   :description "Tests for cl-quasi-quote."
+  :default-component-class local-cl-source-file
   :depends-on (:metabang-bind
                :iterate
                :stefil
+               :cl-def
                :cl-quasi-quote)
   :components
   ((:module :test
 	    :components
-            ((:file "package")))))
+            ((:file "package")
+             (:file "string")
+             (:file "xml")))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)
