@@ -19,6 +19,7 @@
 (def (class* e) xml-text (xml-syntax-node)
   ((content)))
 
+;; TODO: escaping
 (def (function e) transform-quasi-quoted-xml-to-quasi-quoted-string (qq-xml)
   (etypecase qq-xml
     (quasi-quote

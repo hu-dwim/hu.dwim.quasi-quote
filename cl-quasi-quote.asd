@@ -22,26 +22,15 @@
 
 (in-package :cl-user)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (asdf:oos 'asdf:load-op :cl-syntax-sugar))
+
 (defpackage #:cl-quasi-quote-system
-  (:use :cl :asdf :asdf-system-connections))
+  (:use :cl :asdf :cl-syntax-sugar))
 
 (in-package #:cl-quasi-quote-system)
 
 (defvar *load-as-production-p* t)
-
-(defclass local-cl-source-file (cl-source-file)
-  ())
-
-(defmethod perform :around ((op operation) (component local-cl-source-file))
-  (let ((*features* *features*)
-        (*readtable* (copy-readtable *readtable*)))
-    (unless *load-as-production-p*
-      (pushnew :debug *features*))
-    (ignore-errors
-      (let ((setup-readtable-fn (read-from-string "cl-quasi-quote::setup-readtable")))
-        (funcall setup-readtable-fn)
-        t))
-    (call-next-method)))
 
 (defsystem :cl-quasi-quote
   :version "0.1"
@@ -53,12 +42,15 @@
 	       "Levente Mészáros <levente.meszaros@gmail.com>")
   :licence "BSD / Public domain"
   :description "Quasi quote transformations"
-  :default-component-class local-cl-source-file
+  :default-component-class cl-source-file-with-readtable
+  :class system-with-readtable
+  :setup-readtable-function "cl-quasi-quote::setup-readtable"
   :depends-on (:metabang-bind
                :alexandria
                :iterate
                :defclass-star
-               :cl-def)
+               :cl-def
+               :cl-syntax-sugar)
   :components
   ((:module "src"
             :components
@@ -67,5 +59,7 @@
              (:file "configuration" :depends-on ("duplicates"))
              (:file "syntax" :depends-on ("configuration"))
              (:file "string" :depends-on ("syntax"))
+             (:file "binary" :depends-on ("syntax"))
+             (:file "bivalent" :depends-on ("syntax"))
              (:file "xml" :depends-on ("syntax"))
              (:file "typesetting" :depends-on ("syntax"))))))

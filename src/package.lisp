@@ -7,11 +7,14 @@
 (in-package :cl-user)
 
 (defpackage :cl-quasi-quote
+  (:nicknames :qq)
+
   (:use :common-lisp
         :metabang-bind
         :alexandria
         :iterate
         :defclass-star
-        :cl-def)
+        :cl-def
+        :cl-syntax-sugar)
 
   (:export))

@@ -33,7 +33,17 @@
   (etypecase node
     (string (write-string node *string-stream*))
     (list (mapc #'write-quasi-quoted-string node))
-    (function (funcall node))))
+    (function (funcall node)))
+  (values))
+
+(def macro with-quasi-quoted-string-emitting-environment (&body forms)
+  `(bind ((*string-stream* (make-string-output-stream)))
+     ,@forms
+     (get-output-stream-string *string-stream*)))
+
+(def (macro e) force-quasi-quoted-string (node)
+  `(with-quasi-quoted-string-emitting-environment
+     (write-quasi-quoted-string ,node)))
 
 (def (function e) expand-quasi-quoted-string-to-lambda-form (qq-string &optional (toplevel #t))
   (etypecase qq-string
@@ -58,9 +68,8 @@
          (if (and toplevel
                   (not (single-string-list-p processed-forms)))
              `(lambda ()
-                (bind ((*string-stream* (make-string-output-stream)))
-                  ,@processed-forms
-                  (get-output-stream-string *string-stream*)))
+                (with-quasi-quoted-string-emitting-environment
+                  ,@processed-forms))
              `(lambda ()
                 ,@processed-forms)))))
     (unquote
@@ -76,6 +85,23 @@
                        form))))
        `(lambda ()
           ,(process (form-of qq-string)))))))
+
+(def (function e) transform-quasi-quoted-string-to-quasi-quoted-binary (qq-string)
+  (etypecase qq-string
+    (quasi-quote
+     (labels ((process (node)
+                (etypecase node
+                  (string (babel:string-to-octets node :encoding :utf-8))
+                  (list (mapcar #'process node))
+                  (unquote (transform-quasi-quoted-string-to-quasi-quoted-binary node)))))
+       (make-instance 'quasi-quote
+                      :body (bind ((body (body-of qq-string)))
+                              (if (consp body)
+                                  (mapcar #'process body)
+                                  (list (process body)))))))
+    (unquote
+     (make-instance 'unquote
+                    :form `(babel:string-to-octets ,(form-of qq-string) :encoding :utf-8)))))
 
 (def (function e) transform-quasi-quoted-string-to-string (qq-string)
   (funcall (compile nil (expand-quasi-quoted-string-to-lambda-form qq-string))))
