@@ -4,38 +4,63 @@
 ;;;
 ;;; See LICENCE for details.
 
+;; TODO: separate package?
 (in-package :cl-quasi-quote)
 
-;; TODO: separate package?
+;;;;;;;;;
+;;; Parse
+
+(def (function e) with-quasi-quoted-typesetting-syntax ()
+  (lambda (reader)
+    (set-quasi-quote-syntax-in-readtable
+     (lambda (body)
+       (make-instance 'typesetting-quasi-quote :body (map-tree body
+                                                               (lambda (form)
+                                                                 (if (symbolp form)
+                                                                     (make-instance form)
+                                                                     form)))))
+     (lambda (form spliced)
+       (make-instance 'typesetting-unquote :form form :spliced spliced))
+     :quasi-quote-character #\[
+     :quasi-quote-end-character #\])
+    (first (funcall reader))))
+
+;;;;;;;
+;;; AST
+
+(def ast typesetting)
+
 (def class* typesetting-syntax-node (syntax-node)
+  ())
+
+(def class* typesetting-quasi-quote (quasi-quote typesetting-syntax-node)
+  ())
+
+(def class* typesetting-unquote (unquote typesetting-syntax-node)
   ())
 
 (def (class* e) typesetting-list (typesetting-syntax-node)
   ((orientation :vertical :type (member :horizontal :vertical))))
 
-(def (function e) transform-quasi-quoted-typesetting-to-quasi-quoted-xhtml (qq-typesetting)
-  (etypecase qq-typesetting
-    (quasi-quote
-     (labels ((process (node)
-                ;; TODO: generice method
-                (etypecase node
-                  (typesetting-list
-                   (make-instance 'xml-element
-                                  :name "div")))))
-       (make-instance 'quasi-quote
-                      :body (bind ((body (body-of qq-typesetting)))
-                              (if (consp body)
-                                  (mapcar #'process body)
-                                  (list (process body)))))))
-    (unquote
+;;;;;;;;;;;;;
+;;; Transform
+
+(def method transform ((to (eql 'string)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform 'string (transform 'quasi-quoted-xml input) args))
+
+(def method transform ((to (eql 'string-emitting-form)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform 'string-emitting-form (transform 'quasi-quoted-xml input) args))
+
+(def method transform ((to (eql 'quasi-quoted-xml)) (input typesetting-syntax-node) &key &allow-other-keys)
+  (etypecase input
+    (typesetting-quasi-quote
+     (make-instance 'xml-quasi-quote
+                    :body (map-tree (body-of input)
+                                    (lambda (node)
+                                      ;; TODO: generice method
+                                      (etypecase node
+                                        (typesetting-list
+                                         (make-instance 'xml-element
+                                                        :name "div")))))))
+    (typesetting-unquote
      (break))))
-
-(def (function e) transform-quasi-quoted-typesetting-to-xhtml-string (qq-typesetting)
-  (transform-quasi-quoted-string-to-string
-   (transform-quasi-quoted-xml-to-quasi-quoted-string
-    (transform-quasi-quoted-typesetting-to-quasi-quoted-xhtml qq-typesetting))))
-
-(def (function e) expand-quasi-quoted-typesetting-to-lambda-form (qq-typesetting)
-  (expand-quasi-quoted-string-to-lambda-form
-   (transform-quasi-quoted-xml-to-quasi-quoted-string
-    (transform-quasi-quoted-typesetting-to-quasi-quoted-xhtml qq-typesetting))))

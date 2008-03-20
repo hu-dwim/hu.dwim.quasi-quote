@@ -45,7 +45,9 @@
   ((:module :test
 	    :components
             ((:file "package")
+             (:file "binary" :depends-on ("package"))
              (:file "string" :depends-on ("package"))
+             (:file "bivalent" :depends-on ("package"))
              (:file "xml" :depends-on ("package"))
              (:file "typesetting" :depends-on ("package"))))))
 

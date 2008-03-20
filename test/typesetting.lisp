@@ -10,6 +10,5 @@
 
 (def test test/typesetting/1 ()
   (is (string= "<div/>"
-               (transform-quasi-quoted-typesetting-to-xhtml-string
-                (make-instance 'quasi-quote
-                               :body (make-instance 'typesetting-list))))))
+               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-typesetting 'string-emitting-form)
+                [(typesetting-list)]})))

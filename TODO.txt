@@ -1,0 +1,5 @@
+- subclass quasi-quote and unquote for each DSL so asserts can help
+- additional DSLs: string, vector, bivalent, XML, XHTML, SQL, JS, typesetting, pdf
+- continuation support?
+- what about lazyness?
+- what about computed-class?

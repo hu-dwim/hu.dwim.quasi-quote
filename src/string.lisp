@@ -6,7 +6,36 @@
 
 (in-package :cl-quasi-quote)
 
-;;; A quasi quoted string is made of string, list, quasi-quote, unquote
+;;;;;;;;;
+;;; Parse
+
+(def (function e) with-quasi-quoted-string-syntax ()
+  (lambda (reader)
+    (set-quasi-quote-syntax-in-readtable
+     (lambda (body) (make-instance 'string-quasi-quote :body body))
+     (lambda (form spliced) (make-instance 'string-unquote :form form :spliced spliced))
+     :quasi-quote-character #\[
+     :quasi-quote-end-character #\])
+    (first (funcall reader))))
+
+;;;;;;;
+;;; AST
+;;;
+;;; A quasi quoted string is made of string, list, string-quasi-quote, unquote recursively
+
+(def ast string)
+
+(def class* string-syntax-node (syntax-node)
+  ())
+
+(def (class* e) string-quasi-quote (quasi-quote string-syntax-node)
+  ())
+
+(def (class* e) string-unquote (unquote string-syntax-node)
+  ())
+
+;;;;;;;;;;;;;
+;;; Transform
 
 (def special-variable *string-stream*)
 
@@ -45,19 +74,20 @@
   `(with-quasi-quoted-string-emitting-environment
      (write-quasi-quoted-string ,node)))
 
-(def (function e) expand-quasi-quoted-string-to-lambda-form (qq-string &optional (toplevel #t))
-  (etypecase qq-string
-    (quasi-quote
+(def method transform ((to (eql 'string)) (input string-syntax-node) &key args  &allow-other-keys)
+  (funcall (apply #'transform 'string-emitting-lambda input args)))
+
+(def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &key (toplevel #t) (stream '*string-stream*) &allow-other-keys)
+  (etypecase input
+    (string-quasi-quote
      (labels ((process (node)
                 (etypecase node
-                  (string `(write-string ,node *string-stream*))
-                  (unquote `(write-quasi-quoted-string (funcall ,(expand-quasi-quoted-string-to-lambda-form node #f))))))
+                  (string `(write-string ,node ,stream))
+                  (string-unquote `(write-quasi-quoted-string ,(transform 'string-emitting-form node :toplevel #f)))))
               (single-string-list-p (node)
                 (and (= 1 (length node))
                      (stringp (first node)))))
-       (bind ((toplevel (or toplevel
-                            (toplevel-p qq-string)))
-              (forms (reduce-subsequences (flatten (body-of qq-string))
+       (bind ((forms (reduce-subsequences (flatten (body-of input))
                                           #'stringp
                                           (lambda (&rest elements)
                                             (apply #'concatenate 'string elements))))
@@ -67,41 +97,39 @@
                                    (mapcar #'process forms))))
          (if (and toplevel
                   (not (single-string-list-p processed-forms)))
-             `(lambda ()
-                (with-quasi-quoted-string-emitting-environment
-                  ,@processed-forms))
-             `(lambda ()
+             `(with-quasi-quoted-string-emitting-environment
+                ,@processed-forms)
+             `(progn
                 ,@processed-forms)))))
-    (unquote
-     (labels ((process (form)
-                (cond ((typep form 'quasi-quote)
-                       (if (toplevel-p form)
-                           `(funcall ,(expand-quasi-quoted-string-to-lambda-form form (toplevel-p form)))
-                           (expand-quasi-quoted-string-to-lambda-form form #f)))
-                      ((consp form)
-                       (cons (process (car form))
-                             (process (cdr form))))
-                      (t
-                       form))))
-       `(lambda ()
-          ,(process (form-of qq-string)))))))
+    (string-unquote
+     (map-tree (form-of input)
+               (lambda (form)
+                 (if (typep form 'string-quasi-quote)
+                     (transform 'string-emitting-lambda-form form :toplevel #f)
+                     form))))))
 
-(def (function e) transform-quasi-quoted-string-to-quasi-quoted-binary (qq-string)
-  (etypecase qq-string
-    (quasi-quote
-     (labels ((process (node)
-                (etypecase node
-                  (string (babel:string-to-octets node :encoding :utf-8))
-                  (list (mapcar #'process node))
-                  (unquote (transform-quasi-quoted-string-to-quasi-quoted-binary node)))))
-       (make-instance 'quasi-quote
-                      :body (bind ((body (body-of qq-string)))
-                              (if (consp body)
-                                  (mapcar #'process body)
-                                  (list (process body)))))))
-    (unquote
-     (make-instance 'unquote
-                    :form `(babel:string-to-octets ,(form-of qq-string) :encoding :utf-8)))))
+(def method transform ((to (eql 'binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform 'binary (transform 'quasi-quoted-binary input) args))
 
-(def (function e) transform-quasi-quoted-string-to-string (qq-string)
-  (funcall (compile nil (expand-quasi-quoted-string-to-lambda-form qq-string))))
+(def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &key (encoding :utf-8) &allow-other-keys)
+  (etypecase input
+    (string-quasi-quote
+     (make-instance 'binary-quasi-quote
+                    :body (map-tree (body-of input)
+                                    (lambda (node)
+                                      (etypecase node
+                                        (string (babel:string-to-octets node :encoding encoding))
+                                        (string-unquote (transform 'quasi-quoted-binary node)))))))
+    (string-unquote
+     (make-instance 'binary-unquote
+                    :form `(map-tree
+                            ,(map-tree (form-of input)
+                                       (lambda (form)
+                                         (if (typep form 'string-quasi-quote)
+                                             (transform 'quasi-quoted-binary form)
+                                             form)))
+                            (lambda (node)
+                              (etypecase node
+                                (string (babel:string-to-octets node :encoding ,encoding))
+                                (function node)
+                                (binary-unquote node))))))))
