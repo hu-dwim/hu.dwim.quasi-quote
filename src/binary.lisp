@@ -9,20 +9,23 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def (function e) with-quasi-quoted-binary-syntax ()
-  (lambda (reader)
-    (set-quasi-quote-syntax-in-readtable
-     (lambda (body)
-       (make-instance 'binary-quasi-quote
-                      :body (if (and (consp body)
-                                     (vectorp (first body)))
-                                (list (coerce (first body) '(simple-array (unsigned-byte 8) (*))))
-                                body)))
-     (lambda (form spliced)
-       (make-instance 'binary-unquote :form form :spliced spliced))
-     :quasi-quote-character #\[
-     :quasi-quote-end-character #\])
-    (first (funcall reader))))
+(define-syntax quasi-quoted-string (&key (quasi-quote-character #\[)
+                                         (quasi-quote-end-character #\])
+                                         (unquote-character #\,)
+                                         (splice-character #\@))
+  (set-quasi-quote-syntax-in-readtable
+   (lambda (body)
+     (make-instance 'binary-quasi-quote
+                    :body (if (and (consp body)
+                                   (vectorp (first body)))
+                              (list (coerce (first body) '(simple-array (unsigned-byte 8) (*))))
+                              body)))
+   (lambda (form spliced)
+     (make-instance 'binary-unquote :form form :spliced spliced))
+   :quasi-quote-character quasi-quote-character
+   :quasi-quote-end-character quasi-quote-end-character
+   :unquote-character unquote-character
+   :splice-character splice-character))
 
 ;;;;;;;
 ;;; AST
@@ -62,7 +65,7 @@
 (def method transform ((to (eql 'binary)) (input binary-syntax-node) &rest args &key &allow-other-keys)
   (funcall (apply #'transform 'binary-emitting-lambda input args)))
 
-(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &key (toplevel #t) (stream '*binary-stream*) &allow-other-keys)
+(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &key (toplevel #t) (stream '*binary-stream* stream-provided?) &allow-other-keys)
   (etypecase input
     (binary-quasi-quote
      (labels ((process (node)
@@ -73,15 +76,16 @@
                 (and (= 1 (length node))
                      (stringp (first node)))))
        (bind ((forms (reduce-subsequences (flatten (body-of input))
-                                          #'stringp
+                                          #'vectorp
                                           (lambda (&rest elements)
-                                            (apply #'concatenate 'string elements))))
+                                            (apply #'concatenate '(vector (unsigned-byte 8)) elements))))
               (processed-forms (if (and toplevel
                                         (single-string-list-p forms))
                                    forms
                                    (mapcar #'process forms))))
          (if (and toplevel
-                  (not (single-string-list-p processed-forms)))
+                  (not (single-string-list-p processed-forms))
+                  (not stream-provided?))
              `(with-quasi-quoted-binary-emitting-environment
                 ,@processed-forms)
              `(progn

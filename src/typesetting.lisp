@@ -10,20 +10,23 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def (function e) with-quasi-quoted-typesetting-syntax ()
-  (lambda (reader)
-    (set-quasi-quote-syntax-in-readtable
-     (lambda (body)
-       (make-instance 'typesetting-quasi-quote :body (map-tree body
-                                                               (lambda (form)
-                                                                 (if (symbolp form)
-                                                                     (make-instance form)
-                                                                     form)))))
-     (lambda (form spliced)
-       (make-instance 'typesetting-unquote :form form :spliced spliced))
-     :quasi-quote-character #\[
-     :quasi-quote-end-character #\])
-    (first (funcall reader))))
+(define-syntax quasi-quoted-typesetting (&key (quasi-quote-character #\[)
+                                              (quasi-quote-end-character #\])
+                                              (unquote-character #\,)
+                                              (splice-character #\@))
+  (set-quasi-quote-syntax-in-readtable
+   (lambda (body)
+     (make-instance 'typesetting-quasi-quote :body (map-tree body
+                                                             (lambda (form)
+                                                               (if (symbolp form)
+                                                                   (make-instance form)
+                                                                   form)))))
+   (lambda (form spliced)
+     (make-instance 'typesetting-unquote :form form :spliced spliced))
+   :quasi-quote-character quasi-quote-character
+   :quasi-quote-end-character quasi-quote-end-character
+   :unquote-character unquote-character
+   :splice-character splice-character))
 
 ;;;;;;;
 ;;; AST

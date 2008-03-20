@@ -9,12 +9,17 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def (function e) with-quasi-quoted-lisp-syntax ()
-  (lambda (reader)
-    (set-quasi-quote-syntax-in-readtable
-     (lambda (body) (make-instance 'lisp-quasi-quote :body body))
-     (lambda (form spliced) (make-instance 'lisp-unquote :form form :spliced spliced)))
-    (first (funcall reader))))
+(define-syntax quasi-quoted-lisp (&key (quasi-quote-character #\`)
+                                       (quasi-quote-end-character nil)
+                                       (unquote-character #\,)
+                                       (splice-character #\@))
+  (set-quasi-quote-syntax-in-readtable
+   (lambda (body) (make-instance 'lisp-quasi-quote :body body))
+   (lambda (form spliced) (make-instance 'lisp-unquote :form form :spliced spliced))
+   :quasi-quote-character quasi-quote-character
+   :quasi-quote-end-character quasi-quote-end-character
+   :unquote-character unquote-character
+   :splice-character splice-character))
 
 ;;;;;;;
 ;;; AST

@@ -79,3 +79,8 @@
                           (process (cdr form))))
                    (t (funcall map-function form)))))
     (process form)))
+
+(def function name-as-string (name)
+  (etypecase name
+    (string name)
+    (symbol (string-downcase name))))

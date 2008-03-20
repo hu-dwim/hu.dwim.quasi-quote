@@ -9,14 +9,17 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def (function e) with-quasi-quoted-string-syntax ()
-  (lambda (reader)
-    (set-quasi-quote-syntax-in-readtable
-     (lambda (body) (make-instance 'string-quasi-quote :body body))
-     (lambda (form spliced) (make-instance 'string-unquote :form form :spliced spliced))
-     :quasi-quote-character #\[
-     :quasi-quote-end-character #\])
-    (first (funcall reader))))
+(define-syntax quasi-quoted-string (&key (quasi-quote-character #\[)
+                                         (quasi-quote-end-character #\])
+                                         (unquote-character #\,)
+                                         (splice-character #\@))
+  (set-quasi-quote-syntax-in-readtable
+   (lambda (body) (make-instance 'string-quasi-quote :body body))
+   (lambda (form spliced) (make-instance 'string-unquote :form form :spliced spliced))
+   :quasi-quote-character quasi-quote-character
+   :quasi-quote-end-character quasi-quote-end-character
+   :unquote-character unquote-character
+   :splice-character splice-character))
 
 ;;;;;;;
 ;;; AST
@@ -112,24 +115,21 @@
   (apply #'transform 'binary (transform 'quasi-quoted-binary input) args))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &key (encoding :utf-8) &allow-other-keys)
-  (etypecase input
-    (string-quasi-quote
-     (make-instance 'binary-quasi-quote
-                    :body (map-tree (body-of input)
-                                    (lambda (node)
-                                      (etypecase node
-                                        (string (babel:string-to-octets node :encoding encoding))
-                                        (string-unquote (transform 'quasi-quoted-binary node)))))))
-    (string-unquote
-     (make-instance 'binary-unquote
-                    :form `(map-tree
-                            ,(map-tree (form-of input)
-                                       (lambda (form)
-                                         (if (typep form 'string-quasi-quote)
-                                             (transform 'quasi-quoted-binary form)
-                                             form)))
-                            (lambda (node)
-                              (etypecase node
-                                (string (babel:string-to-octets node :encoding ,encoding))
-                                (function node)
-                                (binary-unquote node))))))))
+  (labels ((process (node)
+             (etypecase node
+               (string (babel:string-to-octets node :encoding encoding))
+               (function node)
+               (binary-unquote node)
+               (string-quasi-quote
+                (make-instance 'binary-quasi-quote
+                               :body (map-tree (body-of node) #'process)))
+               (string-unquote
+                (make-instance 'binary-unquote
+                               :form `(map-tree
+                                       ,(map-tree (form-of node)
+                                                  (lambda (form)
+                                                    (if (typep form 'string-quasi-quote)
+                                                        (process form)
+                                                        form)))
+                                       ,#'process))))))
+    (process input)))
