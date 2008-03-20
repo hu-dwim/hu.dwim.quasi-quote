@@ -45,6 +45,7 @@
   ((:module :test
 	    :components
             ((:file "package")
+             (:file "lisp" :depends-on ("package"))
              (:file "binary" :depends-on ("package"))
              (:file "string" :depends-on ("package"))
              (:file "bivalent" :depends-on ("package"))

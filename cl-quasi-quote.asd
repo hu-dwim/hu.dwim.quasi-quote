@@ -58,6 +58,7 @@
              (:file "duplicates" :depends-on ("package"))
              (:file "configuration" :depends-on ("duplicates"))
              (:file "syntax" :depends-on ("configuration"))
+             (:file "lisp" :depends-on ("syntax"))
              (:file "binary" :depends-on ("syntax"))
              (:file "string" :depends-on ("syntax"))
              (:file "bivalent" :depends-on ("syntax"))
