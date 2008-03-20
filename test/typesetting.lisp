@@ -10,5 +10,5 @@
 
 (def test test/typesetting/1 ()
   (is (string= "<div/>"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-typesetting 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'string-emitting-form)
                 [(typesetting-list)]})))

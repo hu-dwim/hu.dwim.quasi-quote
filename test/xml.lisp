@@ -10,13 +10,13 @@
 
 (def test test/xml/1 ()
   (is (string= "<element/>"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-xml 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
                 <element>})))
 
 #|
 (def test test/xml/2 ()
   (is (string= "<element attribute=\"1\"/>"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-xml 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
                 <element :attribute 1>})))
 
 (def test test/xml/3 ()

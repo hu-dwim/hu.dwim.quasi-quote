@@ -10,19 +10,19 @@
 
 (def test test/string/1 ()
   (is (string= "this is a test"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-string 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
                    ["this is a test"]})))
 
 (def test test/string/2 ()
   (is (string= "this is a test"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-string 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
                 ["this"
                  ," is "
                  "a test"]})))
 
 (def test test/string/3 ()
   (is (string= "this is a recursive test"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-string 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
                 ["this"
                  ,(list
                    " is "
@@ -32,7 +32,7 @@
 
 (def test test/string/4 ()
   (is (string= "this is a recursive test"
-               {(with-quasi-quoted-transformed-syntax 'quasi-quoted-string 'string-emitting-form)
+               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
                 ["this"
                  ,(concatenate 'string
                                " is "

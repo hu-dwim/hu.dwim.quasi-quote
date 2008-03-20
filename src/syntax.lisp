@@ -9,7 +9,7 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def (function e) with-quasi-quoted-transformed-syntax (&rest transforms)
+(def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transforms))))
       (chain-transform (cdr transforms)

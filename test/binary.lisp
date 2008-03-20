@@ -10,5 +10,5 @@
 
 (def test test/binary/1 ()
   (is (equalp #(1 2 3)
-              {(with-quasi-quoted-transformed-syntax 'quasi-quoted-binary 'binary-emitting-form)
+              {(with-transformed-quasi-quoted-syntax 'quasi-quoted-binary 'binary-emitting-form)
                [#(1 2 3)]})))
