@@ -21,10 +21,14 @@
    :unquote-character unquote-character
    :splice-character splice-character))
 
+
+(def (function e) with-quasi-quoted-string-to-binary-syntax ()
+  (with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'quasi-quoted-binary 'binary-emitting-form))
+
 ;;;;;;;
 ;;; AST
 ;;;
-;;; A quasi quoted string is made of string, list, string-quasi-quote, unquote recursively
+;;; A quasi quoted string is made of string, list, string-quasi-quote, string-unquote recursively
 
 (def ast string)
 
@@ -117,19 +121,16 @@
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &key (encoding :utf-8) &allow-other-keys)
   (labels ((process (node)
              (etypecase node
-               (string (babel:string-to-octets node :encoding encoding))
                (function node)
+               (binary-quasi-quote node)
                (binary-unquote node)
+               (list (mapcar #'process node))
+               (string (babel:string-to-octets node :encoding encoding))
                (string-quasi-quote
-                (make-instance 'binary-quasi-quote
-                               :body (map-tree (body-of node) #'process)))
+                (make-instance 'binary-quasi-quote :body (process (body-of node))))
                (string-unquote
                 (make-instance 'binary-unquote
                                :form `(map-tree
-                                       ,(map-tree (form-of node)
-                                                  (lambda (form)
-                                                    (if (typep form 'string-quasi-quote)
-                                                        (process form)
-                                                        form)))
+                                       ,(map-filtered-tree (form-of node) 'string-quasi-quote #'process)
                                        ,#'process))))))
     (process input)))

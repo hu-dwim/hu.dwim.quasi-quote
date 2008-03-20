@@ -9,6 +9,7 @@
 ;;;;;;;;;
 ;;; Parse
 
+
 (def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transforms))))
@@ -42,7 +43,7 @@
 
 (defgeneric transform (to from &key &allow-other-keys)
   (:method (to from &key &allow-other-keys)
-    (error "Cannot transform ~A to ~A" from to))
+    (error "Don't know how to transform ~A to ~A" from to))
 
   (:method ((to list) from &key &allow-other-keys)
     (apply #'transform (first to) from (cdr to)))
@@ -79,6 +80,13 @@
                           (process (cdr form))))
                    (t (funcall map-function form)))))
     (process form)))
+
+(def (function e) map-filtered-tree (form type map-function)
+  (map-tree form
+            (lambda (form)
+              (if (typep form type)
+                  (funcall map-function form)
+                  form))))
 
 (def function name-as-string (name)
   (etypecase name

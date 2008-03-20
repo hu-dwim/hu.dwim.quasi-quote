@@ -27,19 +27,24 @@
                                                          ,value
                                                          (progn
                                                            ,@forms)))))
-                                       (bind (((name attributes &rest children) form))
-                                         (make-instance 'xml-element
-                                                        :name (name-as-string name)
-                                                        :attributes (unless-unquote attributes
-                                                                                    (iter (generate element :in attributes)
-                                                                                          (for name = (next element))
-                                                                                          (if (typep name 'xml-unquote)
-                                                                                              (collect name)
-                                                                                              (bind ((value (next element)))
-                                                                                                (collect (make-instance 'xml-attribute
-                                                                                                                        :name (unless-unquote name (name-as-string name))
-                                                                                                                        :value (unless-unquote value (princ-to-string value))))))))
-                                                        :children (mapcar #'process children))))))
+                                       (etypecase form
+                                         (string
+                                          (make-instance 'xml-text :content form))
+                                         (cons
+                                          (bind (((name &optional attributes &rest children) form))
+                                            (make-instance 'xml-element
+                                                           :name (name-as-string name)
+                                                           :attributes (unless-unquote attributes
+                                                                                       (iter (generate element :in attributes)
+                                                                                             (for name = (next element))
+                                                                                             (if (typep name 'xml-unquote)
+                                                                                                 (collect name)
+                                                                                                 (bind ((value (next element)))
+                                                                                                   (collect (make-instance 'xml-attribute
+                                                                                                                           :name (unless-unquote name (name-as-string name))
+                                                                                                                           :value (unless-unquote value (princ-to-string value))))))))
+                                                           :children (mapcar #'process children))))
+                                         (xml-unquote form)))))
                             (process body))))
    (lambda (form spliced) (make-instance 'xml-unquote :form form :spliced spliced))
    :quasi-quote-character quasi-quote-character
@@ -56,8 +61,16 @@
                                 (read-delimited-list #\> stream t)))
          (funcall original-reader stream char))))))
 
+(def (function e) with-quasi-quoted-xml-to-binary-syntax ()
+  (with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'quasi-quoted-string 'quasi-quoted-binary 'binary-emitting-form))
+
+(def (function e) with-quasi-quoted-xml-to-string-syntax ()
+  (with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'quasi-quoted-string 'string-emitting-form))
+
 ;;;;;;;
 ;;; AST
+;;;
+;;; A quasi quoted XML is made of list, xml-syntax-nodes, xml-quasi-quote, xml-unquote recursively
 
 (def ast xml)
 
@@ -91,7 +104,6 @@
 (def method transform ((to (eql 'string-emitting-form)) (input xml-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform 'string-emitting-form (transform 'quasi-quoted-string input) args))
 
-;; TODO: escaping
 (def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &key &allow-other-keys)
   (labels ((process-unquote (node)
              (map-tree (form-of node)
@@ -107,7 +119,8 @@
                   `("<" ,(name-of node)
                         ,@(when attributes
                                 `(" " ,@(if (typep attributes 'xml-unquote)
-                                            (list (process attributes))
+                                            (list (make-instance 'string-unquote
+                                                                 :form `(mapcar ,#'process ,(form-of attributes))))
                                             (iter (for attribute :in attributes)
                                                   (unless (first-iteration-p)
                                                     (collect " "))
@@ -124,17 +137,23 @@
                          (process name)
                          name)
                      "=\""
+                     ;; TODO: escaping
                      ,(if (typep value 'xml-unquote)
                           (make-instance 'string-unquote
                                          :form `(princ-to-string ,(process-unquote value)))
                           (princ-to-string value))
                      "\"")))
-               (xml-text `
-                ("<!CDATA[["
-                 ,(if (typep node 'xml-unquote)
-                      (process node)
-                      (content-of node))
-                 "]]>"))
+               (xml-text
+                (bind ((content
+                        (if (typep node 'xml-unquote)
+                            (process node)
+                            (content-of node))))
+                  content
+                  ;; TODO: escaping
+                  #+nil
+                  ("<!CDATA[["
+                   ,content
+                   "]]>")))
                (xml-quasi-quote
                 (make-instance 'string-quasi-quote
                                :body (map-tree (body-of node) #'process)))
