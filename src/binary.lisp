@@ -9,7 +9,7 @@
 ;;;;;;;;;
 ;;; Parse
 
-(define-syntax quasi-quoted-string (&key (quasi-quote-character #\[)
+(define-syntax quasi-quoted-binary (&key (quasi-quote-character #\[)
                                          (quasi-quote-end-character #\])
                                          (unquote-character #\,)
                                          (splice-character #\@))

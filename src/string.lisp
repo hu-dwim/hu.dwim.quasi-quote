@@ -118,19 +118,20 @@
 (def method transform ((to (eql 'binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform 'binary (transform 'quasi-quoted-binary input) args))
 
-(def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &key (encoding :utf-8) &allow-other-keys)
-  (labels ((process (node)
-             (etypecase node
-               (function node)
-               (binary-quasi-quote node)
-               (binary-unquote node)
-               (list (mapcar #'process node))
-               (string (babel:string-to-octets node :encoding encoding))
-               (string-quasi-quote
-                (make-instance 'binary-quasi-quote :body (process (body-of node))))
-               (string-unquote
-                (make-instance 'binary-unquote
-                               :form `(map-tree
-                                       ,(map-filtered-tree (form-of node) 'string-quasi-quote #'process)
-                                       ,#'process))))))
-    (process input)))
+(def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
+  (etypecase node
+    (function node)
+    (binary-quasi-quote node)
+    (binary-unquote node)
+    (list (mapcar #'transform-quasi-quoted-string-to-quasi-quoted-binary node))
+    (string (babel:string-to-octets node :encoding encoding))
+    (string-quasi-quote
+     (make-instance 'binary-quasi-quote :body (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))
+    (string-unquote
+     (make-instance 'binary-unquote
+                    :form `(map-tree
+                            ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary)
+                            'transform-quasi-quoted-string-to-quasi-quoted-binary)))))
+
+(def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))
