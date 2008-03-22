@@ -129,9 +129,8 @@
      (make-instance 'binary-quasi-quote :body (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))
     (string-unquote
      (make-instance 'binary-unquote
-                    :form `(map-tree
-                            ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary)
-                            'transform-quasi-quoted-string-to-quasi-quoted-binary)))))
+                    :form `(transform-quasi-quoted-string-to-quasi-quoted-binary
+                            ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary))))))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))
