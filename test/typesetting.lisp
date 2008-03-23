@@ -9,7 +9,7 @@
 (defsuite* (test/typesetting :in test))
 
 (def test test/typesetting/1 ()
-  (is (string= "<div/>"
+  (is (string= "<table/>"
                {(with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'string-emitting-form)
                 [vertical-list]})))
 

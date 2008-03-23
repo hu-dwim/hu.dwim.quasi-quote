@@ -6,8 +6,9 @@
 
 (in-package :cl-quasi-quote-test)
 
-;; TODO: ajax stuff
+;; TODO: ajax stuff based on computed states or mark-dirty
 ;; TODO: per session state
+;; TODO: continuation and sequential gui (process)
 ;; TODO: quoted AST node state
 ;; TODO: computed state?
 
@@ -48,6 +49,32 @@
          (button "Increment" ,(incf counter))
          (button "Decrement" ,(decf counter))]}))
 
+;; editor example
+(bind ((value "default"))
+  (def function editor-example ()
+    {with-typesetting
+        ;; TODO: parse text-field and put value into variable
+        [form
+         (vertical-list
+          (text-field value)
+          (button "Set" ,(break "Store: ~A" value))
+          (button "Reset" ,(setf value "default")))]}))
+
+;; instance example
+(def function instance-panel-example (instance)
+  (bind ((class (class-of instance)))
+    {with-typesetting
+        [form
+         (vertical-list
+          ;; TODO: this is broken
+          ,@(qq::body-of
+             (first
+              (iter (for slot :in (sb-pcl:class-slots class))
+                    (for slot-name = (symbol-name (sb-pcl:slot-definition-name slot)))
+                    (collect [horizontal-list
+                              (paragraph ,slot-name)
+                              (text-field ,slot-name)])))))]}))
+
 ;; menu example
 (bind ((content (lambda () "Please choose a menu item")))
   (def function menu-example ()
@@ -56,6 +83,7 @@
          (menu
           (menu-item "Hello World" ,(setf content (lambda () (hello-world-example))))
           (menu-item "Counter" ,(setf content (lambda () (counter-example))))
+          (menu-item "Editor" ,(setf content (lambda () (editor-example))))
           (menu-item "Sequential" ,(setf content (lambda () (sequential-example)))))
          ,(funcall content)]}))
 
@@ -84,6 +112,7 @@
        (vertical-list
         ,(hello-world-example)
         ,(counter-example)
+        ,(editor-example)
         ,(sequential-example)
         ,(menu-example))]})
 

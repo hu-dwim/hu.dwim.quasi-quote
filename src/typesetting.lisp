@@ -77,6 +77,14 @@
                  :label (second whole)
                  :action (third whole)))
 
+(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-text-field)) whole)
+  (make-instance 'typesetting-text-field
+                 :name (second whole)))
+
+(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-form)) whole)
+  (make-instance 'typesetting-form
+                 :content (parse-quasi-quoted-typesetting (second whole))))
+
 ;;;;;;;
 ;;; AST
 
@@ -120,6 +128,12 @@
   ((label)
    (action)))
 
+(def (class* e) typesetting-text-field (typesetting-syntax-node)
+  ((name)))
+
+(def (class* e) typesetting-form (typesetting-syntax-node)
+  ((content)))
+
 ;;;;;;;;;;;;;
 ;;; Transform
 
@@ -133,6 +147,9 @@
   (transform-quasi-quoted-typesetting-to-quasi-quoted-xml input))
 
 (defgeneric transform-quasi-quoted-typesetting-to-quasi-quoted-xml (node))
+
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node function))
+  node)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node string))
   node)
@@ -222,6 +239,23 @@
                  :children (list
                             (make-instance 'xml-text
                                            :content (label-of node)))))
+
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text-field))
+  (make-instance 'xml-element
+                 :name "input"
+                 :attributes (list
+                              (make-instance 'xml-attribute
+                                             :name "type"
+                                             :value "text")
+                              (make-instance 'xml-attribute
+                                             :name "value"
+                                             :value (make-instance 'xml-unquote :form (name-of node))))))
+
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
+  (make-instance 'xml-element
+                 :name "form"
+                 :children (list
+                            (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))))
 
 (def (special-variable e) *registered-lambdas* (make-hash-table :test #'equal))
 

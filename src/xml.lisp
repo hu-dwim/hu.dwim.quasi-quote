@@ -114,6 +114,9 @@
                            (transform-quasi-quoted-xml-to-quasi-quoted-string form)
                            form)))))
     (etypecase node
+      (function node)
+      (string node)
+      (number (princ-to-string node))
       (xml-element
        (bind ((attributes (attributes-of node))
               (children (children-of node)))
@@ -159,9 +162,7 @@
                       :body (map-tree (body-of node) #'transform-quasi-quoted-xml-to-quasi-quoted-string)))
       (xml-unquote
        (make-instance 'string-unquote
-                      :form `(transform-quasi-quoted-xml-to-quasi-quoted-string ,(process-xml-unqoute-form node))))
-      (string node)
-      (number (princ-to-string node)))))
+                      :form `(transform-quasi-quoted-xml-to-quasi-quoted-string ,(process-xml-unqoute-form node)))))))
 
 (def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &key &allow-other-keys)
   (transform-quasi-quoted-xml-to-quasi-quoted-string input))

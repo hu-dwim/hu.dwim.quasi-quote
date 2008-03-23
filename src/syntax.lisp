@@ -9,7 +9,6 @@
 ;;;;;;;;;
 ;;; Parse
 
-
 (def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transforms))))
@@ -35,8 +34,20 @@
            (format-symbol *package* "~A~A" arg1 arg2)))
     `(export ',(list name (format-name "QUASI-QUOTED-" name) (format-name name "-EMITTING-FORM") (format-name name "-EMITTING-LAMBDA-FORM") (format-name name "-EMITTING-LAMBDA")))))
 
-(def method make-load-form ((self syntax-node) &optional environment)
-  (make-load-form-saving-slots self :environment environment))
+(def method make-load-form ((instance syntax-node) &optional environment)
+  (make-load-form-saving-slots instance :environment environment))
+
+(def method print-object ((instance syntax-node) stream)
+  (print-unreadable-object (instance stream :type #t :identity #t)
+    (bind ((class (class-of instance)))
+      (iter (for slot :in (sb-pcl:class-slots class))
+            (when (sb-pcl:slot-boundp-using-class class instance slot)
+              (for value = (sb-pcl:slot-value-using-class class instance slot))
+              (unless (first-iteration-p)
+                (write-string " " stream))
+              (write (first (sb-pcl:slot-definition-initargs slot)) :stream stream)
+              (write-string " " stream)
+              (write value :stream stream))))))
 
 ;;;;;;;;;;;;;
 ;;; Transform
