@@ -20,7 +20,7 @@
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
 ;;; IN THE SOFTWARE.
 
-(in-package :cl-user)
+(cl:in-package :cl-user)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (asdf:oos 'asdf:load-op :cl-syntax-sugar))
@@ -64,3 +64,15 @@
              (:file "bivalent" :depends-on ("syntax"))
              (:file "xml" :depends-on ("syntax"))
              (:file "typesetting" :depends-on ("syntax"))))))
+
+(defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote))))
+  (operate 'load-op :cl-quasi-quote-test)
+  (in-package :cl-quasi-quote-test)
+  (declaim (optimize (debug 3)))
+  (warn "(declaim (optimize (debug 3))) was issued to help later C-c C-c'ing")
+  (eval (read-from-string "(progn
+                             (stefil:funcall-test-with-feedback-message 'test))"))
+  (values))
+
+(defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote))))
+  nil)
