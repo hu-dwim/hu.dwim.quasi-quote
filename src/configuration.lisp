@@ -14,5 +14,5 @@
   (enable-readtime-wrapper-syntax))
 
 #+#.(cl:when (cl:find-package "SWANK") '(:and))
-(setup-swank-readtable-alist
+(register-readtable-for-swank
  '("CL-QUASI-QUOTE" "CL-QUASI-QUOTE-TEST") 'setup-readtable)
