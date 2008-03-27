@@ -89,7 +89,10 @@
     (string-quasi-quote
      (labels ((process (node)
                 (etypecase node
-                  (string `(write-string ,node ,stream))
+                  (string
+                   (if (= 1 (length node))
+                       `(write-char ,(char node 0) ,stream)
+                       `(write-string ,node ,stream)))
                   (string-unquote `(write-quasi-quoted-string ,(transform 'string-emitting-form node :toplevel #f)))))
               (single-string-list-p (node)
                 (and (= 1 (length node))
