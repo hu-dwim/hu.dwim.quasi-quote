@@ -116,7 +116,7 @@
     (etypecase node
       (function node)
       (string node)
-      (number (princ-to-string node))
+      (integer (princ-to-string node))
       (xml-element
        (bind ((attributes (attributes-of node))
               (children (children-of node)))
