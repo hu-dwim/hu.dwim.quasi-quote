@@ -8,33 +8,45 @@
 
 (defsuite* (test/xml :in test))
 
-(def test test/xml/1 ()
-  (is (string= "<element/>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
-                <element>})))
+(def definer xml-to-string-test (name args &body body)
+  (labels ((process-entry (entry)
+             (if (eq (first entry) 'with-expected-failures)
+                 `(with-expected-failures
+                    ,@(mapcar #'process-entry (rest entry)))
+                 (bind (((expected form) entry))
+                   `(is (string= ,expected ,form))))))
+    `(def test ,name ,args
+       ,@(mapcar #'process-entry body))))
 
-(def test test/xml/2 ()
-  (is (string= "<element attribute=\"1\"/>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
-                <element (:attribute 1)>})))
+(def xml-to-string-test test/xml/simple ()
+  ("<element/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element>})
+  ("<element attribute=\"1\"/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element (:attribute 1)>})
+  ("<element attribute1=\"1\" attribute2=\"2\"/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element (:attribute1 "1" :attribute2 "2")> })
+  ("<element><child/></element>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element ()
+       <child>>})
+  ("<element/><element/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element>
+     <element>}))
 
-(def test test/xml/3 ()
-  (is (string= "<element attribute1=\"1\" attribute2=\"2\"/>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
-                <element (:attribute1 "1" :attribute2 "2")> })))
-
-(def test test/xml/4 ()
-  (is (string= "<element><child/></element>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
-                <element ()
-                  <child>>})))
-
-(def test test/xml/5 ()
-  (is (string= "<element/><element/>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
-                <element><element>})))
-
-(def test test/xml/6 ()
-  (is (string= "<element attribute=\"1\"/>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
-                <element ,(list (make-instance 'xml-attribute :name "attribute" :value "1")) >})))
+(def xml-to-string-test test/xml/attribute-unquoting ()
+  ("<element attribute=\"1\"/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+    <element ,(list (make-xml-attribute "attribute" "1"))>})
+  (with-expected-failures
+    ("<element attribute1=\"1\"/>"
+     {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+      <element (attribute1 1
+                ,(make-xml-attribute "attribute2" "2")
+                ,@(list (make-xml-attribute "attribute3" "3")
+                        (make-xml-attribute "attribute4" "4"))
+                "aTTriUte5" "5"
+                ,(make-xml-attribute "attribute6" "6"))>})))
