@@ -37,17 +37,23 @@
 (def method make-load-form ((instance syntax-node) &optional environment)
   (make-load-form-saving-slots instance :environment environment))
 
-(def method print-object ((instance syntax-node) stream)
-  (print-unreadable-object (instance stream :type #t :identity #t)
-    (bind ((class (class-of instance)))
-      (iter (for slot :in (sb-pcl:class-slots class))
-            (when (sb-pcl:slot-boundp-using-class class instance slot)
-              (for value = (sb-pcl:slot-value-using-class class instance slot))
-              (unless (first-iteration-p)
-                (write-string " " stream))
-              (write (first (sb-pcl:slot-definition-initargs slot)) :stream stream)
-              (write-string " " stream)
-              (write value :stream stream))))))
+(def special-variable *ast-print-object-nesting-level* 0)
+
+(def constant +ast-print-depth+ 2)
+
+(def print-object syntax-node
+  (bind ((class (class-of self))
+         (*ast-print-object-nesting-level* (1+ *ast-print-object-nesting-level*)))
+    (if (> *ast-print-object-nesting-level* +ast-print-depth+)
+        (write-string "...")
+        (iter (for slot :in (sb-pcl:class-slots class))
+              (when (sb-pcl:slot-boundp-using-class class self slot)
+                (for value = (sb-pcl:slot-value-using-class class self slot))
+                (unless (first-iteration-p)
+                  (write-string " "))
+                (write (first (sb-pcl:slot-definition-initargs slot)))
+                (write-string " ")
+                (write value))))))
 
 ;;;;;;;;;;;;;
 ;;; Transform
