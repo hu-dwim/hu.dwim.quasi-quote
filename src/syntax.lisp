@@ -88,6 +88,17 @@
 ;;;;;;;;
 ;;; Util
 
+(def (function o) vector-extend (extension vector)
+  (bind ((original-length (length vector))
+         (extension-length (length extension))
+         (new-length (+ original-length extension-length))
+         (original-dimension (array-dimension vector 0)))
+    (when (< original-dimension new-length)
+      (setf vector (adjust-array vector (max (* 2 original-dimension) new-length))))
+    (setf (fill-pointer vector) new-length)
+    (replace vector extension :start1 original-length)
+    vector))
+
 (def (function e) map-tree (form map-function)
   (labels ((process (form)
              (cond ((null form)
