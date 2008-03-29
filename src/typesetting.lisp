@@ -187,8 +187,8 @@
 ;; TODO: kill superfluous ()
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'xml-emitting-form)
-   <html ()
-     <body ()
+   <html
+     <body
        ,@(list (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))>>})
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-list))
