@@ -14,6 +14,14 @@
   (let ((str "alma"))
     (is (eq str (escape-as-xml str)))))
 
+(def string=-test test/xml/escaping-element-value ()
+  ("<element attribute=\"&lt;1&gt;\"/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element ,(list (make-xml-attribute "attribute" "<1>"))>})
+  ("<element attribute=\"&lt;1&gt;\"/>"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
+     <element (attribute "<1>")>}))
+
 (def string=-test test/xml/simple ()
   ("<element/>"
    {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
@@ -57,8 +65,8 @@
   ("<element attribute1=\"1\" attribute2=\"2\" attribute3=\"3\" attribute4=\"4\" aTTriUte5=\"5\" attribute6=\"6\"/>"
    {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
     <element (attribute1 1
-                         ,(make-xml-attribute "attribute2" "2")
-                         ,@(list (make-xml-attribute "attribute3" "3")
-                                 (make-xml-attribute "attribute4" "4"))
-                         "aTTriUte5" "5"
-                         ,(make-xml-attribute "attribute6" "6"))>}))
+              ,(make-xml-attribute "attribute2" "2")
+              ,@(list (make-xml-attribute "attribute3" "3")
+                      (make-xml-attribute "attribute4" "4"))
+              "aTTriUte5" "5"
+              ,(make-xml-attribute "attribute6" "6"))>}))
