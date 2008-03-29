@@ -67,6 +67,8 @@
             ((ends-with-subseq "LAMBDA" name)
              (bind ((to (format-symbol *package* "~A-FORM" name)))
                (compile nil (apply #'transform to from args))))
+            ((ends-with-subseq "EMITTING-FORM" name)
+             (syntax-node-emitting-form from))
             (t (call-next-method)))))
 
   (:method ((to (eql :lambda)) from &rest args &key &allow-other-keys)
@@ -78,6 +80,35 @@
   (iter (for node :initially from :then (transform element node))
         (for element :in through)
         (finally (return node))))
+
+(defgeneric syntax-node-emitting-form (node)
+  (:method ((node symbol))
+    node)
+
+  (:method ((node number))
+    node)
+
+  (:method ((node string))
+    node)
+
+  (:method ((node list))
+    `(list ,@(mapcar 'syntax-node-emitting-form node)))
+
+  (:method ((node quasi-quote))
+    (syntax-node-emitting-form (body-of node)))
+
+  (:method ((node unquote))
+    (map-filtered-tree (form-of node) 'quasi-quote #'syntax-node-emitting-form))
+
+  (:method ((node syntax-node))
+    (bind ((class (class-of node)))
+      `(make-instance ',(class-name class)
+                      ,@(iter (for slot :in (class-slots class))
+                              (when (slot-boundp-using-class class node slot)
+                                (appending (list (first (slot-definition-initargs slot))
+                                                 (syntax-node-emitting-form (slot-value-using-class class node slot))))))))))
+
+(export 'syntax-node-emitting-form)
 
 ;;;;;;;;
 ;;; Util
