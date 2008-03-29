@@ -16,10 +16,12 @@
 (define-syntax quasi-quoted-typesetting (&key (quasi-quote-character #\[)
                                               (quasi-quote-end-character #\])
                                               (unquote-character #\,)
-                                              (splice-character #\@))
+                                              (splice-character #\@)
+                                              (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body)))
+     (chain-transform transform
+                      (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body))))
    (lambda (form spliced)
      (make-instance 'typesetting-unquote :form form :spliced spliced))
    :quasi-quote-character quasi-quote-character
@@ -27,39 +29,14 @@
    :unquote-character unquote-character
    :splice-character splice-character))
 
-;; TODO: factor out
-(define-syntax quasi-quoted-typesetting-to-string (&key (quasi-quote-character #\[)
-                                                        (quasi-quote-end-character #\])
-                                                        (unquote-character #\,)
-                                                        (splice-character #\@))
-  (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
-     (chain-transform '(quasi-quoted-xml quasi-quoted-string string-emitting-form)
-                      (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body))))
-   (lambda (form spliced)
-     (make-instance 'typesetting-unquote :form form :spliced spliced))
-   :quasi-quote-character quasi-quote-character
-   :quasi-quote-end-character quasi-quote-end-character
-   :unquote-character unquote-character
-   :splice-character splice-character
-   :quasi-quote-reader-wrapper
-   (lambda (original-reader)
-     (lambda (stream char)
-       (bind ((*readtable* (copy-readtable)))
-         (set-macro-character quasi-quote-character
-                              (lambda (stream char)
-                                (declare (ignore char))
-                                (read-delimited-list quasi-quote-end-character stream t)))
-         (funcall original-reader stream char))))))
+(define-syntax quasi-quoted-typesetting-to-string ()
+  (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string-emitting-form)))
 
-(def (function e) with-quasi-quoted-typesetting-to-string-syntax ()
-  (with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'quasi-quoted-xml 'quasi-quoted-string 'string-emitting-form))
+(define-syntax quasi-quoted-typesetting-to-binary ()
+  (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(def (function e) with-quasi-quoted-typesetting-to-binary-syntax ()
-  (with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'quasi-quoted-xml 'quasi-quoted-string 'quasi-quoted-binary `binary-emitting-form))
-
-(def (function e) with-quasi-quoted-typesetting-to-binary-stream-syntax (stream)
-  (with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'quasi-quoted-xml 'quasi-quoted-string 'quasi-quoted-binary `(binary-emitting-form :stream ,stream)))
+(define-syntax quasi-quoted-typesetting-to-binary-stream (stream)
+  (set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function parse-quasi-quoted-typesetting (form)
   (if (typep form 'typesetting-unquote)
@@ -207,14 +184,12 @@
 ;;                 :form `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (registered-component ,(form-of node)))))
                  :form `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml ,(form-of node))))
 
+;; TODO: kill superfluous ()
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
-  (make-instance 'xml-element
-                 :name "html"
-                 :children (list
-                            (make-instance 'xml-element
-                                           :name "body"
-                                           :children (list
-                                                      (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))))))
+  {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'xml-emitting-form)
+   <html ()
+     <body ()
+       ,@(list (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))>>})
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-list))
   (ecase (orientation-of node)
@@ -334,6 +309,7 @@
                  :children (list
                             (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))))
 
+;; TODO: the following parts are experimental and should be deleted
 #.(use-package :computed-class)
 
 (define-computed-universe compute-as)
@@ -379,6 +355,7 @@
        (funcall handler))
      (maphash-values (lambda (value)
                        (unless (cc::computed-state-valid-p value)
+                         ;; TODO: sort and find out which computed state should be sent to the client
                          value))
                      *registered-components*)
      (funcall screen-thunk))

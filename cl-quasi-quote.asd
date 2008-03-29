@@ -65,7 +65,7 @@
              (:file "bivalent" :depends-on ("syntax"))
              (:file "escaping" :depends-on ("syntax"))
              (:file "xml" :depends-on ("syntax" "escaping"))
-             (:file "typesetting" :depends-on ("syntax"))))))
+             (:file "typesetting" :depends-on ("xml"))))))
 
 (defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   (operate 'load-op :cl-quasi-quote-test)
