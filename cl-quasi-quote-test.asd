@@ -49,7 +49,7 @@
              (:file "binary" :depends-on ("package"))
              (:file "string" :depends-on ("package"))
              (:file "bivalent" :depends-on ("package"))
-             (:file "xml" :depends-on ("package"))
+             (:file "xml" :depends-on ("package" "string"))
              (:file "typesetting" :depends-on ("package"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))

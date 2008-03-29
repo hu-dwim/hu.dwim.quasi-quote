@@ -8,34 +8,41 @@
 
 (defsuite* (test/string :in test))
 
-(def test test/string/1 ()
-  (is (string= "this is a test"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
-                   ["this is a test"]})))
+(def definer string=-test (name args &body body)
+  (labels ((process-entry (entry)
+             (if (eq (first entry) 'with-expected-failures)
+                 `(with-expected-failures
+                    ,@(mapcar #'process-entry (rest entry)))
+                 (bind (((expected form) entry))
+                   `(is (string= ,expected ,form))))))
+    `(def test ,name ,args
+       ,@(mapcar #'process-entry body))))
 
-(def test test/string/2 ()
-  (is (string= "this is a test"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
-                ["this"
-                 ," is "
-                 "a test"]})))
 
-(def test test/string/3 ()
-  (is (string= "this is a recursive test"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
-                ["this"
-                 ,(list
+(def string=-test test/string/simple ()
+  ("this is a test"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
+    ["this is a test"]}))
+
+(def string=-test test/string/unquote ()
+  ("this is a test"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
+    ["this"
+     ," is "
+     "a test"]})
+  ("this is a recursive test"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
+    ["this"
+     ,(list
+       " is "
+       ["a" " recursive"]
+       " ")
+     "test"]})
+  ("this is a recursive test"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
+    ["this"
+     ,(concatenate 'string
                    " is "
-                   ["a" " recursive"]
+                   (force-quasi-quoted-string ["a" " recursive"])
                    " ")
-                 "test"]})))
-
-(def test test/string/4 ()
-  (is (string= "this is a recursive test"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
-                ["this"
-                 ,(concatenate 'string
-                               " is "
-                               (force-quasi-quoted-string ["a" " recursive"])
-                               " ")
-                 "test"]})))
+     "test"]}))

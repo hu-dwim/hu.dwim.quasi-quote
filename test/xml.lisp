@@ -8,17 +8,7 @@
 
 (defsuite* (test/xml :in test))
 
-(def definer xml-to-string-test (name args &body body)
-  (labels ((process-entry (entry)
-             (if (eq (first entry) 'with-expected-failures)
-                 `(with-expected-failures
-                    ,@(mapcar #'process-entry (rest entry)))
-                 (bind (((expected form) entry))
-                   `(is (string= ,expected ,form))))))
-    `(def test ,name ,args
-       ,@(mapcar #'process-entry body))))
-
-(def xml-to-string-test test/xml/simple ()
+(def string=-test test/xml/simple ()
   ("<element/>"
    {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
      <element>})
@@ -37,7 +27,7 @@
      <element>
      <element>}))
 
-(def xml-to-string-test test/xml/attribute-unquoting ()
+(def string=-test test/xml/attribute-unquoting ()
   ("<element attribute=\"1\"/>"
    {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
     <element ,(list (make-xml-attribute "attribute" "1"))>})
