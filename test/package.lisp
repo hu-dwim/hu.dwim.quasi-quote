@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-user)
+(in-package :cl-quasi-quote)
 
 (defpackage :cl-quasi-quote-test
   (:nicknames :qqt)
@@ -16,6 +16,10 @@
         :cl-def
         :cl-syntax-sugar
         :cl-quasi-quote))
+
+(import
+ '(escape-as-xml)
+ (find-package :cl-quasi-quote-test))
 
 (in-package :cl-quasi-quote-test)
 

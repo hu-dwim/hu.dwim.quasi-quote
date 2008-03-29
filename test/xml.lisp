@@ -8,6 +8,12 @@
 
 (defsuite* (test/xml :in test))
 
+(def test test/xml/escaping ()
+  (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"
+               (escape-as-xml "<1\"2>3<&4>")))
+  (let ((str "alma"))
+    (is (eq str (escape-as-xml str)))))
+
 (def string=-test test/xml/simple ()
   ("<element/>"
    {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'string-emitting-form)
