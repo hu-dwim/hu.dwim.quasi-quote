@@ -15,13 +15,14 @@
           (setf (aref result (char-code character)) entity))
     result))
 
-(def (function o) escape-as-xml (string)
-  (declare (type string string))
-  (bind ((result nil))
+(def (function o) escape-as-xml (string &optional destination)
+  (declare (type string string)
+           (type (or null (array character (*))) destination))
+  (bind ((result destination))
     (iter (for index :from 0 :below (length string))
           (for character = (aref string index))
           (for character-code = (char-code character))
-          (for entity = (when (< character-code (length #.+character-code->xml-escaped-entity+))
+          (for entity = (when (< character-code #.(length +character-code->xml-escaped-entity+))
                           (aref #.+character-code->xml-escaped-entity+ character-code)))
           (if entity
               (progn
@@ -34,4 +35,4 @@
                 (vector-extend entity result))
               (when result
                 (vector-push-extend character result))))
-    (or result string)))
+    (or result (shrink-vector string (length string)))))
