@@ -14,6 +14,7 @@
         :alexandria
         :iterate
         :defclass-star
+        :closer-mop
         :cl-def
         :cl-syntax-sugar)
 
