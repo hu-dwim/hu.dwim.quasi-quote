@@ -27,6 +27,31 @@
    :unquote-character unquote-character
    :splice-character splice-character))
 
+;; TODO: factor out
+(define-syntax quasi-quoted-typesetting-to-string (&key (quasi-quote-character #\[)
+                                                        (quasi-quote-end-character #\])
+                                                        (unquote-character #\,)
+                                                        (splice-character #\@))
+  (set-quasi-quote-syntax-in-readtable
+   (lambda (body)
+     (chain-transform '(quasi-quoted-xml quasi-quoted-string string-emitting-form)
+                      (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body))))
+   (lambda (form spliced)
+     (make-instance 'typesetting-unquote :form form :spliced spliced))
+   :quasi-quote-character quasi-quote-character
+   :quasi-quote-end-character quasi-quote-end-character
+   :unquote-character unquote-character
+   :splice-character splice-character
+   :quasi-quote-reader-wrapper
+   (lambda (original-reader)
+     (lambda (stream char)
+       (bind ((*readtable* (copy-readtable)))
+         (set-macro-character quasi-quote-character
+                              (lambda (stream char)
+                                (declare (ignore char))
+                                (read-delimited-list quasi-quote-end-character stream t)))
+         (funcall original-reader stream char))))))
+
 (def (function e) with-quasi-quoted-typesetting-to-string-syntax ()
   (with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'quasi-quoted-xml 'quasi-quoted-string 'string-emitting-form))
 
@@ -59,6 +84,10 @@
   (make-instance 'typesetting-horizontal-list
                  :elements (mapcar 'parse-quasi-quoted-typesetting (cdr whole))))
 
+(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-text)) whole)
+  (make-instance 'typesetting-text
+                 :contents (cdr whole)))
+
 (def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-paragraph)) whole)
   (make-instance 'typesetting-paragraph
                  :contents (cdr whole)))
@@ -67,19 +96,24 @@
   (make-instance 'typesetting-menu
                  :menu-items (mapcar 'parse-quasi-quoted-typesetting (cdr whole))))
 
+(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-content-menu)) whole)
+  (make-instance 'typesetting-content-menu
+                 :place (second whole)
+                 :menu-items (mapcar 'parse-quasi-quoted-typesetting (cddr whole))))
+
 (def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-menu-item)) whole)
   (make-instance 'typesetting-menu-item
                  :label (second whole)
                  :action (third whole)))
 
-(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-button)) whole)
-  (make-instance 'typesetting-button
+(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-action)) whole)
+  (make-instance 'typesetting-action
                  :label (second whole)
                  :action (third whole)))
 
 (def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-text-field)) whole)
   (make-instance 'typesetting-text-field
-                 :name (second whole)))
+                 :place (second whole)))
 
 (def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-form)) whole)
   (make-instance 'typesetting-form
@@ -114,22 +148,28 @@
   ()
   (:default-initargs :orientation :horizontal))
 
+(def (class* e) typesetting-text (typesetting-syntax-node)
+  ((contents)))
+
 (def (class* e) typesetting-paragraph (typesetting-syntax-node)
   ((contents)))
 
 (def (class* e) typesetting-menu (typesetting-syntax-node)
   ((menu-items)))
 
+(def (class* e) typesetting-content-menu (typesetting-menu typesetting-list)
+  ((place)))
+
 (def (class* e) typesetting-menu-item (typesetting-syntax-node)
   ((label)
    (action)))
 
-(def (class* e) typesetting-button (typesetting-syntax-node)
+(def (class* e) typesetting-action (typesetting-syntax-node)
   ((label)
    (action)))
 
 (def (class* e) typesetting-text-field (typesetting-syntax-node)
-  ((name)))
+  ((place)))
 
 (def (class* e) typesetting-form (typesetting-syntax-node)
   ((content)))
@@ -163,6 +203,8 @@
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-unquote))
   (make-instance 'xml-unquote
+                 ;; TODO: computed states should capture lexical variables and cache in hash-table like defcfun
+;;                 :form `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (registered-component ,(form-of node)))))
                  :form `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml ,(form-of node))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
@@ -202,17 +244,49 @@
                                                                                      (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node))))
                                                          (elements-of node))))))))
 
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text))
+  (make-instance 'xml-element
+                 :name "span"
+                 :children (mapcar (lambda (node)
+                                     (make-instance 'xml-text
+                                                    :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
+                                   (contents-of node))))
+
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-paragraph))
   (make-instance 'xml-element
                  :name "span"
                  :children (mapcar (lambda (node)
-                                     (make-instance 'xml-text :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
+                                     (make-instance 'xml-text
+                                                    :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
                                    (contents-of node))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu))
   (make-instance 'xml-element
                  :name "ul"
                  :children (mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))))
+
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-content-menu))
+  (make-instance 'xml-element
+                 :name "table"
+                 :children (list
+                            (make-instance 'xml-element
+                                           :name "tr"
+                                           :children (list
+                                                      (make-instance 'xml-element
+                                                                     :name "td"
+                                                                     :children (list
+                                                                                (make-instance 'xml-element
+                                                                                               :name "ul"
+                                                                                               :children (mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node)))))
+                                                      (make-instance 'xml-element
+                                                                     :name "td"
+                                                                     :children (list
+                                                                                (make-instance 'xml-unquote
+                                                                                               :form (with-unique-names (content)
+                                                                                                       `(bind ((,content ,(form-of (place-of node))))
+                                                                                                          (if (functionp ,content)
+                                                                                                              (funcall ,content)
+                                                                                                              ,content)))))))))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu-item))
   (make-instance 'xml-element
@@ -223,33 +297,36 @@
                                            :attributes (list (make-instance 'xml-attribute
                                                                             :name "href"
                                                                             :value (make-instance 'xml-unquote
-                                                                                                  :form `(registered-lambda ,(form-of (action-of node))))))
+                                                                                                  :form `(registered-action ,(form-of (action-of node))))))
                                            :children (list
                                                       (make-instance 'xml-text
                                                                      :content (label-of node)))))))
 
-(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-button))
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-action))
   (make-instance 'xml-element
                  :name "a"
                  :attributes (list
                               (make-instance 'xml-attribute
                                              :name "href"
                                              :value (make-instance 'xml-unquote
-                                                                   :form `(registered-lambda ,(form-of (action-of node))))))
+                                                                   :form `(registered-action ,(form-of (action-of node))))))
                  :children (list
                             (make-instance 'xml-text
-                                           :content (label-of node)))))
+                                           :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (label-of node))))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text-field))
   (make-instance 'xml-element
                  :name "input"
                  :attributes (list
                               (make-instance 'xml-attribute
+                                             :name "name"
+                                             :value (make-instance 'xml-unquote :form `(registered-input ,(form-of (place-of node)))))
+                              (make-instance 'xml-attribute
                                              :name "type"
                                              :value "text")
                               (make-instance 'xml-attribute
                                              :name "value"
-                                             :value (make-instance 'xml-unquote :form (name-of node))))))
+                                             :value (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (place-of node))))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
   (make-instance 'xml-element
@@ -257,12 +334,52 @@
                  :children (list
                             (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))))
 
-(def (special-variable e) *registered-lambdas* (make-hash-table :test #'equal))
+#.(use-package :computed-class)
 
-(def macro registered-lambda (&body forms)
-  `(bind ((key (symbol-name (gensym))))
-     (setf (gethash key *registered-lambdas*)
-           (lambda ()
-             ,@forms))
-     key))
+(define-computed-universe compute-as)
+(export 'compute-as)
 
+(def (special-variable e) *registered-components* (make-hash-table :test #'eql))
+
+(def (special-variable e) *registered-actions* (make-hash-table :test #'eql))
+
+(def (special-variable e) *registered-parsers* (make-hash-table :test #'eql))
+
+(def macro registered-action (&body forms)
+  `(bind ((key (random 10000000000)))
+     (setf (gethash key *registered-actions*)
+           (lambda () ,@forms))
+     (merge-pathnames (princ-to-string key)
+                      (ucw::query-path (ucw:context.request ucw:*context*)))))
+
+(def macro registered-component (&body forms)
+  `(bind ((key (random 10000000000))
+          ((:values computed-state found?)
+           (gethash key *registered-components*
+                    (compute-as* (:kind cc::standalone) ,@forms))))
+     (unless found?
+       (setf (gethash key *registered-components*) computed-state))
+     (computed-state-value computed-state)))
+
+(def macro registered-input (place)
+  `(bind ((key (random 10000000000)))
+     (setf (gethash key *registered-parsers*)
+           ;; TODO: parse value from HTTP request
+           (lambda () (setf ,place nil)))
+     (merge-pathnames (princ-to-string key)
+                      (ucw::query-path (ucw:context.request ucw:*context*)))))
+
+(def (function e) handle-request (screen-thunk)
+  (write-string
+   (bind ((path (ucw::query-path (ucw:context.request ucw:*context*)))
+          (name (pathname-name path))
+          (key (when name (parse-integer name  :junk-allowed #t)))
+          (handler (gethash key *registered-actions*)))
+     (when handler
+       (funcall handler))
+     (maphash-values (lambda (value)
+                       (unless (cc::computed-state-valid-p value)
+                         value))
+                     *registered-components*)
+     (funcall screen-thunk))
+   (ucw:html-stream (ucw:context.response ucw:*context*))))

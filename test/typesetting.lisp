@@ -22,5 +22,5 @@
   (is (string= "<ul><li>1</li><li>2</li></ul>"
                {(with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'string-emitting-form)
                 [menu
-                 (menu-item "1")
-                 (menu-item "2")]})))
+                 (menu-item "1" ,nil)
+                 (menu-item "2" ,nil)]})))
