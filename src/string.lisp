@@ -85,6 +85,9 @@
   (funcall (apply #'transform 'string-emitting-lambda input args)))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &key (toplevel #t) (stream '*string-stream*) &allow-other-keys)
+  (transform-quasi-quoted-string-to-string-emitting-form input toplevel stream))
+
+(def function transform-quasi-quoted-string-to-string-emitting-form (input toplevel stream)
   (etypecase input
     (string-quasi-quote
      (labels ((process (node)
