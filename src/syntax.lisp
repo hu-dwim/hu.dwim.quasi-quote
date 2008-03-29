@@ -92,7 +92,20 @@
     node)
 
   (:method ((node list))
-    `(list ,@(mapcar 'syntax-node-emitting-form node)))
+    (iter (for element :in node)
+          (collect (when (typep element 'unquote)
+                     (spliced-p element)) :into spliced-elements)
+          (collect (syntax-node-emitting-form element) :into transformed-elements)
+          (finally (return
+                     (cond ((every #'identity spliced-elements)
+                            `(append ,@transformed-elements))
+                           ((notany #'identity spliced-elements)
+                            `(list ,@transformed-elements))
+                           (t `(append ,@(mapcar (lambda (spliced element)
+                                                   (if spliced
+                                                       element
+                                                       `(list ,element)))
+                                                 spliced-elements transformed-elements))))))))
 
   (:method ((node quasi-quote))
     (syntax-node-emitting-form (body-of node)))
