@@ -46,3 +46,12 @@
                    (force-quasi-quoted-string ["a" " recursive"])
                    " ")
      "test"]}))
+
+(def string=-test test/string/spliced-unquote ()
+  ("1 2 3 4 5 6 7"
+   {(with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'string-emitting-form)
+    ["1 "
+     ,(make-string 1 :initial-element #\2)
+     ,@(list " 3 " "4 " "5 ")
+     ,(make-string 1 :initial-element #\6)
+     " 7"]}))
