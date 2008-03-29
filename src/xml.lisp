@@ -131,6 +131,12 @@
 (def class* xml-unquote (unquote xml-syntax-node)
   ())
 
+(def (function e) make-xml-quasi-quote (body)
+  (make-instance 'xml-quasi-quote :body body))
+
+(def (function e) make-xml-unquote (form)
+  (make-instance 'xml-unquote :form form))
+
 (def (class* e) xml-element (xml-syntax-node)
   ((name)
    (attributes nil)
@@ -143,8 +149,14 @@
 (def (class* e) xml-text (xml-syntax-node)
   ((content)))
 
+(def (function e) make-xml-element (name &optional attributes children)
+  (make-instance 'xml-element :name name :attributes attributes :children children))
+
 (def (function e) make-xml-attribute (name value)
   (make-instance 'xml-attribute :name name :value value))
+
+(def (function e) make-xml-text (content)
+  (make-instance 'xml-text :content content))
 
 ;;;;;;;;;;;;;
 ;;; Transform
