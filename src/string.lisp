@@ -15,7 +15,7 @@
                                          (splice-character #\@))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body) (make-instance 'string-quasi-quote :body body))
-   (lambda (form spliced) (make-instance 'string-unquote :form form :spliced spliced))
+   (lambda (form spliced) (make-string-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
@@ -40,6 +40,9 @@
 
 (def (class* e) string-unquote (unquote string-syntax-node)
   ())
+
+(def (function e) make-string-unquote (form &optional (spliced? #f))
+  (make-instance 'string-unquote :form form :spliced spliced?))
 
 ;;;;;;;;;;;;;
 ;;; Transform

@@ -173,8 +173,7 @@
              ,@(when attributes
                  `(" "
                    ,@(if (typep attributes 'xml-unquote)
-                         (list (make-instance 'string-unquote
-                                              :form `(mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
+                         (list (make-string-unquote `(mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
                                                              ,(form-of attributes))))
                          (iter (for attribute :in attributes)
                                (unless (first-iteration-p)
@@ -199,8 +198,7 @@
      (make-instance 'string-quasi-quote
                     :body (map-tree (body-of node) #'transform-quasi-quoted-xml-to-quasi-quoted-string/element)))
     (xml-unquote
-     (make-instance 'string-unquote
-                    :form `(transform-quasi-quoted-xml-to-quasi-quoted-string/element
+     (make-string-unquote `(transform-quasi-quoted-xml-to-quasi-quoted-string/element
                             ,(process-xml-unqoute-form node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element))))))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
@@ -217,9 +215,9 @@
           "=\""
           ;; TODO: escaping
           ,(if (typep value 'xml-unquote)
-               (make-instance 'string-unquote
-                              :form `(princ-to-string ,(process-xml-unqoute-form value
-                                                                                 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
+               (make-string-unquote `(princ-to-string
+                                      ,(process-xml-unqoute-form
+                                        value 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
                (princ-to-string value))
           "\"")))
     (xml-quasi-quote
@@ -227,16 +225,16 @@
                     :body (map-tree (body-of node) #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
     (xml-unquote
      (bind ((spliced? (spliced-p node)))
-       (make-instance 'string-unquote
-                      :form (if spliced?
-                                `(iter (for attribute :in-sequence ,(process-xml-unqoute-form node
-                                                                                              'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))
-                                       (unless (first-iteration-p)
-                                         (collect " "))
-                                       (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute attribute)))
-                                `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
-                                  ,(process-xml-unqoute-form node 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
-                      :spliced spliced?)))))
+       (make-string-unquote
+        (if spliced?
+            `(iter (for attribute :in-sequence ,(process-xml-unqoute-form node
+                                                                          'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))
+                   (unless (first-iteration-p)
+                     (collect " "))
+                   (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute attribute)))
+            `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
+              ,(process-xml-unqoute-form node 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
+        spliced?)))))
 
 (def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &key &allow-other-keys)
   (transform-quasi-quoted-xml-to-quasi-quoted-string/element input))
