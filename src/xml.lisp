@@ -19,7 +19,8 @@
     (&key (open-bracket-character #\<)
           (close-bracket-character #\>)
           (unquote-character #\,)
-          (splice-character #\@))
+          (splice-character #\@)
+          (transform nil))
   (bind ((original-reader-on-open-bracket-character (multiple-value-list (get-macro-character open-bracket-character *readtable*)))
          (original-reader-on-unquote-character      (multiple-value-list (get-macro-character unquote-character *readtable*))))
     (set-macro-character open-bracket-character
@@ -27,14 +28,25 @@
                                                        original-reader-on-unquote-character
                                                        open-bracket-character close-bracket-character
                                                        unquote-character
-                                                       splice-character)
+                                                       splice-character
+                                                       transform)
                          t
                          *readtable*)))
+
+(define-syntax quasi-quoted-xml-to-string ()
+  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string string-emitting-form)))
+
+(define-syntax quasi-quoted-xml-to-binary ()
+  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
+
+(define-syntax quasi-quoted-xml-to-binary-stream (stream)
+  (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function make-quasi-quoted-xml-reader (original-reader-on-open-bracket-character
                                             original-reader-on-unquote-character
                                             open-bracket-character close-bracket-character
-                                            unquote-character splice-character)
+                                            unquote-character splice-character
+                                            transform)
   (declare (ignore original-reader-on-open-bracket-character))
   (labels ((unquote-reader (stream char)
              (declare (ignore char))
@@ -72,7 +84,7 @@
                                     (read-delimited-list close-bracket-character stream t)))
                                 ;; seems like we have a standalone #\<, read it as the common-lisp:< symbol
                                 (return-from toplevel-quasi-quoted-xml-reader 'common-lisp:<))))
-                 (make-instance 'xml-quasi-quote :body (process-xml-reader-body body)))))
+                 (chain-transform transform (make-instance 'xml-quasi-quote :body (process-xml-reader-body body))))))
            (nested-quasi-quoted-xml-reader (stream char)
              (declare (ignore char))
              (process-xml-reader-body (read-delimited-list close-bracket-character stream t))))
@@ -106,14 +118,6 @@
                                                                        :name (unless-unquote name (name-as-string name))
                                                                        :value (unless-unquote value (princ-to-string value))))))))
                      :children form))))
-
-(def (function e) with-quasi-quoted-xml-to-binary-syntax (&key stream)
-  (with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'quasi-quoted-string 'quasi-quoted-binary
-                                        `(binary-emitting-form ,@(when stream
-                                                                       `(:stream ,stream)))))
-
-(def (function e) with-quasi-quoted-xml-to-string-syntax ()
-  (with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'quasi-quoted-string 'string-emitting-form))
 
 ;;;;;;;
 ;;; AST
