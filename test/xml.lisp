@@ -60,3 +60,12 @@
                       (make-xml-attribute "attribute4" "4"))
               "aTTriUte5" "5"
               ,(make-xml-attribute "attribute6" "6"))>))
+
+
+(def string=-test test/xml/nested-unquoting ()
+  ("<a><b><c><d/></c></b></c>"
+   <a ()
+     ,(make-instance 'xml-element
+                     :name "b"
+                     :children (list <c ()
+                                       ,(make-instance 'xml-element :name "d")>))>))
