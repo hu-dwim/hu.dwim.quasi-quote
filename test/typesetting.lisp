@@ -6,21 +6,10 @@
 
 (in-package :cl-quasi-quote-test)
 
+(enable-quasi-quoted-typesetting-to-string-emitting-form-syntax)
+
 (defsuite* (test/typesetting :in test))
 
-(def test test/typesetting/1 ()
-  (is (string= "<table/>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'string-emitting-form)
-                [vertical-list]})))
-
-(def test test/typesetting/2 ()
-  (is (string= "<span>Hello World</span>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'string-emitting-form)
-                [paragraph "Hello World"]})))
-
-(def test test/typesetting/3 ()
-  (is (string= "<ul><li>1</li><li>2</li></ul>"
-               {(with-transformed-quasi-quoted-syntax 'quasi-quoted-typesetting 'string-emitting-form)
-                [menu
-                 (menu-item "1" ,nil)
-                 (menu-item "2" ,nil)]})))
+(def string=-test test/typesetting/1 ()
+  ("<table/>"
+   [vertical-list]))
