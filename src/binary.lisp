@@ -12,20 +12,21 @@
 (define-syntax quasi-quoted-binary (&key (quasi-quote-character #\[)
                                          (quasi-quote-end-character #\])
                                          (unquote-character #\,)
-                                         (splice-character #\@))
+                                         (splice-character #\@)
+                                         (transform nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
-     (make-instance 'binary-quasi-quote
-                    :body (if (and (consp body)
-                                   (vectorp (first body)))
-                              (list (coerce (first body) '(simple-array (unsigned-byte 8) (*))))
-                              body)))
-   (lambda (form spliced)
-     (make-instance 'binary-unquote :form form :spliced spliced))
+   (lambda (body) (chain-transform transform (make-binary-quasi-quote body)))
+   (lambda (form spliced) (make-binary-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
    :splice-character splice-character))
+
+(define-syntax quasi-quoted-binary-to-binary ()
+  (set-quasi-quoted-binary-syntax-in-readtable :transform '(binary)))
+
+(define-syntax quasi-quoted-binary-to-binary-emitting-form ()
+  (set-quasi-quoted-binary-syntax-in-readtable :transform '(binary-emitting-form)))
 
 ;;;;;;;
 ;;; AST
@@ -38,8 +39,14 @@
 (def (class* e) binary-quasi-quote (quasi-quote binary-syntax-node)
   ())
 
+(def (function e) make-binary-quasi-quote (body)
+  (make-instance 'binary-quasi-quote :body body))
+
 (def (class* e) binary-unquote (unquote binary-syntax-node)
   ())
+
+(def (function e) make-binary-unquote (form &optional (spliced? #f))
+  (make-instance 'binary-unquote :form form :spliced spliced?))
 
 ;;;;;;;;;;;;;
 ;;; Transform
@@ -48,7 +55,7 @@
 
 (def function write-quasi-quoted-binary (node)
   (etypecase node
-    ((vector (unsigned-byte 8)) (write-sequence node *binary-stream*))
+    (vector (write-sequence node *binary-stream*))
     (list (mapc #'write-quasi-quoted-binary node))
     (function (funcall node)))
   (values))
@@ -65,7 +72,10 @@
 (def method transform ((to (eql 'binary)) (input binary-syntax-node) &rest args &key &allow-other-keys)
   (funcall (apply #'transform 'binary-emitting-lambda input args)))
 
-(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &key (toplevel #t) (stream '*binary-stream* stream-provided?) &allow-other-keys)
+(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &key (toplevel #t) (stream '*binary-stream*) &allow-other-keys)
+  (transform-quasi-quoted-binary-to-binary-emitting-form input toplevel stream))
+
+(def function transform-quasi-quoted-binary-to-binary-emitting-form (input toplevel stream)
   (etypecase input
     (binary-quasi-quote
      (labels ((process (node)
@@ -85,7 +95,7 @@
                                    (mapcar #'process forms))))
          (if (and toplevel
                   (not (single-string-list-p processed-forms))
-                  (not stream-provided?))
+                  (eq stream '*binary-stream*))
              `(with-quasi-quoted-binary-emitting-environment
                 ,@processed-forms)
              `(progn

@@ -24,6 +24,7 @@
           (for character-code = (char-code character))
           (for entity = (when (< character-code #.(length +character-code->xml-escaped-entity+))
                           (aref #.+character-code->xml-escaped-entity+ character-code)))
+          (declare (type fixnum index))
           (if entity
               (progn
                 (unless result

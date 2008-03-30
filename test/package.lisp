@@ -26,3 +26,23 @@
 (in-root-suite)
 
 (defsuite* test)
+
+(def definer string=-test (name args &body body)
+  (labels ((process-entry (entry)
+             (if (eq (first entry) 'with-expected-failures)
+                 `(with-expected-failures
+                    ,@(mapcar #'process-entry (rest entry)))
+                 (bind (((expected form) entry))
+                   `(is (string= ,expected ,form))))))
+    `(def test ,name ,args
+       ,@(mapcar #'process-entry body))))
+
+(def definer binary=-test (name args &body body)
+  (labels ((process-entry (entry)
+             (if (eq (first entry) 'with-expected-failures)
+                 `(with-expected-failures
+                    ,@(mapcar #'process-entry (rest entry)))
+                 (bind (((expected form) entry))
+                   `(is (equalp ,expected ,form))))))
+    `(def test ,name ,args
+       ,@(mapcar #'process-entry body))))

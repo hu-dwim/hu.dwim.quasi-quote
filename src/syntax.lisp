@@ -9,6 +9,7 @@
 ;;;;;;;;;
 ;;; Parse
 
+;; TODO: remove this and use define-syntax instead
 (def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transforms))))

@@ -12,23 +12,32 @@
 (define-syntax quasi-quoted-string (&key (quasi-quote-character #\[)
                                          (quasi-quote-end-character #\])
                                          (unquote-character #\,)
-                                         (splice-character #\@))
+                                         (splice-character #\@)
+                                         (transform nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body) (make-instance 'string-quasi-quote :body body))
+   (lambda (body) (chain-transform transform (make-string-quasi-quote body)))
    (lambda (form spliced) (make-string-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
    :splice-character splice-character))
 
+(define-syntax quasi-quoted-string-to-string ()
+  (set-quasi-quoted-string-syntax-in-readtable :transform '(string)))
 
-(def (function e) with-quasi-quoted-string-to-binary-syntax ()
-  (with-transformed-quasi-quoted-syntax 'quasi-quoted-string 'quasi-quoted-binary 'binary-emitting-form))
+(define-syntax quasi-quoted-string-to-string-emitting-form ()
+  (set-quasi-quoted-string-syntax-in-readtable :transform '(string-emitting-form)))
+
+(define-syntax quasi-quoted-string-to-binary ()
+  (set-quasi-quoted-string-syntax-in-readtable :transform '(quasi-quoted-binary binary)))
+
+(define-syntax quasi-quoted-string-to-binary-emitting-form ()
+  (set-quasi-quoted-string-syntax-in-readtable :transform '(quasi-quoted-binary binary-emitting-form)))
 
 ;;;;;;;
 ;;; AST
 ;;;
-;;; A quasi quoted string is made of string, list, string-quasi-quote, string-unquote recursively
+;;; A quasi quoted string is made of string, list, string-quasi-quote, string-unquote nodes recursively.
 
 (def ast string)
 
@@ -37,6 +46,9 @@
 
 (def (class* e) string-quasi-quote (quasi-quote string-syntax-node)
   ())
+
+(def (function e) make-string-quasi-quote (body)
+  (make-instance 'string-quasi-quote :body body))
 
 (def (class* e) string-unquote (unquote string-syntax-node)
   ())
@@ -112,7 +124,8 @@
                                    forms
                                    (mapcar #'process forms))))
          (if (and toplevel
-                  (not (single-string-list-p processed-forms)))
+                  (not (single-string-list-p processed-forms))
+                  (eq stream '*string-stream*))
              `(with-quasi-quoted-string-emitting-environment
                 ,@processed-forms)
              `(progn
