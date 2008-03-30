@@ -33,6 +33,12 @@
                          t
                          *readtable*)))
 
+(define-syntax quasi-quoted-xml-to-xml ()
+  (set-quasi-quoted-xml-syntax-in-readtable :transform '(xml)))
+
+(define-syntax quasi-quoted-xml-to-xml-emitting-form ()
+  (set-quasi-quoted-xml-syntax-in-readtable :transform '(xml-emitting-form)))
+
 (define-syntax quasi-quoted-xml-to-string ()
   (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string string)))
 
