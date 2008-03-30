@@ -30,12 +30,18 @@
    :splice-character splice-character))
 
 (define-syntax quasi-quoted-typesetting-to-string ()
+  (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string)))
+
+(define-syntax quasi-quoted-typesetting-to-string-emitting-form ()
   (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string-emitting-form)))
 
 (define-syntax quasi-quoted-typesetting-to-binary ()
+  (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary)))
+
+(define-syntax quasi-quoted-typesetting-to-binary-emitting-form ()
   (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-typesetting-to-binary-stream (stream)
+(define-syntax quasi-quoted-typesetting-to-binary-stream-emitting-form (stream)
   (set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function parse-quasi-quoted-typesetting (form)
@@ -63,10 +69,6 @@
 
 (def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-text)) whole)
   (make-instance 'typesetting-text
-                 :contents (cdr whole)))
-
-(def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-paragraph)) whole)
-  (make-instance 'typesetting-paragraph
                  :contents (cdr whole)))
 
 (def method parse-quasi-quoted-typesetting* ((first (eql 'typesetting-menu)) whole)
@@ -128,9 +130,6 @@
 (def (class* e) typesetting-text (typesetting-syntax-node)
   ((contents)))
 
-(def (class* e) typesetting-paragraph (typesetting-syntax-node)
-  ((contents)))
-
 (def (class* e) typesetting-menu (typesetting-syntax-node)
   ((menu-items)))
 
@@ -154,14 +153,10 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def method transform ((to (eql 'string)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform 'string (transform 'quasi-quoted-xml input) args))
+(enable-quasi-quoted-xml-to-xml-emitting-form-syntax)
 
-(def method transform ((to (eql 'string-emitting-form)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform 'string-emitting-form (transform 'quasi-quoted-xml input) args))
-
-(def method transform ((to (eql 'quasi-quoted-xml)) (input typesetting-syntax-node) &key &allow-other-keys)
-  (transform-quasi-quoted-typesetting-to-quasi-quoted-xml input))
+(def method transform ((to (eql 'quasi-quoted-xml)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform-quasi-quoted-typesetting-to-quasi-quoted-xml input args))
 
 (defgeneric transform-quasi-quoted-typesetting-to-quasi-quoted-xml (node))
 
@@ -175,140 +170,77 @@
   (princ-to-string node))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-quasi-quote))
-  (make-instance 'xml-quasi-quote
-                 :body (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (body-of node))))
+  (make-xml-quasi-quote (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (body-of node))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-unquote))
-  (make-instance 'xml-unquote
-                 ;; TODO: computed states should capture lexical variables and cache in hash-table like defcfun
-;;                 :form `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (registered-component ,(form-of node)))))
-                 :form `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml ,(form-of node))))
+  (make-xml-unquote
+   ;; TODO: computed states should capture lexical variables and cache in hash-table like defcfun
+   ;; `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (registered-component ,(form-of node)))))
+   `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml ,(form-of node))))
 
-;; TODO: kill superfluous ()
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
-  {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'xml-emitting-form)
-   <html
-     <body
-       ,@(list (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))>>})
+  <html
+    <body
+      ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-list))
   (ecase (orientation-of node)
     (:vertical
-     (make-instance 'xml-element
-                    :name "table"
-                    :children (mapcar (lambda (node)
-                                        (make-instance 'xml-element
-                                                       :name "tr"
-                                                       :children (list
-                                                                  (make-instance 'xml-element
-                                                                                 :name "td"
-                                                                                 :children (list
-                                                                                            (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node))))))
-                                      (elements-of node))))
+     <table ()
+       ,@(mapcar
+          (lambda (node)
+            <tr
+              <td ()
+                ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)>>)
+          (elements-of node))>)
     (:horizontal
-     (make-instance 'xml-element
-                    :name "table"
-                    :children (list
-                               (make-instance 'xml-element
-                                              :name "tr"
-                                              :children (mapcar
-                                                         (lambda (node)
-                                                           (make-instance 'xml-element
-                                                                          :name "td"
-                                                                          :children (list
-                                                                                     (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node))))
-                                                         (elements-of node))))))))
+     <table
+       <tr ()
+         ,@(mapcar
+            (lambda (node)
+              <td ()
+                ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)>)
+            (elements-of node))>>)))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text))
-  (make-instance 'xml-element
-                 :name "span"
-                 :children (mapcar (lambda (node)
-                                     (make-instance 'xml-text
-                                                    :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
-                                   (contents-of node))))
-
-(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-paragraph))
-  (make-instance 'xml-element
-                 :name "span"
-                 :children (mapcar (lambda (node)
-                                     (make-instance 'xml-text
-                                                    :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
-                                   (contents-of node))))
+  <span () ,@(mapcar (lambda (node)
+                       (make-instance 'xml-text
+                                      :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
+                     (contents-of node))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu))
-  (make-instance 'xml-element
-                 :name "ul"
-                 :children (mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))))
+  <ul () ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-content-menu))
-  (make-instance 'xml-element
-                 :name "table"
-                 :children (list
-                            (make-instance 'xml-element
-                                           :name "tr"
-                                           :children (list
-                                                      (make-instance 'xml-element
-                                                                     :name "td"
-                                                                     :children (list
-                                                                                (make-instance 'xml-element
-                                                                                               :name "ul"
-                                                                                               :children (mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node)))))
-                                                      (make-instance 'xml-element
-                                                                     :name "td"
-                                                                     :children (list
-                                                                                (make-instance 'xml-unquote
-                                                                                               :form (with-unique-names (content)
-                                                                                                       `(bind ((,content ,(form-of (place-of node))))
-                                                                                                          (if (functionp ,content)
-                                                                                                              (funcall ,content)
-                                                                                                              ,content)))))))))))
+  <table
+    <tr
+      <td
+        <ul () ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>>
+      <td () ,(make-instance 'xml-unquote
+                             :form (with-unique-names (content)
+                                     `(bind ((,content ,(form-of (place-of node))))
+                                        (if (functionp ,content)
+                                            (funcall ,content)
+                                            ,content))))>>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu-item))
-  (make-instance 'xml-element
-                 :name "li"
-                 :children (list
-                            (make-instance 'xml-element
-                                           :name "a"
-                                           :attributes (list (make-instance 'xml-attribute
-                                                                            :name "href"
-                                                                            :value (make-instance 'xml-unquote
-                                                                                                  :form `(registered-action ,(form-of (action-of node))))))
-                                           :children (list
-                                                      (make-instance 'xml-text
-                                                                     :content (label-of node)))))))
+  <li
+    <a (:href ,(make-xml-unquote `(registered-action ,(form-of (action-of node)))))
+      ,(make-xml-text (label-of node))>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-action))
-  (make-instance 'xml-element
-                 :name "a"
-                 :attributes (list
-                              (make-instance 'xml-attribute
-                                             :name "href"
-                                             :value (make-instance 'xml-unquote
-                                                                   :form `(registered-action ,(form-of (action-of node))))))
-                 :children (list
-                            (make-instance 'xml-text
-                                           :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (label-of node))))))
+  <a (:href ,(make-xml-unquote `(registered-action ,(form-of (action-of node)))))
+    ,(make-xml-text (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (label-of node)))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text-field))
-  (make-instance 'xml-element
-                 :name "input"
-                 :attributes (list
-                              (make-instance 'xml-attribute
-                                             :name "name"
-                                             :value (make-instance 'xml-unquote :form `(registered-input ,(form-of (place-of node)))))
-                              (make-instance 'xml-attribute
-                                             :name "type"
-                                             :value "text")
-                              (make-instance 'xml-attribute
-                                             :name "value"
-                                             :value (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (place-of node))))))
+  <input (:type "text"
+          :value ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (place-of node))
+           :name ,(make-xml-unquote `(registered-input ,(form-of (place-of node)))))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
-  (make-instance 'xml-element
-                 :name "form"
-                 :children (list
-                            (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node)))))
+  <form () ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)
 
+#|
 ;; TODO: the following parts are experimental and should be deleted
 #.(use-package :computed-class)
 
@@ -360,3 +292,4 @@
                      *registered-components*)
      (funcall screen-thunk))
    (ucw:html-stream (ucw:context.response ucw:*context*))))
+|#
