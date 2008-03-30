@@ -96,13 +96,7 @@
   `(with-quasi-quoted-string-emitting-environment
      (write-quasi-quoted-string ,node)))
 
-(def method transform ((to (eql 'string)) (input string-syntax-node) &key args  &allow-other-keys)
-  (funcall (apply #'transform 'string-emitting-lambda input args)))
-
-(def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &key (toplevel #t) (stream '*string-stream*) &allow-other-keys)
-  (transform-quasi-quoted-string-to-string-emitting-form input toplevel stream))
-
-(def function transform-quasi-quoted-string-to-string-emitting-form (input toplevel stream)
+(def function transform-quasi-quoted-string-to-string-emitting-form (input &key (toplevel #t) (stream '*string-stream*) &allow-other-keys)
   (etypecase input
     (string-quasi-quote
      (labels ((process (node)
@@ -137,8 +131,8 @@
                      (transform 'string-emitting-lambda-form form :toplevel #f)
                      form))))))
 
-(def method transform ((to (eql 'binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform 'binary (transform 'quasi-quoted-binary input) args))
+(def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform-quasi-quoted-string-to-string-emitting-form input args))
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
   (etypecase node

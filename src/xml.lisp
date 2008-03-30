@@ -177,12 +177,6 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def method transform ((to (eql 'string)) (input xml-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform 'string (transform 'quasi-quoted-string input) args))
-
-(def method transform ((to (eql 'string-emitting-form)) (input xml-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform 'string-emitting-form (transform 'quasi-quoted-string input) args))
-
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-tree (form-of node)
             (lambda (form)
@@ -221,6 +215,7 @@
          (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/element content))
          (unquote content)
          (string content))
+
        ;; TODO: escaping
        #+nil
        ("<!CDATA[["

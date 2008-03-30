@@ -69,13 +69,7 @@
   `(with-quasi-quoted-binary-emitting-environment
      (write-quasi-quoted-binary ,node)))
 
-(def method transform ((to (eql 'binary)) (input binary-syntax-node) &rest args &key &allow-other-keys)
-  (funcall (apply #'transform 'binary-emitting-lambda input args)))
-
-(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &key (toplevel #t) (stream '*binary-stream*) &allow-other-keys)
-  (transform-quasi-quoted-binary-to-binary-emitting-form input toplevel stream))
-
-(def function transform-quasi-quoted-binary-to-binary-emitting-form (input toplevel stream)
+(def function transform-quasi-quoted-binary-to-binary-emitting-form (input &key (toplevel #t) (stream '*binary-stream*) &allow-other-keys)
   (etypecase input
     (binary-quasi-quote
      (labels ((process (node)
@@ -106,3 +100,6 @@
                  (if (typep form 'quasi-quote)
                      (transform 'binary-emitting-lambda-form form :toplevel #f :stream stream)
                      form))))))
+
+(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform-quasi-quoted-binary-to-binary-emitting-form input args))
