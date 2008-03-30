@@ -12,14 +12,18 @@
 (define-syntax quasi-quoted-lisp (&key (quasi-quote-character #\`)
                                        (quasi-quote-end-character nil)
                                        (unquote-character #\,)
-                                       (splice-character #\@))
+                                       (splice-character #\@)
+                                       (transform nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body) (make-instance 'lisp-quasi-quote :body body))
-   (lambda (form spliced) (make-instance 'lisp-unquote :form form :spliced spliced))
+   (lambda (body) (chain-transform transform (make-lisp-quasi-quote body)))
+   (lambda (form spliced) (make-lisp-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
    :splice-character splice-character))
+
+(define-syntax quasi-quoted-lisp-to-lisp-emitting-form ()
+  (set-quasi-quoted-lisp-syntax-in-readtable :transform '(lisp-emitting-form)))
 
 ;;;;;;;
 ;;; AST
@@ -32,8 +36,14 @@
 (def class* lisp-quasi-quote (quasi-quote lisp-syntax-node)
   ())
 
+(def (function e) make-lisp-quasi-quote (body)
+  (make-instance 'lisp-quasi-quote :body body))
+
 (def class* lisp-unquote (unquote lisp-syntax-node)
   ())
+
+(def (function e) make-lisp-unquote (form &optional (spliced? #f))
+  (make-instance 'lisp-unquote :form form :spliced spliced?))
 
 ;;;;;;;;;;;;;
 ;;; Transform

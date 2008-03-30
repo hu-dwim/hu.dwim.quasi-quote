@@ -34,12 +34,18 @@
                          *readtable*)))
 
 (define-syntax quasi-quoted-xml-to-string ()
+  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string string)))
+
+(define-syntax quasi-quoted-xml-to-string-emitting-form ()
   (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string string-emitting-form)))
 
 (define-syntax quasi-quoted-xml-to-binary ()
+  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary)))
+
+(define-syntax quasi-quoted-xml-to-binary-emitting-form ()
   (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-xml-to-binary-stream (stream)
+(define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream)
   (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function make-quasi-quoted-xml-reader (original-reader-on-open-bracket-character
