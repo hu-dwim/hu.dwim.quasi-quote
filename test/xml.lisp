@@ -63,7 +63,7 @@
 
 
 (def string=-test test/xml/nested-unquoting ()
-  ("<a><b><c><d/></c></b></c>"
+  ("<a><b><c><d/></c></b></a>"
    <a ()
      ,(make-instance 'xml-element
                      :name "b"
