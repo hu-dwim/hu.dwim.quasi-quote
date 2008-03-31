@@ -126,11 +126,10 @@
          (if (and toplevel
                   (not (single-string-list-p processed-forms))
                   (eq stream '*string-stream*))
-             `(make-string-quote
-               (with-quasi-quoted-string-emitting-environment
-                 ,@processed-forms))
-             `(make-string-quote
-               ,@processed-forms)))))
+             `(with-quasi-quoted-string-emitting-environment
+                ,@processed-forms)
+             `(progn
+                ,@processed-forms)))))
     (string-unquote
      (map-tree (form-of input)
                (lambda (form)

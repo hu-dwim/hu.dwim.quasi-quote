@@ -96,10 +96,9 @@
          (if (and toplevel
                   (not (single-string-list-p processed-forms))
                   (eq stream '*binary-stream*))
-             `(make-binary-quote
-               (with-quasi-quoted-binary-emitting-environment
-                 ,@processed-forms))
-             `(make-binary-quote
+             `(with-quasi-quoted-binary-emitting-environment
+                ,@processed-forms)
+             `(progn
                 ,@processed-forms)))))
     (binary-unquote
      (map-tree (form-of input)

@@ -67,5 +67,6 @@
    <a ()
      ,(make-instance 'xml-element
                      :name "b"
-                     :children (list <c ()
-                                       ,(make-instance 'xml-element :name "d")>))>))
+                     :children (list {(with-transformed-quasi-quoted-syntax 'quasi-quoted-xml 'quasi-quoted-string 'quoted-string-emitting-form)
+                                      <c ()
+                                       ,(make-instance 'xml-element :name "d")>}))>))
