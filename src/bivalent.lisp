@@ -36,12 +36,6 @@
 (def class* bivalent-syntax-node ()
   ())
 
-(def (class* e) bivalent-quote (quote bivalent-syntax-node)
-  ())
-
-(def (function e) make-bivalent-quote (body)
-  (make-instance 'bivalent-quote :body body))
-
 (def (class* e) bivalent-quasi-quote (quasi-quote bivalent-syntax-node)
   ())
 
@@ -68,9 +62,8 @@
      (make-binary-unquote
       `(transform-quasi-quoted-bivalent-to-quasi-quoted-binary
         ,(map-filtered-tree (form-of node) 'bivalent-quasi-quote #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary))))
-    (quote node)
-    (quasi-quote node)
-    (unquote node)))
+    (quasi-quote (body-of (transform 'quasi-quoted-binary node)))
+    (unquote (transform 'quasi-quoted-binary node))))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input bivalent-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary input args))

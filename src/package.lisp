@@ -18,6 +18,4 @@
         :cl-def
         :cl-syntax-sugar)
 
-  (:shadow #:quote)
-
   (:export))

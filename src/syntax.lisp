@@ -9,7 +9,6 @@
 ;;;;;;;;;
 ;;; Parse
 
-;; TODO: remove this and use define-syntax instead
 (def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transforms))))
@@ -22,9 +21,6 @@
 
 (def class* syntax-node ()
   ())
-
-(def class* quote (syntax-node)
-  ((body)))
 
 (def (class* e) quasi-quote (syntax-node)
   ((body)))
@@ -95,21 +91,25 @@
     (bind ((name (symbol-name to))
            (package (ast-package to)))
       (cond ((ends-with-subseq "-EMITTING-LAMBDA-FORM" name)
-             (bind ((to (format-symbol package "~A-EMITTING-FORM" (subseq name 0 (- (length name) 21)))))
+             (bind ((to (format-symbol package "~A-EMITTING-FORM" (subseq name 0 (- (length name) (length "-EMITTING-LAMBDA-FORM"))))))
                `(lambda () ,(apply #'transform to from args))))
             ((ends-with-subseq "-EMITTING-LAMBDA" name)
              (bind ((to (format-symbol package "~A-EMITTING-FORM" name)))
                (compile nil (apply #'transform to from args))))
             ((and (starts-with-subseq "QUOTED-" name)
                   (ends-with-subseq "-EMITTING-FORM" name))
-             (bind ((ast (subseq name 7 (- (length name) 14))))
+             (bind ((ast (subseq name (length "QUOTED-") (- (length name) (length "-EMITTING-FORM")))))
                `(make-instance ',(format-symbol package "~A-QUOTE" ast)
-                               :body ,(apply #'transform (format-symbol package (subseq name 7)) from args))))
+                               :body ,(apply #'transform (format-symbol package (subseq name (length "QUOTED-"))) from args))))
             ((ends-with-subseq "-EMITTING-FORM" name)
              (syntax-node-emitting-form from))
-            ((and (not (search "QUOTED-" name))
-                  (not (search "QUASI-QUOTED-" name)))
+            ((not (search "QUASI-QUOTED-" name))
              (funcall (apply #'transform (format-symbol package "~A-EMITTING-LAMBDA" name) from args)))
+            ((and (starts-with-subseq "QUASI-QUOTED-" name)
+                  (typep from (format-symbol package "~A-SYNTAX-NODE"
+                                             (subseq name (length "QUASI-QUITED-")))))
+             
+             from)
             (t (call-next-method)))))
 
   (:method ((to (eql :lambda)) from &rest args &key &allow-other-keys)
@@ -166,6 +166,9 @@
 
 ;;;;;;;;
 ;;; Util
+
+(def macro delay (&body forms)
+  `(lambda () ,@forms))
 
 (def (function o) vector-extend (extension vector)
   (bind ((original-length (length vector))

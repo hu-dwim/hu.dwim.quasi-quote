@@ -160,8 +160,11 @@
 
 (defgeneric transform-quasi-quoted-typesetting-to-quasi-quoted-xml (node))
 
-(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node function))
-  node)
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node quasi-quote))
+  (body-of (transform 'quasi-quoted-xml node)))
+
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node unquote))
+  (transform 'quasi-quoted-xml node))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node string))
   node)
@@ -234,7 +237,7 @@
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text-field))
   <input (:type "text"
           :value ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (place-of node))
-           :name ,(make-xml-unquote `(registered-input ,(form-of (place-of node)))))>)
+          :name ,(make-xml-unquote `(registered-input ,(form-of (place-of node)))))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
   <form () ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)

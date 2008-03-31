@@ -33,12 +33,6 @@
 (def class* lisp-syntax-node (syntax-node)
   ((name)))
 
-(def (class* e) lisp-quote (quote lisp-syntax-node)
-  ())
-
-(def (function e) make-lisp-quote (body)
-  (make-instance 'lisp-quote :body body))
-
 (def (class* e) lisp-quasi-quote (quasi-quote lisp-syntax-node)
   ())
 
@@ -61,7 +55,7 @@
                 (etypecase node
                   (lisp-unquote (transform 'lisp-emitting-form node))
                   (list `(list ,@(mapcar #'process node)))
-                  (t (list 'cl:quote node)))))
+                  (t (list 'quote node)))))
        (process (body-of input))))
     (lisp-unquote
      (map-tree (form-of input)
