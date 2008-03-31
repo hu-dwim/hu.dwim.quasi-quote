@@ -15,8 +15,11 @@
                                          (splice-character #\@)
                                          (transform nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body) (chain-transform transform (make-binary-quasi-quote body)))
-   (lambda (form spliced) (make-binary-unquote form spliced))
+   (lambda (body)
+     (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
+       (readtime-chain-transform transform (make-binary-quasi-quote body))))
+   (lambda (form spliced)
+     (make-binary-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
@@ -84,11 +87,12 @@
                                           #'vectorp
                                           (lambda (&rest elements)
                                             (apply #'concatenate '(vector (unsigned-byte 8)) elements))))
+              (internal-stream? (eq stream '*binary-stream*))
               (processed-forms (if (and toplevel
+                                        internal-stream?
                                         (single-string-list-p forms))
                                    forms
-                                   (mapcar #'process forms)))
-              (internal-stream? (eq stream '*binary-stream*)))
+                                   (mapcar #'process forms))))
          (if (and toplevel
                   internal-stream?
                   (not (single-string-list-p processed-forms)))

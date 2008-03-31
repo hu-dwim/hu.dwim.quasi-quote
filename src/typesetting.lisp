@@ -20,8 +20,8 @@
                                               (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (chain-transform transform
-                      (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body))))
+     (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
+       (readtime-chain-transform transform (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body)))))
    (lambda (form spliced)
      (make-instance 'typesetting-unquote :form form :spliced spliced))
    :quasi-quote-character quasi-quote-character

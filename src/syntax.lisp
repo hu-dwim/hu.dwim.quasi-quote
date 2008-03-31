@@ -9,6 +9,13 @@
 ;;;;;;;;;
 ;;; Parse
 
+(def special-variable *quasi-quote-level* 0)
+
+(def function readtime-chain-transform (to from)
+  (if (= 1 *quasi-quote-level*)
+      (chain-transform to from)
+      from))
+
 (def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transforms))))

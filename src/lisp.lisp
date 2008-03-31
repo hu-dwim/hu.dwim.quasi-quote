@@ -15,8 +15,11 @@
                                        (splice-character #\@)
                                        (transform nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body) (chain-transform transform (make-lisp-quasi-quote body)))
-   (lambda (form spliced) (make-lisp-unquote form spliced))
+   (lambda (body)
+     (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
+       (readtime-chain-transform transform (make-lisp-quasi-quote body))))
+   (lambda (form spliced)
+     (make-lisp-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character

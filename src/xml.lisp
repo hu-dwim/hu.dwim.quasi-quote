@@ -80,6 +80,7 @@
              (bind ((*xml-quasi-quote-level* (if (boundp '*xml-quasi-quote-level*)
                                                  (1+ *xml-quasi-quote-level*)
                                                  1))
+                    (*quasi-quote-level* (1+ *quasi-quote-level*))
                     (*readtable* (copy-readtable)))
                (set-macro-character unquote-character #'unquote-reader)
                ;; on nested invocations we want to do something else then on the toplevel invocation
@@ -97,10 +98,11 @@
                                     (read-delimited-list close-bracket-character stream t)))
                                 ;; seems like we have a standalone #\<, read it as the common-lisp:< symbol
                                 (return-from toplevel-quasi-quoted-xml-reader 'common-lisp:<))))
-                 (chain-transform transform (make-instance 'xml-quasi-quote :body (process-xml-reader-body body))))))
+                 (readtime-chain-transform transform (make-instance 'xml-quasi-quote :body (process-xml-reader-body body))))))
            (nested-quasi-quoted-xml-reader (stream char)
              (declare (ignore char))
-             (process-xml-reader-body (read-delimited-list close-bracket-character stream t))))
+             (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
+               (process-xml-reader-body (read-delimited-list close-bracket-character stream t)))))
     #'toplevel-quasi-quoted-xml-reader))
 
 (def function process-xml-reader-body (form)
