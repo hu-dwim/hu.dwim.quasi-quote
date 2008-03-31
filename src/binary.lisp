@@ -36,6 +36,12 @@
 (def class* binary-syntax-node ()
   ())
 
+(def (class* e) binary-quote (quote binary-syntax-node)
+  ())
+
+(def (function e) make-binary-quote (body)
+  (make-instance 'binary-quote :body body))
+
 (def (class* e) binary-quasi-quote (quasi-quote binary-syntax-node)
   ())
 
@@ -57,7 +63,7 @@
   (etypecase node
     (vector (write-sequence node *binary-stream*))
     (list (mapc #'write-quasi-quoted-binary node))
-    (function (funcall node)))
+    (binary-quote (write-quasi-quoted-binary (body-of node))))
   (values))
 
 (def macro with-quasi-quoted-binary-emitting-environment (&body forms)
@@ -90,9 +96,10 @@
          (if (and toplevel
                   (not (single-string-list-p processed-forms))
                   (eq stream '*binary-stream*))
-             `(with-quasi-quoted-binary-emitting-environment
-                ,@processed-forms)
-             `(progn
+             `(make-binary-quote
+               (with-quasi-quoted-binary-emitting-environment
+                 ,@processed-forms))
+             `(make-binary-quote
                 ,@processed-forms)))))
     (binary-unquote
      (map-tree (form-of input)

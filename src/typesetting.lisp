@@ -216,12 +216,11 @@
     <tr
       <td
         <ul () ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>>
-      <td () ,(make-instance 'xml-unquote
-                             :form (with-unique-names (content)
-                                     `(bind ((,content ,(form-of (place-of node))))
-                                        (if (functionp ,content)
-                                            (funcall ,content)
-                                            ,content))))>>>)
+      <td () ,(make-xml-unquote (with-unique-names (content)
+                                  `(bind ((,content ,(form-of (place-of node))))
+                                     (if (functionp ,content)
+                                         (funcall ,content)
+                                         ,content))))>>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu-item))
   <li

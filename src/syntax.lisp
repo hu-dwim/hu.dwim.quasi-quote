@@ -23,6 +23,9 @@
 (def class* syntax-node ()
   ())
 
+(def class* quote (syntax-node)
+  ((body)))
+
 (def (class* e) quasi-quote (syntax-node)
   ((body)))
 

@@ -44,6 +44,12 @@
 (def class* string-syntax-node (syntax-node)
   ())
 
+(def (class* e) string-quote (quote string-syntax-node)
+  ())
+
+(def (function e) make-string-quote (body)
+  (make-instance 'string-quote :body body))
+
 (def (class* e) string-quasi-quote (quasi-quote string-syntax-node)
   ())
 
@@ -84,7 +90,7 @@
   (etypecase node
     (string (write-string node *string-stream*))
     (list (mapc #'write-quasi-quoted-string node))
-    (function (funcall node)))
+    (string-quote (write-quasi-quoted-string (body-of node))))
   (values))
 
 (def macro with-quasi-quoted-string-emitting-environment (&body forms)
@@ -120,10 +126,11 @@
          (if (and toplevel
                   (not (single-string-list-p processed-forms))
                   (eq stream '*string-stream*))
-             `(with-quasi-quoted-string-emitting-environment
-                ,@processed-forms)
-             `(progn
-                ,@processed-forms)))))
+             `(make-string-quote
+               (with-quasi-quoted-string-emitting-environment
+                 ,@processed-forms))
+             `(make-string-quote
+               ,@processed-forms)))))
     (string-unquote
      (map-tree (form-of input)
                (lambda (form)
@@ -136,9 +143,6 @@
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
-    (function node)
-    (binary-quasi-quote node)
-    (binary-unquote node)
     (list (mapcar #'transform-quasi-quoted-string-to-quasi-quoted-binary node))
     (string (babel:string-to-octets node :encoding encoding))
     (string-quasi-quote
@@ -146,7 +150,10 @@
     (string-unquote
      (make-instance 'binary-unquote
                     :form `(transform-quasi-quoted-string-to-quasi-quoted-binary
-                            ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary))))))
+                            ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary))))
+    (quote node)
+    (quasi-quote node)
+    (unquote node)))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))

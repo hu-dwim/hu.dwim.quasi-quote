@@ -55,10 +55,10 @@
   (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function make-quasi-quoted-xml-reader (original-reader-on-open-bracket-character
-                                            original-reader-on-unquote-character
-                                            open-bracket-character close-bracket-character
-                                            unquote-character splice-character
-                                            transform)
+                                             original-reader-on-unquote-character
+                                             open-bracket-character close-bracket-character
+                                             unquote-character splice-character
+                                             transform)
   (declare (ignore original-reader-on-open-bracket-character))
   (labels ((unquote-reader (stream char)
              (declare (ignore char))
@@ -72,6 +72,7 @@
                  ;; restore the original unquote reader when we are leaving our nesting. this way it's possible
                  ;; to use #\, in its normal meanings when being outside our own nesting levels.
                  (apply 'set-macro-character unquote-character original-reader-on-unquote-character))
+               (set-macro-character open-bracket-character #'toplevel-quasi-quoted-xml-reader)
                (bind ((body (read stream t nil t)))
                  (make-instance 'xml-unquote :form body :spliced spliced?))))
            (toplevel-quasi-quoted-xml-reader (stream char)
@@ -235,6 +236,8 @@
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                 node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element)))
         spliced?)))
+    (quote node)
+    (quasi-quote node)
     (unquote node)))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
@@ -272,6 +275,8 @@
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                 node 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
         spliced?)))
+    (quote node)
+    (quasi-quote node)
     (unquote node)))
 
 (def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &key &allow-other-keys)
