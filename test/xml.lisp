@@ -29,10 +29,13 @@
      <element (:attribute 1)>)
   ("<element attribute1=\"1\" attribute2=\"2\"/>"
      <element (:attribute1 "1" :attribute2 "2")> )
+  ("<element>Hello</element>"
+     <element "Hello">)
   ("<element><child/></element>"
      <element
        <child>>)
   ("<element><child/></element>"
+     ;; test () being optional
      <element ()
        <child>>))
 
@@ -40,10 +43,10 @@
   ("<element/>"
     <,"element">)
   ("<element><nested/></element>"
-    <element ()
+    <element
       ,(make-xml-element "nested")>)
   ("<element><child1/><child2/><child3/><child4 attribute1=\"1\"/><child5/></element>"
-    <element ()
+    <element
       <child1>
       ,(make-xml-element "child2")
       ,@(list (make-xml-element "child3")
@@ -64,8 +67,6 @@
 
 (def string=-test test/xml/nested-unquoting ()
   ("<a><b><c><d/></c></b></a>"
-   <a ()
-     ,(make-instance 'xml-element
-                     :name "b"
-                     :children (list <c ()
-                                       ,(make-instance 'xml-element :name "d")>))>))
+   <a ,(make-instance 'xml-element
+                      :name "b"
+                      :children (list <c ,(make-instance 'xml-element :name "d")>))>))
