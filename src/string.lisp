@@ -137,7 +137,7 @@
      (map-tree (form-of input)
                (lambda (form)
                  (if (typep form 'string-quasi-quote)
-                     (transform 'string-emitting-lambda-form form :toplevel #f :stream stream)
+                     (chain-transform `((string-emitting-form :toplevel #f :stream ,stream) lambda-form) form)
                      form))))))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)

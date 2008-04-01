@@ -54,14 +54,10 @@
         ',(mapcar #'process
                   `((,name)
                     ("QUASI-QUOTED-" ,name)
-                    (,name "-EMITTING-FORM")
-                    (,name "-EMITTING-LAMBDA-FORM")
-                    (,name "-EMITTING-LAMBDA")
-                    ("QUOTED-" ,name)
-                    ("QUOTED-" ,name "-EMITTING-FORM")
-                    ("QUOTED-" ,name "-EMITTING-LAMBDA-FORM")
-                    ("QUOTED-" ,name "-EMITTING-LAMBDA")))
+                    (,name "-EMITTING-FORM")))
         ,package))))
+
+(export '(lambda-form lambda))
 
 (def method make-load-form ((instance syntax-node) &optional environment)
   (make-load-form-saving-slots instance :environment environment))
@@ -94,32 +90,35 @@
   (:method ((to list) from &key &allow-other-keys)
     (apply #'transform (first to) from (cdr to)))
 
-  (:method ((to symbol) from &rest args &key &allow-other-keys)
+  (:method ((to symbol) from &key &allow-other-keys)
     (bind ((name (symbol-name to))
            (package (ast-package to)))
-      (cond ((ends-with-subseq "-EMITTING-LAMBDA-FORM" name)
-             (bind ((to (format-symbol package "~A-EMITTING-FORM" (subseq name 0 (- (length name) (length "-EMITTING-LAMBDA-FORM"))))))
-               `(lambda () ,@(bind ((body (apply #'transform to from args)))
-                              (if (and (consp body)
-                                       (eq 'progn (first body)))
-                                  (cdr body)
-                                  (list body))))))
-            ((ends-with-subseq "-EMITTING-LAMBDA" name)
-             (bind ((to (format-symbol package "~A-EMITTING-FORM" name)))
-               (compile nil (apply #'transform to from args))))
-            ((ends-with-subseq "-EMITTING-FORM" name)
+      (cond ((ends-with-subseq "-EMITTING-FORM" name)
+             ;; call generic form emitter for CLOS AST 
              (syntax-node-emitting-form from))
-            ((not (search "QUASI-QUOTED-" name))
-             (funcall (apply #'transform (format-symbol package "~A-EMITTING-LAMBDA" name) from args)))
+            ((and (not (search "QUASI-QUOTED-" name))
+                  (typep from (format-symbol package "~A-SYNTAX-NODE" name)))
+             (funcall (chain-transform `(,(format-symbol package "~A-EMITTING-FORM" name) lambda-form lambda) from)))
+            ;; when FROM is actually an instance of TO
             ((and (starts-with-subseq "QUASI-QUOTED-" name)
                   (typep from (format-symbol package "~A-SYNTAX-NODE"
                                              (subseq name (length "QUASI-QUITED-")))))
              
              from)
+            ;; call the specific transformation
             (t (call-next-method)))))
 
-  (:method ((to (eql :lambda)) from &rest args &key &allow-other-keys)
-    (compile nil (apply #'transform :lambda-form from args))))
+  (:method ((to (eql 'lambda-form)) (from cons) &key optimize &allow-other-keys)
+    `(lambda ()
+       ,@(when optimize
+               `((declare (optimize ,@optimize))))
+       ,@(if (and (consp from)
+                  (eq 'progn (first from)))
+             (cdr from)
+             (list from))))
+
+  (:method ((to (eql 'lambda)) (from cons) &key &allow-other-keys)
+    (compile nil from)))
 
 (export 'transform)
 
