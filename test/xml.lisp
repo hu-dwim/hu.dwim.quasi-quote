@@ -31,11 +31,11 @@
      <element (:attribute1 "1" :attribute2 "2")> )
   ("<element>Hello</element>"
      <element "Hello">)
+  ;; test that attribute list is optional
   ("<element><child/></element>"
      <element
        <child>>)
   ("<element><child/></element>"
-     ;; test () being optional
      <element ()
        <child>>))
 
@@ -64,9 +64,21 @@
               "aTTriUte5" "5"
               ,(make-xml-attribute "attribute6" "6"))>))
 
+(def test test/xml/errors ()
+  (set-quasi-quoted-xml-syntax-in-readtable)
+  (signals reader-error
+    (read-from-string "<element < >>")))
+
+(def test test/xml/less-then-sign-at-toplevel ()
+  (set-quasi-quoted-xml-syntax-in-readtable)
+  (is (equal '< (read-from-string "<")))
+  (is (equal '<= (read-from-string "<=")))
+  (is (equal '(< a b) (read-from-string "(< a b)"))))
+
+(def string=-test test/xml/less-then-sign-in-unquote ()
+  ("<element ok=\"1\"/>"
+    <element ,(when (< 3 4) (make-xml-attribute "ok" "1"))>))
 
 (def string=-test test/xml/nested-unquoting ()
   ("<a><b><c><d/></c></b></a>"
-   <a ,(make-instance 'xml-element
-                      :name "b"
-                      :children (list <c ,(make-instance 'xml-element :name "d")>))>))
+   <a ,(make-xml-element "b" (list <c ,(make-xml-element "d")>))>))
