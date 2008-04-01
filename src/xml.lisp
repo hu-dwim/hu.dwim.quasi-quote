@@ -79,72 +79,74 @@
                  (make-instance 'xml-unquote :form body :spliced spliced?))))
            (toplevel-quasi-quoted-xml-reader (stream char)
              (declare (ignore char))
-             (bind ((*xml-quasi-quote-level* (1+ *xml-quasi-quote-level*))
-                    (*quasi-quote-level* (1+ *quasi-quote-level*))
-                    (*readtable* (copy-readtable)))
-               (bind ((next-char (peek-char nil stream nil :eof t)))
-                 (when (or (eq next-char :eof)
-                           (not (or (alphanumericp next-char)
-                                    (char= unquote-character next-char))))
-                   ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
-                   ;; but i don't care much: it works fine on lisps with sane stream buffering,
-                   ;; which includes SBCL.
-                   (if (= *xml-quasi-quote-level* 1)
-                       (progn
-                         (unread-char open-bracket-character stream)
-                         (bind ((*readtable* (copy-readtable)))
-                           ;; disable us and call READ recursively to make things like (< a b) work in unquoted parts
-                           (apply 'set-macro-character open-bracket-character original-reader-on-open-bracket-character)
-                           (apply 'set-macro-character close-bracket-character original-reader-on-close-bracket-character)
-                           (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
-                           (return-from toplevel-quasi-quoted-xml-reader (read stream t nil t))))
-                       (simple-reader-error stream "Error at toplevel XML syntax, '<' must be followed by either an unquote or a tag name.")))
-                 ;; we must set the syntax on the end char to be like #\)
-                 ;; until we read out our entire body. this is needed to
-                 ;; make "<... 5> style inputs work where '5' is not
-                 ;; separated from '>'.
+             (bind ((next-char (peek-char nil stream nil :eof t)))
+               (when (or (eq next-char :eof)
+                         (not (or (alphanumericp next-char)
+                                  (char= unquote-character next-char))))
+                 ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
+                 ;; but i don't care much: it works fine on lisps with sane stream buffering,
+                 ;; which includes SBCL.
+                 (unread-char open-bracket-character stream)
                  (bind ((*readtable* (copy-readtable)))
-                   (set-macro-character unquote-character #'unquote-reader)
-                   ;; on nested invocations we want to do something else then on the toplevel invocation
-                   (set-macro-character open-bracket-character #'nested-quasi-quoted-xml-reader)
-                   (set-syntax-from-char close-bracket-character #\) *readtable*)
-                   (bind ((body (read-delimited-list close-bracket-character stream t)))
-                     (readtime-chain-transform transform (make-instance 'xml-quasi-quote :body (process-xml-reader-body stream body))))))))
+                   ;; disable us and call READ recursively to make things like (< a b) work in unquoted parts
+                   (apply 'set-macro-character open-bracket-character original-reader-on-open-bracket-character)
+                   (apply 'set-macro-character close-bracket-character original-reader-on-close-bracket-character)
+                   (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
+                   (return-from toplevel-quasi-quoted-xml-reader (read stream t nil t))))
+               ;; we must set the syntax on the end char to be like #\)
+               ;; until we read out our entire body. this is needed to
+               ;; make "<... 5> style inputs work where '5' is not
+               ;; separated from '>'.
+               (bind ((*xml-quasi-quote-level* (1+ *xml-quasi-quote-level*))
+                      (*quasi-quote-level* (1+ *quasi-quote-level*))
+                      (*readtable* (copy-readtable)))
+                 (set-macro-character unquote-character #'unquote-reader)
+                 ;; on nested invocations we want to do something else then on the toplevel invocation
+                 (set-macro-character open-bracket-character #'nested-quasi-quoted-xml-reader)
+                 (set-syntax-from-char close-bracket-character #\) *readtable*)
+                 (bind ((body (read-delimited-list close-bracket-character stream t)))
+                   (readtime-chain-transform transform (make-instance 'xml-quasi-quote :body (process-xml-reader-body stream body)))))))
            (nested-quasi-quoted-xml-reader (stream char)
              (declare (ignore char))
              (process-xml-reader-body stream (read-delimited-list close-bracket-character stream t))))
     #'toplevel-quasi-quoted-xml-reader))
 
-(def function process-xml-reader-body (stream form)
-  (setf form (mapcar (lambda (el)
-                       (if (stringp el)
-                           (make-xml-text el)
-                           el))
-                     form))
-  (bind ((name (pop form))
-         (attributes (pop form)))
-    (unless name
-      (simple-reader-error stream "Syntax error in XML syntax, node name is NIL!?"))
-    (macrolet ((unless-unquote (value &body forms)
-                 (once-only (value)
-                   `(if (typep ,value 'xml-unquote)
-                        ,value
-                        (progn
-                          ,@forms)))))
-      (when (typep attributes 'xml-syntax-node)
-        (push attributes form)
-        (setf attributes nil))
-      (make-xml-element
-          (unless-unquote name (name-as-string name))
-          (unless-unquote attributes (iter (generate element :in attributes)
-                                           (for name = (next element))
-                                           (if (typep name 'xml-unquote)
-                                               (collect name)
-                                               (bind ((value (next element)))
-                                                 (collect (make-xml-attribute
-                                                           (unless-unquote name (name-as-string name))
-                                                           (unless-unquote value (princ-to-string value))))))))
-        form))))
+(def (function d) process-xml-reader-body (stream form)
+  (etypecase form
+    (syntax-node form)
+    (cons
+     (setf form (mapcar (lambda (el)
+                          (if (stringp el)
+                              (make-xml-text el)
+                              el))
+                        form))
+     (bind ((name (pop form))
+            (attributes (pop form)))
+       (unless name
+         (simple-reader-error stream "Syntax error in XML syntax, node name is NIL!?"))
+       (macrolet ((unless-unquote (value &body forms)
+                    (once-only (value)
+                      `(if (typep ,value 'xml-unquote)
+                           ,value
+                           (progn
+                             ,@forms)))))
+         (when (typep attributes 'syntax-node)
+           ;; to make the attribute list of foo optional in <foo <bar>> we only accept
+           ;; unquoted attribute lists in the form of <foo (,@(call-some-lisp)) <bar>>.
+           (push attributes form)
+           (setf attributes nil))
+         (make-xml-element
+             (unless-unquote name (name-as-string name))
+             (unless-unquote attributes (iter (generate element :in attributes)
+                                              (for name = (next element))
+                                              (if (typep name 'xml-unquote)
+                                                  (collect name)
+                                                  (bind ((value (next element)))
+                                                    (collect (make-xml-attribute
+                                                              (unless-unquote name (name-as-string name))
+                                                              (unless-unquote value (princ-to-string value))))))))
+           form))))
+    (null (simple-reader-error stream "Empty xml tag?"))))
 
 ;;;;;;;
 ;;; AST
