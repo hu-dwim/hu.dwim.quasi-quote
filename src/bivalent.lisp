@@ -56,7 +56,6 @@
 
 (def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
-    (void-syntax-node node)
     (function node)
     (list (mapcar #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary node))
     (string (babel:string-to-octets node :encoding encoding))

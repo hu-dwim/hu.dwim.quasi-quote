@@ -61,7 +61,6 @@
 
 (def function write-quasi-quoted-binary (node stream)
   (etypecase node
-    (void-syntax-node)
     (vector (write-sequence node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
     (binary-quasi-quote (write-quasi-quoted-binary (body-of node) stream))
@@ -100,8 +99,9 @@
                            ,@processed-forms)
                         `(progn
                            ,@processed-forms
-                           ,@(unless internal-stream?
-                                     `(+void-syntax-node+))))))
+                           ,@(unless (and toplevel
+                                          internal-stream?)
+                                     `((values)))))))
          (if (and toplevel
                   internal-stream?)
              `(make-binary-quasi-quote ,form)

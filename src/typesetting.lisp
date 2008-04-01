@@ -160,9 +160,6 @@
 
 (defgeneric transform-quasi-quoted-typesetting-to-quasi-quoted-xml (node))
 
-(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node void-syntax-node))
-  node)
-
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node function))
   node)
 

@@ -199,7 +199,6 @@
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node)
   (etypecase node
-    (void-syntax-node node)
     (function node)
     (xml-element
      (bind ((attributes (attributes-of node))

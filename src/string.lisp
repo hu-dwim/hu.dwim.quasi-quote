@@ -126,8 +126,9 @@
                            ,@processed-forms)
                         `(progn
                            ,@processed-forms
-                           ,@(unless internal-stream?
-                                     `(+void-syntax-node+))))))
+                           ,@(unless (and toplevel
+                                          internal-stream?)
+                                     `((values)))))))
          (if (and toplevel
                   internal-stream?)
              `(make-string-quasi-quote ,form)
@@ -144,7 +145,6 @@
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
-    (void-syntax-node node)
     (list (mapcar #'transform-quasi-quoted-string-to-quasi-quoted-binary node))
     (string (babel:string-to-octets node :encoding encoding))
     (string-quasi-quote
