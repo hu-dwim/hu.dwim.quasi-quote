@@ -45,13 +45,13 @@
   ((:module :test
 	    :components
             ((:file "package")
-             (:file "test-infrastructure" :depends-on ("package"))
-             (:file "lisp" :depends-on ("test-infrastructure"))
-             (:file "binary" :depends-on ("test-infrastructure"))
-             (:file "string" :depends-on ("test-infrastructure"))
-             (:file "bivalent" :depends-on ("test-infrastructure"))
-             (:file "xml" :depends-on ("test-infrastructure" "string"))
-             (:file "typesetting" :depends-on ("test-infrastructure"))))))
+             (:file "suite" :depends-on ("package"))
+             (:file "lisp" :depends-on ("suite"))
+             (:file "binary" :depends-on ("suite"))
+             (:file "string" :depends-on ("suite"))
+             (:file "bivalent" :depends-on ("suite"))
+             (:file "xml" :depends-on ("suite" "string"))
+             (:file "typesetting" :depends-on ("suite"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)

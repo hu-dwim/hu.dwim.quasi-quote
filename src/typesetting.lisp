@@ -163,6 +163,9 @@
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node void-syntax-node))
   node)
 
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node function))
+  node)
+
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node quasi-quote))
   (if (typep node 'xml-quasi-quote)
       (body-of node)
@@ -184,7 +187,8 @@
   (make-xml-unquote
    ;; TODO: computed states should capture lexical variables and cache in hash-table like defcfun
    ;; `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (registered-component ,(form-of node)))))
-   `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml ,(form-of node))))
+   `(transform-quasi-quoted-typesetting-to-quasi-quoted-xml
+     ,(map-filtered-tree (form-of node) 'typesetting-quasi-quote #'transform-quasi-quoted-typesetting-to-quasi-quoted-xml))))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
   <html

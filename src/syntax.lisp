@@ -114,6 +114,8 @@
              (bind ((to (format-symbol package "~A-EMITTING-FORM" name)))
                (compile nil (apply #'transform to from args))))
             ((ends-with-subseq "-EMITTING-FORM" name)
+             (syntax-node-emitting-form from)
+             #+nil
              `(,(format-symbol package "MAKE-~A-QUASI-QUOTE" (subseq name 0 (- (length name) (length "-EMITTING-FORM"))))
                 ,(syntax-node-emitting-form from)))
             ((not (search "QUASI-QUOTED-" name))

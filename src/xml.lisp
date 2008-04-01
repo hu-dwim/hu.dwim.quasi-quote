@@ -195,11 +195,7 @@
 ;;; Transform
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form (node fn)
-  (map-tree (form-of node)
-            (lambda (form)
-              (if (typep form 'xml-quasi-quote)
-                  (funcall fn form)
-                  form))))
+  (map-filtered-tree (form-of node) 'xml-quasi-quote fn))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node)
   (etypecase node
@@ -248,7 +244,7 @@
        (make-string-unquote
         (if spliced?
             `(iter (for element :in-sequence ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                               node 'transform-quasi-quoted-xml-to-quasi-quoted-string/element))
+                                               node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element))
                    (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/element element)))
             `(transform-quasi-quoted-xml-to-quasi-quoted-string/element
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
@@ -276,7 +272,7 @@
                                     `(escape-as-xml
                                       (princ-to-string
                                        ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                         value 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))))
+                                         value #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))))
                       (unquote value)
                       (string (escape-as-xml value)))
           "\"")))
@@ -288,13 +284,13 @@
        (make-string-unquote
         (if spliced?
             `(iter (for attribute :in-sequence ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                                 node 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))
+                                                 node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))
                    (unless (first-iteration-p)
                      (collect " "))
                    (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute attribute)))
             `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                node 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
+                node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
         spliced?)))
     (quasi-quote (body-of (transform 'quasi-quoted-string node)))
     (unquote (transform 'quasi-quoted-string node))))
