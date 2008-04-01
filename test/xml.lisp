@@ -107,17 +107,15 @@
               ,(make-xml-attribute "attribute6" "6"))>))
 
 (def test test/xml/errors ()
-  (bind ((*readtable* (copy-readtable)))
-    (set-quasi-quoted-xml-syntax-in-readtable)
-    (signals reader-error
-      (read-from-string "<element < >>"))))
+  (enable-quasi-quoted-xml-syntax)
+  (signals reader-error
+    (read-from-string "<element < >>")))
 
 (def test test/xml/less-then-sign-at-toplevel ()
-  (bind ((*readtable* (copy-readtable)))
-    (set-quasi-quoted-xml-syntax-in-readtable)
-    (is (equal '< (read-from-string "<")))
-    (is (equal '<= (read-from-string "<=")))
-    (is (equal '(< a b) (read-from-string "(< a b)")))))
+  (enable-quasi-quoted-xml-syntax)
+  (is (equal '< (read-from-string "<")))
+  (is (equal '<= (read-from-string "<=")))
+  (is (equal '(< a b) (read-from-string "(< a b)"))))
 
 (def xml-test test/xml/less-then-sign-in-unquote ()
   ("<element ok=\"1\"/>"
@@ -128,7 +126,7 @@
    <a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>))
 
 (def xml-test test/xml/mixed ()
-  ("<element>Hello</element>"
+  ("<element>HelloWorld</element>"
    <element {with-quasi-quoted-string-syntax ["Hello" ,(list "World")]}>))
 
 (def xml-test test/xml/reverse ()
