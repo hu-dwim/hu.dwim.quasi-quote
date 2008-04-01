@@ -112,8 +112,7 @@
                      (readtime-chain-transform transform (make-instance 'xml-quasi-quote :body (process-xml-reader-body stream body))))))))
            (nested-quasi-quoted-xml-reader (stream char)
              (declare (ignore char))
-             (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
-               (process-xml-reader-body (read-delimited-list close-bracket-character stream t)))))
+             (process-xml-reader-body stream (read-delimited-list close-bracket-character stream t))))
     #'toplevel-quasi-quoted-xml-reader))
 
 (def function process-xml-reader-body (stream form)
