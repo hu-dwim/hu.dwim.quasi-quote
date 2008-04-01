@@ -29,6 +29,16 @@
 (def class* syntax-node ()
   ())
 
+(eval-when (:compile-toplevel :load-toplevel)
+  (def class* void-syntax-node ()
+    ()))
+
+(def function void-syntax-node= (node1 node2)
+  (and (typep node1 'void-syntax-node)
+       (typep node2 'void-syntax-node)))
+
+(def (constant :test void-syntax-node=) +void-syntax-node+ (make-instance 'void-syntax-node))
+
 (def (class* e) quasi-quote (syntax-node)
   ((body)))
 
@@ -103,13 +113,9 @@
             ((ends-with-subseq "-EMITTING-LAMBDA" name)
              (bind ((to (format-symbol package "~A-EMITTING-FORM" name)))
                (compile nil (apply #'transform to from args))))
-            ((and (starts-with-subseq "QUOTED-" name)
-                  (ends-with-subseq "-EMITTING-FORM" name))
-             (bind ((ast (subseq name (length "QUOTED-") (- (length name) (length "-EMITTING-FORM")))))
-               `(make-instance ',(format-symbol package "~A-QUOTE" ast)
-                               :body ,(apply #'transform (format-symbol package (subseq name (length "QUOTED-"))) from args))))
             ((ends-with-subseq "-EMITTING-FORM" name)
-             (syntax-node-emitting-form from))
+             `(,(format-symbol package "MAKE-~A-QUASI-QUOTE" (subseq name 0 (- (length name) (length "-EMITTING-FORM"))))
+                ,(syntax-node-emitting-form from)))
             ((not (search "QUASI-QUOTED-" name))
              (funcall (apply #'transform (format-symbol package "~A-EMITTING-LAMBDA" name) from args)))
             ((and (starts-with-subseq "QUASI-QUOTED-" name)
@@ -173,9 +179,6 @@
 
 ;;;;;;;;
 ;;; Util
-
-(def macro delay (&body forms)
-  `(lambda () ,@forms))
 
 (def (function o) vector-extend (extension vector)
   (bind ((original-length (length vector))

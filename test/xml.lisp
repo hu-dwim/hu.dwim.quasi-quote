@@ -6,9 +6,51 @@
 
 (in-package :cl-quasi-quote-test)
 
-(enable-quasi-quoted-xml-to-string-emitting-form-syntax)
+(enable-quasi-quoted-xml-syntax)
 
 (defsuite* (test/xml :in test))
+
+(def test-definer xml)
+
+(def special-variable *xml-stream*)
+
+(def function test-xml-ast (expected ast)
+  ;; evaluate to string
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-string
+                             quasi-quoted-string
+                             string-emitting-form)
+                           ast)))
+    (is (string= expected
+                 (qq::body-of (eval transformed)))))
+  ;; write to string stream
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-string
+                             quasi-quoted-string
+                             (string-emitting-form :stream *xml-stream*))
+                           ast)))
+    (is (string= expected
+                 (bind ((*xml-stream* (make-string-output-stream)))
+                   (eval transformed)
+                   (get-output-stream-string *xml-stream*)))))
+  ;; evaluate to binary
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-string
+                             quasi-quoted-binary
+                             binary-emitting-form)
+                           ast)))
+    (is (string= expected
+                 (babel:octets-to-string (qq::body-of (eval transformed))))))
+  ;; write to binary stream
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-string
+                             quasi-quoted-binary
+                             (binary-emitting-form :stream *xml-stream*))
+                           ast)))
+    (is (string= expected
+                 (bind ((*xml-stream* (flexi-streams:make-in-memory-output-stream)))
+                   (eval transformed)
+                   (babel:octets-to-string (flexi-streams:get-output-stream-sequence *xml-stream*)))))))
 
 (def test test/xml/escaping ()
   (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"
@@ -16,13 +58,13 @@
   (let ((str "alma"))
     (is (eq str (escape-as-xml str)))))
 
-(def string=-test test/xml/escaping-element-value ()
+(def xml-test test/xml/escaping-element-value ()
   ("<element attribute=\"&lt;1&gt;\"/>"
-     <element ,(list (make-xml-attribute "attribute" "<1>"))>)
+     <element (,@(list (make-xml-attribute "attribute" "<1>"))) >)
   ("<element attribute=\"&lt;1&gt;\"/>"
      <element (attribute "<1>")>))
 
-(def string=-test test/xml/simple ()
+(def xml-test test/xml/simple ()
   ("<element/>"
      <element>)
   ("<element attribute=\"1\"/>"
@@ -39,7 +81,7 @@
      <element ()
        <child>>))
 
-(def string=-test test/xml/element-unquoting ()
+(def xml-test test/xml/element-unquoting ()
   ("<element/>"
     <,"element">)
   ("<element><nested/></element>"
@@ -53,9 +95,9 @@
               (make-xml-element "child4" (list (make-xml-attribute "attribute1" "1"))))
       <child5>>))
 
-(def string=-test test/xml/attribute-unquoting ()
+(def xml-test test/xml/attribute-unquoting ()
   ("<element attribute=\"1\"/>"
-    <element ,(list (make-xml-attribute "attribute" "1"))>)
+    <element (,@(list (make-xml-attribute "attribute" "1"))) >)
   ("<element attribute1=\"1\" attribute2=\"2\" attribute3=\"3\" attribute4=\"4\" aTTriUte5=\"5\" attribute6=\"6\"/>"
     <element (attribute1 1
               ,(make-xml-attribute "attribute2" "2")
@@ -65,20 +107,32 @@
               ,(make-xml-attribute "attribute6" "6"))>))
 
 (def test test/xml/errors ()
-  (set-quasi-quoted-xml-syntax-in-readtable)
-  (signals reader-error
-    (read-from-string "<element < >>")))
+  (bind ((*readtable* (copy-readtable)))
+    (set-quasi-quoted-xml-syntax-in-readtable)
+    (signals reader-error
+      (read-from-string "<element < >>"))))
 
 (def test test/xml/less-then-sign-at-toplevel ()
-  (set-quasi-quoted-xml-syntax-in-readtable)
-  (is (equal '< (read-from-string "<")))
-  (is (equal '<= (read-from-string "<=")))
-  (is (equal '(< a b) (read-from-string "(< a b)"))))
+  (bind ((*readtable* (copy-readtable)))
+    (set-quasi-quoted-xml-syntax-in-readtable)
+    (is (equal '< (read-from-string "<")))
+    (is (equal '<= (read-from-string "<=")))
+    (is (equal '(< a b) (read-from-string "(< a b)")))))
 
-(def string=-test test/xml/less-then-sign-in-unquote ()
+(def xml-test test/xml/less-then-sign-in-unquote ()
   ("<element ok=\"1\"/>"
-    <element ,(when (< 3 4) (make-xml-attribute "ok" "1"))>))
+    <element (,@(when (< 3 4) (list (make-xml-attribute "ok" "1")))) >))
 
-(def string=-test test/xml/nested-unquoting ()
+(def xml-test test/xml/nested-unquoting ()
   ("<a><b><c><d/></c></b></a>"
-   <a ,(make-xml-element "b" (list <c ,(make-xml-element "d")>))>))
+   <a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>))
+
+(def xml-test test/xml/mixed ()
+  ("<element>Hello</element>"
+   <element {with-quasi-quoted-string-syntax ["Hello" ,(list "World")]}>))
+
+(def xml-test test/xml/reverse ()
+  ("<element><child2/><child1/></element>"
+   <element ,@(let ((c1 <child1>)
+                    (c2 <child2>))
+                   (list c2 c1))>))

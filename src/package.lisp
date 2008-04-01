@@ -19,3 +19,10 @@
         :cl-syntax-sugar)
 
   (:export))
+
+(in-package :cl-quasi-quote)
+
+(defun transform-function-definer-options (options)
+  (if cl-quasi-quote-system:*load-as-production-p*
+      options
+      (remove-from-plist options :inline :optimize)))

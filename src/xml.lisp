@@ -196,11 +196,13 @@
   (map-tree (form-of node)
             (lambda (form)
               (if (typep form 'xml-quasi-quote)
-                  `(make-string-quasi-quote (delay ,(funcall fn form)))
+                  (funcall fn form)
                   form))))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node)
   (etypecase node
+    (void-syntax-node node)
+    (function node)
     (xml-element
      (bind ((attributes (attributes-of node))
             (name (name-of node))
@@ -250,27 +252,31 @@
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                 node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element)))
         spliced?)))
-    (quasi-quote (body-of (transform 'quasi-quoted-string node)))
+    (quasi-quote
+     (if (typep node 'string-quasi-quote)
+         (body-of node)
+         node))
     (unquote (transform 'quasi-quoted-string node))))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
   (etypecase node
+    (function node)
     (xml-attribute
      (bind ((name (name-of node))
             (value (value-of node)))
        `(,(etypecase name
-            (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute name))
-            (unquote name)
-            (string name))
+                     (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute name))
+                     (unquote name)
+                     (string name))
           "=\""
           ,(etypecase value
-             (xml-unquote (make-string-unquote
-                           `(escape-as-xml
-                             (princ-to-string
-                              ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                value 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))))
-             (unquote value)
-             (string (escape-as-xml value)))
+                      (xml-unquote (make-string-unquote
+                                    `(escape-as-xml
+                                      (princ-to-string
+                                       ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
+                                         value 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))))
+                      (unquote value)
+                      (string (escape-as-xml value)))
           "\"")))
     (xml-quasi-quote
      (make-instance 'string-quasi-quote

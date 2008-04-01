@@ -51,18 +51,25 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def method transform ((to (eql 'lisp-emitting-form)) (input lisp-syntax-node) &key &allow-other-keys)
+(def function transform-quasi-quoted-lisp-to-lisp-emitting-form (input &key (toplevel #t))
   (etypecase input
     (lisp-quasi-quote
      (labels ((process (node)
                 (etypecase node
-                  (lisp-unquote (transform 'lisp-emitting-form node))
+                  (lisp-unquote (transform-quasi-quoted-lisp-to-lisp-emitting-form node :toplevel #f))
                   (list `(list ,@(mapcar #'process node)))
                   (t (list 'quote node)))))
-       (process (body-of input))))
+       (bind ((form (process (body-of input))))
+         (if toplevel
+             `(make-lisp-quasi-quote
+               ,form)
+             form))))
     (lisp-unquote
      (map-tree (form-of input)
                (lambda (form)
                  (if (typep form 'lisp-quasi-quote)
-                     (transform 'lisp-emitting-form form)
+                     (transform-quasi-quoted-lisp-to-lisp-emitting-form form :toplevel #f)
                      form))))))
+
+(def method transform ((to (eql 'lisp-emitting-form)) (input lisp-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform-quasi-quoted-lisp-to-lisp-emitting-form input args))

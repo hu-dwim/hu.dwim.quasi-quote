@@ -45,7 +45,7 @@
   (set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function parse-quasi-quoted-typesetting (form)
-  (if (typep form 'typesetting-unquote)
+  (if (typep form 'syntax-node)
       form
       (parse-quasi-quoted-typesetting* (typesetting-syntax-node-name (first form)) form)))
 
@@ -160,8 +160,13 @@
 
 (defgeneric transform-quasi-quoted-typesetting-to-quasi-quoted-xml (node))
 
+(def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node void-syntax-node))
+  node)
+
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node quasi-quote))
-  (body-of (transform 'quasi-quoted-xml node)))
+  (if (typep node 'xml-quasi-quote)
+      (body-of node)
+      node))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node unquote))
   (transform 'quasi-quoted-xml node))
@@ -183,7 +188,7 @@
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
   <html
-    <body
+    <body ()
       ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-list))
@@ -207,8 +212,10 @@
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text))
   <span () ,@(mapcar (lambda (node)
-                       (make-instance 'xml-text
-                                      :content (transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)))
+                       (if (typep node 'typesetting-unquote)
+                           (make-instance 'xml-unquote
+                                          :form `(make-instance 'xml-text :content ,(form-of node)))
+                           (make-instance 'xml-text :content node)))
                      (contents-of node))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu))
@@ -242,7 +249,6 @@
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
   <form () ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)
 
-#|
 ;; TODO: the following parts are experimental and should be deleted
 #.(use-package :computed-class)
 
@@ -294,4 +300,3 @@
                      *registered-components*)
      (funcall screen-thunk))
    (ucw:html-stream (ucw:context.response ucw:*context*))))
-|#

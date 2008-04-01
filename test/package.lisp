@@ -11,6 +11,7 @@
 
   (:use :common-lisp
         :metabang-bind
+        :alexandria
         :iterate
         :stefil
         :cl-def
@@ -27,22 +28,14 @@
 
 (defsuite* test)
 
-(def definer string=-test (name args &body body)
-  (labels ((process-entry (entry)
-             (if (eq (first entry) 'with-expected-failures)
-                 `(with-expected-failures
-                    ,@(mapcar #'process-entry (rest entry)))
-                 (bind (((expected form) entry))
-                   `(is (string= ,expected ,form))))))
-    `(def test ,name ,args
-       ,@(mapcar #'process-entry body))))
-
-(def definer binary=-test (name args &body body)
-  (labels ((process-entry (entry)
-             (if (eq (first entry) 'with-expected-failures)
-                 `(with-expected-failures
-                    ,@(mapcar #'process-entry (rest entry)))
-                 (bind (((expected form) entry))
-                   `(is (equalp ,expected ,form))))))
-    `(def test ,name ,args
-       ,@(mapcar #'process-entry body))))
+(def definer test-definer (name)
+  (bind ((package (find-package :cl-quasi-quote-test)))
+    `(def definer ,(format-symbol package "~A-TEST" name) (name args &body forms)
+       (labels ((process-entry (entry)
+                  (if (eq (first entry) 'with-expected-failures)
+                      `(with-expected-failures
+                         ,@(mapcar #'process-entry (rest entry)))
+                      (bind (((expected ast) entry))
+                        `(,',(format-symbol package "TEST-~A-AST" name) ,expected ,ast)))))
+         `(def test ,name ,args
+            ,@(mapcar #'process-entry forms))))))

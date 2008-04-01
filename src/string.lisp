@@ -91,14 +91,10 @@
     (function (funcall node)))
   (values))
 
-(def macro with-quasi-quoted-string-emitting-environment (&body forms)
-  `(bind ((*string-stream* (make-string-output-stream)))
+(def macro with-quasi-quoted-string-emitting-environment (stream &body forms)
+  `(bind ((,stream (make-string-output-stream)))
      ,@forms
-     (get-output-stream-string *string-stream*)))
-
-(def (macro e) force-quasi-quoted-string (node)
-  `(with-quasi-quoted-string-emitting-environment
-     (write-quasi-quoted-string ,node *string-stream*)))
+     (get-output-stream-string ,stream)))
 
 (def function transform-quasi-quoted-string-to-string-emitting-form (input &key (toplevel #t) (stream '*string-stream*) &allow-other-keys)
   (etypecase input
@@ -122,21 +118,24 @@
                                         internal-stream?
                                         (single-string-list-p forms))
                                    forms
-                                   (mapcar #'process forms))))
-         (if (and toplevel
-                  internal-stream?
-                  (not (single-string-list-p processed-forms)))
-             `(with-quasi-quoted-string-emitting-environment
-                ,@processed-forms)
-             `(progn
-                ,@processed-forms
-                ,@(unless internal-stream?
-                          `((values))))))))
+                                   (mapcar #'process forms)))
+              (form (if (and toplevel
+                             internal-stream?
+                             (not (single-string-list-p processed-forms)))
+                        `(with-quasi-quoted-string-emitting-environment ,stream
+                           ,@processed-forms)
+                        `(progn
+                           ,@processed-forms
+                           ,@(unless internal-stream?
+                                     `(+void-syntax-node+))))))
+         (if internal-stream?
+             `(make-string-quasi-quote ,form)
+             form))))
     (string-unquote
      (map-tree (form-of input)
                (lambda (form)
                  (if (typep form 'string-quasi-quote)
-                     (transform 'string-emitting-form form :toplevel #f :stream stream)
+                     (transform 'string-emitting-lambda-form form :toplevel #f :stream stream)
                      form))))))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
@@ -144,6 +143,7 @@
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
+    (void-syntax-node node)
     (list (mapcar #'transform-quasi-quoted-string-to-quasi-quoted-binary node))
     (string (babel:string-to-octets node :encoding encoding))
     (string-quasi-quote
@@ -153,7 +153,8 @@
                     :form `(transform-quasi-quoted-string-to-quasi-quoted-binary
                             ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary))))
     (quasi-quote (body-of (transform 'quasi-quoted-binary node)))
-    (unquote (transform 'quasi-quoted-binary node))))
+    (unquote (transform 'quasi-quoted-binary node))
+    (function node)))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))

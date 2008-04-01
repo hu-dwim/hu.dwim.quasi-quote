@@ -26,7 +26,9 @@
   (asdf:oos 'asdf:load-op :cl-syntax-sugar))
 
 (defpackage #:cl-quasi-quote-system
-  (:use :cl :asdf :cl-syntax-sugar))
+  (:use :cl :asdf :cl-syntax-sugar)
+
+  (:export #:*load-as-production-p*))
 
 (in-package #:cl-quasi-quote-system)
 
