@@ -68,7 +68,7 @@
     (function (funcall node)))
   (values))
 
-(def macro with-quasi-quoted-binary-emitting-environment (stream &body forms)
+(def (macro e) with-binary-stream-to-binary (stream &body forms)
   `(bind ((,stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
      ,@forms
      (flexi-streams:get-output-stream-sequence ,stream)))
@@ -96,13 +96,14 @@
               (form (if (and toplevel
                              internal-stream?
                              (not (single-string-list-p processed-forms)))
-                        `(with-quasi-quoted-binary-emitting-environment ,stream
+                        `(with-binary-stream-to-binary ,stream
                            ,@processed-forms)
                         `(progn
                            ,@processed-forms
                            ,@(unless internal-stream?
                                      `(+void-syntax-node+))))))
-         (if internal-stream?
+         (if (and toplevel
+                  internal-stream?)
              `(make-binary-quasi-quote ,form)
              form))))
     (binary-unquote

@@ -91,7 +91,7 @@
     (function (funcall node)))
   (values))
 
-(def macro with-quasi-quoted-string-emitting-environment (stream &body forms)
+(def macro with-string-stream-to-string (stream &body forms)
   `(bind ((,stream (make-string-output-stream)))
      ,@forms
      (get-output-stream-string ,stream)))
@@ -122,13 +122,14 @@
               (form (if (and toplevel
                              internal-stream?
                              (not (single-string-list-p processed-forms)))
-                        `(with-quasi-quoted-string-emitting-environment ,stream
+                        `(with-string-stream-to-string ,stream
                            ,@processed-forms)
                         `(progn
                            ,@processed-forms
                            ,@(unless internal-stream?
                                      `(+void-syntax-node+))))))
-         (if internal-stream?
+         (if (and toplevel
+                  internal-stream?)
              `(make-string-quasi-quote ,form)
              form))))
     (string-unquote

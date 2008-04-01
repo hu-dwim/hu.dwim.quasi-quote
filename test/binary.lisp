@@ -70,3 +70,10 @@
      ,@(list #(3) #(4) #(5))
      ,(make-array 1 :initial-element 6)
      #(7)]))
+
+(def binary-test test/binary/reverse ()
+  (#(1 2 3 4 5 6 7 8)
+   [#(1 2)
+    ,(reverse
+      (list [#(5 6)] [#(3 4)]))
+    #(7 8)]))
