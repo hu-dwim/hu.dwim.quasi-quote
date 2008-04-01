@@ -189,49 +189,48 @@
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-screen))
   <html
-    <body ()
+    <body
       ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-list))
   (ecase (orientation-of node)
     (:vertical
-     <table ()
+     <table
        ,@(mapcar
           (lambda (node)
             <tr
-              <td ()
+              <td
                 ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)>>)
           (elements-of node))>)
     (:horizontal
      <table
-       <tr ()
+       <tr
          ,@(mapcar
             (lambda (node)
-              <td ()
+              <td
                 ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml node)>)
             (elements-of node))>>)))
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text))
-  <span () ,@(mapcar (lambda (node)
-                       (if (typep node 'typesetting-unquote)
-                           (make-instance 'xml-unquote
-                                          :form `(make-instance 'xml-text :content ,(form-of node)))
-                           (make-instance 'xml-text :content node)))
-                     (contents-of node))>)
+  <span ,@(mapcar (lambda (node)
+                    (if (typep node 'typesetting-unquote)
+                        (make-xml-unquote `(make-xml-text ,(form-of node)))
+                        (make-xml-text node)))
+                  (contents-of node))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu))
-  <ul () ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>)
+  <ul ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-content-menu))
   <table
     <tr
       <td
-        <ul () ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>>
-      <td () ,(make-xml-unquote (with-unique-names (content)
-                                  `(bind ((,content ,(form-of (place-of node))))
-                                     (if (functionp ,content)
-                                         (funcall ,content)
-                                         ,content))))>>>)
+        <ul ,@(mapcar 'transform-quasi-quoted-typesetting-to-quasi-quoted-xml (menu-items-of node))>>
+      <td ,(make-xml-unquote (with-unique-names (content)
+                               `(bind ((,content ,(form-of (place-of node))))
+                                  (if (functionp ,content)
+                                      (funcall ,content)
+                                      ,content))))>>>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-menu-item))
   <li
@@ -240,7 +239,10 @@
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-action))
   <a (:href ,(make-xml-unquote `(registered-action ,(form-of (action-of node)))))
-    ,(make-xml-text (transform-quasi-quoted-typesetting-to-quasi-quoted-xml (label-of node)))>)
+    ,(bind ((label (label-of node)))
+           (if (typep label 'typesetting-unquote)
+               (make-xml-unquote `(make-xml-text (princ-to-string ,(form-of label))))
+               (make-xml-text (transform-quasi-quoted-typesetting-to-quasi-quoted-xml label))))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-text-field))
   <input (:type "text"
@@ -248,7 +250,7 @@
           :name ,(make-xml-unquote `(registered-input ,(form-of (place-of node)))))>)
 
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
-  <form () ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)
+  <form ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)
 
 ;; TODO: the following parts are experimental and should be deleted
 #.(use-package :computed-class)
@@ -299,5 +301,5 @@
                          ;; TODO: sort and find out which computed state should be sent to the client
                          value))
                      *registered-components*)
-     (funcall screen-thunk))
+     (body-of (funcall screen-thunk)))
    (ucw:html-stream (ucw:context.response ucw:*context*))))
