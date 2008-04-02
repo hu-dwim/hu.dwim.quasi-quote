@@ -83,6 +83,15 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
+(def function wrap-form-with-lambda (form optimize)
+  `(lambda ()
+     ,@(when optimize
+             `((declare (optimize ,@optimize))))
+     ,@(if (and (consp form)
+                (eq 'progn (first form)))
+           (cdr form)
+           (list form))))
+
 (defgeneric transform (to from &key &allow-other-keys)
   (:method (to from &key &allow-other-keys)
     (error "Don't know how to transform ~A to ~A" from to))
@@ -109,13 +118,7 @@
             (t (call-next-method)))))
 
   (:method ((to (eql 'lambda-form)) (from cons) &key optimize &allow-other-keys)
-    `(lambda ()
-       ,@(when optimize
-               `((declare (optimize ,@optimize))))
-       ,@(if (and (consp from)
-                  (eq 'progn (first from)))
-             (cdr from)
-             (list from))))
+    (wrap-form-with-lambda from optimize))
 
   (:method ((to (eql 'lambda)) (from cons) &key &allow-other-keys)
     (compile nil from)))

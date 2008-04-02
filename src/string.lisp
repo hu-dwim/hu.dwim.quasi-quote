@@ -136,7 +136,7 @@
                 `(make-string-quasi-quote ,form))
                ((or (not internal-stream?)
                     (not toplevel))
-                `(lambda () ,form))
+                (wrap-form-with-lambda form nil))
                (t form)))))
     (string-unquote
      (map-tree (form-of input)
