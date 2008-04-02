@@ -54,18 +54,25 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
+(def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node &rest args &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
     (function node)
-    (list (mapcar #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary node))
+    (list
+     (mapcar (lambda (child)
+               (apply #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary child args))
+             node))
+    (character (babel:string-to-octets (string node) :encoding encoding)) ;; TODO: more efficient way
     (string (babel:string-to-octets node :encoding encoding))
     (vector (coerce node 'binary))
     (bivalent-quasi-quote
-     (make-binary-quasi-quote (transform-quasi-quoted-bivalent-to-quasi-quoted-binary (body-of node))))
+     (make-binary-quasi-quote (apply #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary (body-of node) args)))
     (bivalent-unquote
      (make-binary-unquote
       `(transform-quasi-quoted-bivalent-to-quasi-quoted-binary
-        ,(map-filtered-tree (form-of node) 'bivalent-quasi-quote #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary))))
+        ,(map-filtered-tree (form-of node) 'bivalent-quasi-quote
+                            (lambda (child)
+                              (apply #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary child args)))
+        :encoding ,encoding)))
     (quasi-quote (body-of (transform 'quasi-quoted-binary node)))
     (unquote (transform 'quasi-quoted-binary node))))
 

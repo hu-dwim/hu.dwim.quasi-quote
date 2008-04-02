@@ -150,20 +150,26 @@
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-string-emitting-form input args))
 
-(def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
+(def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &rest args &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
-    (list (mapcar #'transform-quasi-quoted-string-to-quasi-quoted-binary node))
+    (function node)
+    (list
+     (mapcar (lambda (child)
+               (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary child args))
+             node))
     (character (babel:string-to-octets (string node) :encoding encoding)) ;; TODO: more efficient way
     (string (babel:string-to-octets node :encoding encoding))
     (string-quasi-quote
-     (make-instance 'binary-quasi-quote :body (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))
+     (make-binary-quasi-quote (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node) args)))
     (string-unquote
-     (make-instance 'binary-unquote
-                    :form `(transform-quasi-quoted-string-to-quasi-quoted-binary
-                            ,(map-filtered-tree (form-of node) 'string-quasi-quote #'transform-quasi-quoted-string-to-quasi-quoted-binary))))
+     (make-binary-unquote
+      `(transform-quasi-quoted-string-to-quasi-quoted-binary
+        ,(map-filtered-tree (form-of node) 'string-quasi-quote
+                            (lambda (child)
+                              (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary child args)))
+        :encoding ,encoding)))
     (quasi-quote (body-of (transform 'quasi-quoted-binary node)))
-    (unquote (transform 'quasi-quoted-binary node))
-    (function node)))
+    (unquote (transform 'quasi-quoted-binary node))))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))
