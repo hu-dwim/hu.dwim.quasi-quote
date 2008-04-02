@@ -83,14 +83,26 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def function wrap-form-with-lambda (form optimize)
+(def function wrap-forms-with-lambda (forms optimize)
   `(lambda ()
      ,@(when optimize
              `((declare (optimize ,@optimize))))
-     ,@(if (and (consp form)
-                (eq 'progn (first form)))
-           (cdr form)
-           (list form))))
+     ,@(if (and (consp forms)
+                (eq 'progn (first forms)))
+           (cdr forms)
+           (list forms))))
+
+(def function wrap-forms-with-progn (forms)
+  (if (= 1 (length forms))
+      (first forms)
+      `(progn
+         ,@forms)))
+
+(def function wrap-forms-with-bindings (bindings forms)
+  (if bindings
+      `(bind ,bindings
+         ,forms)
+      forms))
 
 (defgeneric transform (to from &key &allow-other-keys)
   (:method (to from &key &allow-other-keys)
@@ -118,7 +130,7 @@
             (t (call-next-method)))))
 
   (:method ((to (eql 'lambda-form)) (from cons) &key optimize &allow-other-keys)
-    (wrap-form-with-lambda from optimize))
+    (wrap-forms-with-lambda from optimize))
 
   (:method ((to (eql 'lambda)) (from cons) &key &allow-other-keys)
     (compile nil from)))

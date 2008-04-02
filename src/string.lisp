@@ -40,7 +40,7 @@
 ;;;;;;;
 ;;; AST
 ;;;
-;;; A quasi quoted string is made of string, list, string-quasi-quote, string-unquote nodes recursively.
+;;; A quasi quoted string is made of character, string, list, string-quasi-quote, string-unquote nodes recursively.
 
 (def ast string)
 
@@ -85,6 +85,7 @@
 
 (def function write-quasi-quoted-string (node stream)
   (etypecase node
+    (character (write-char node stream))
     (string (write-string node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-string node stream)) node))
     (string-quasi-quote (write-quasi-quoted-string (body-of node) stream))
@@ -101,6 +102,7 @@
     (string-quasi-quote
      (labels ((process (node)
                 (etypecase node
+                  (character `(write-char ,node ,stream))
                   (string
                    (if (= 1 (length node))
                        `(write-char ,(char node 0) ,stream)
@@ -126,17 +128,17 @@
                              (not (single-string-list-p processed-forms)))
                         `(with-string-stream-to-string ,stream
                            ,@processed-forms)
-                        `(progn
-                           ,@processed-forms
-                           ,@(unless (and toplevel
-                                          internal-stream?)
-                                     `((values)))))))
+                        (wrap-forms-with-progn
+                         (append processed-forms
+                                 (unless (and toplevel
+                                              internal-stream?)
+                                   `((values))))))))
          (cond ((and toplevel
                      internal-stream?)
                 `(make-string-quasi-quote ,form))
                ((or (not internal-stream?)
                     (not toplevel))
-                (wrap-form-with-lambda form nil))
+                (wrap-forms-with-lambda form nil))
                (t form)))))
     (string-unquote
      (map-tree (form-of input)
@@ -151,6 +153,7 @@
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
     (list (mapcar #'transform-quasi-quoted-string-to-quasi-quoted-binary node))
+    (character (babel:string-to-octets (string node) :encoding encoding)) ;; TODO: more efficient way
     (string (babel:string-to-octets node :encoding encoding))
     (string-quasi-quote
      (make-instance 'binary-quasi-quote :body (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))

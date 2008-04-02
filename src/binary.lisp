@@ -99,17 +99,17 @@
                              (not (single-string-list-p processed-forms)))
                         `(with-binary-stream-to-binary ,stream
                            ,@processed-forms)
-                        `(progn
-                           ,@processed-forms
-                           ,@(unless (and toplevel
-                                          internal-stream?)
-                                     `((values)))))))
+                        (wrap-forms-with-progn
+                         (append processed-forms
+                                 (unless (and toplevel
+                                              internal-stream?)
+                                   `((values))))))))
          (cond ((and toplevel
                      internal-stream?)
                 `(make-binary-quasi-quote ,form))
                ((or (not internal-stream?)
                     (not toplevel))
-                (wrap-form-with-lambda form nil))
+                (wrap-forms-with-lambda form nil))
                (t form)))))
     (binary-unquote
      (map-tree (form-of input)
