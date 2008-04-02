@@ -20,7 +20,7 @@
       <title ,class-name>>
      <body (:style "font-size: small;")
            <h2 "The class " <i ,class-name> " is an instance of " ,(present-class-reference (class-of class) #f)>
-           <p ,@(present-documentation class)>
+           <p ,(present-documentation class)>
            ,(present-direct-superclasses class)
            ,(present-direct-subclasses class)
            ,(present-class-precedence-list class)
@@ -54,7 +54,8 @@
   <span
    <a (:href ,(arnesi:escape-as-uri (class-file-name class))) ,(fully-qualified-symbol-name (class-name class))>
    <br>
-   ,@(when documentation (present-documentation class))>)
+   ,@(when documentation
+      (list (present-documentation class)))>)
 
 (defun present-direct-slots (class)
   <div
@@ -90,12 +91,11 @@
          <td ,(princ-to-string (slot-definition-writers slot))>>
      <tr (:bgcolor ,color)
          <td (:colspan 5)
-             ,@(present-documentation slot)>>)))
+             ,(present-documentation slot)>>)))
 
 (defun present-documentation (what)
   (bind ((content (documentation what t)))
-    (when content
-      (list content))))
+    (or content +void+)))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Present in a file
