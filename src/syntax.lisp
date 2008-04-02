@@ -26,6 +26,13 @@
 ;;;;;;;
 ;;; AST
 
+(def function always-eq (o1 o2)
+  (declare (ignore o1 o2))
+  #t)
+
+;; TODO: +void+ should be replaced by using (values) in user code (somewhat difficult)
+(def (constant e :test always-eq) +void+ (lambda ()))
+
 (def class* syntax-node ()
   ())
 
