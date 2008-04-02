@@ -169,6 +169,17 @@
 
 (export 'syntax-node-emitting-form)
 
+(defgeneric emit (node &optional stream)
+  (:method ((node syntax-node) &optional stream)
+    (declare (ignore stream))
+    (body-of node))
+
+  (:method ((node function) &optional stream)
+    (declare (ignore stream))
+    (funcall node)))
+
+(export 'emit)
+
 ;;;;;;;;
 ;;; Util
 

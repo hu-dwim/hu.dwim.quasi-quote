@@ -16,13 +16,21 @@
 
 (def function test-binary-ast (expected ast)
   ;; evaluate to binary
-  (bind ((transformed (chain-transform '(binary-emitting-form) ast)))
-    (is (equalp expected (qq::body-of (eval transformed)))))
+  (bind ((transformed
+          (chain-transform '(binary-emitting-form
+                             lambda-form
+                             lambda)
+                           ast)))
+    (is (equalp expected (emit (funcall transformed)))))
   ;; write to binary stream
-  (bind ((transformed (chain-transform '((binary-emitting-form :stream *binary-stream*)) ast)))
+  (bind ((transformed
+          (chain-transform '((binary-emitting-form :stream *binary-stream*)
+                             lambda-form
+                             lambda)
+                           ast)))
     (is (equalp expected
                 (bind ((*binary-stream* (flexi-streams:make-in-memory-output-stream)))
-                  (eval transformed)
+                  (emit (funcall transformed) *binary-stream*)
                   (flexi-streams:get-output-stream-sequence *binary-stream*))))))
 
 (def binary-test test/binary/simple ()

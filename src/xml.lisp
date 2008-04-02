@@ -200,6 +200,7 @@
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node)
   (etypecase node
     (function node)
+    (string (escape-as-xml node))
     (xml-element
      (bind ((attributes (attributes-of node))
             (name (name-of node))
@@ -227,14 +228,7 @@
      (bind ((content (content-of node)))
        (etypecase content
          (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/element content))
-         (unquote content)
-         (string content))
-
-       ;; TODO: escaping
-       #+nil
-       ("<!CDATA[["
-        ,content
-        "]]>")))
+         (string (escape-as-xml content)))))
     (xml-quasi-quote
      (make-instance 'string-quasi-quote
                     :body (map-tree (body-of node) #'transform-quasi-quoted-xml-to-quasi-quoted-string/element)))
@@ -242,9 +236,9 @@
      (bind ((spliced? (spliced-p node)))
        (make-string-unquote
         (if spliced?
-            `(iter (for element :in-sequence ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                               node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element))
-                   (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/element element)))
+            `(map 'list #'transform-quasi-quoted-xml-to-quasi-quoted-string/element
+                  ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
+                    node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element))
             `(transform-quasi-quoted-xml-to-quasi-quoted-string/element
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                 node #'transform-quasi-quoted-xml-to-quasi-quoted-string/element)))

@@ -16,22 +16,40 @@
 
 (def function test-string-ast (expected ast)
   ;; evaluate to string
-  (bind ((transformed (chain-transform '(string-emitting-form) ast)))
-    (is (string= expected (qq::body-of (eval transformed)))))
+  (bind ((transformed
+          (chain-transform '(string-emitting-form
+                             lambda-form
+                             lambda)
+                           ast)))
+    (is (string= expected (emit (funcall transformed)))))
   ;; write to string stream
-  (bind ((transformed (chain-transform '((string-emitting-form :stream *string-stream*)) ast)))
+  (bind ((transformed
+          (chain-transform '((string-emitting-form :stream *string-stream*)
+                             lambda-form
+                             lambda)
+                           ast)))
     (is (string= expected
                  (bind ((*string-stream* (make-string-output-stream)))
-                   (eval transformed)
+                   (emit (funcall transformed) *string-stream*)
                    (get-output-stream-string *string-stream*)))))
   ;; evaluate to binary
-  (bind ((transformed (chain-transform '(quasi-quoted-binary binary-emitting-form) ast)))
-    (is (string= expected (babel:octets-to-string (qq::body-of (eval transformed))))))
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-binary
+                             binary-emitting-form
+                             lambda-form
+                             lambda)
+                           ast)))
+    (is (string= expected (babel:octets-to-string (emit (funcall transformed))))))
   ;; write to binary stream
-  (bind ((transformed (chain-transform '(quasi-quoted-binary (binary-emitting-form :stream *string-stream*)) ast)))
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-binary
+                             (binary-emitting-form :stream *string-stream*)
+                             lambda-form
+                             lambda)
+                           ast)))
     (is (string= expected
                  (bind ((*string-stream* (flexi-streams:make-in-memory-output-stream)))
-                   (eval transformed)
+                   (emit (funcall transformed) *string-stream*)
                    (babel:octets-to-string (flexi-streams:get-output-stream-sequence *string-stream*)))))))
 
 (def string-test test/string/simple ()

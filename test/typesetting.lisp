@@ -20,40 +20,48 @@
           (chain-transform '(quasi-quoted-xml
                              quasi-quoted-string
                              quasi-quoted-string
-                             string-emitting-form)
+                             string-emitting-form
+                             lambda-form
+                             lambda)
                            ast)))
     (is (string= expected
-                 (qq::body-of (eval transformed)))))
+                 (emit (funcall transformed)))))
   ;; write to string stream
   (bind ((transformed
           (chain-transform '(quasi-quoted-xml
                              quasi-quoted-string
                              quasi-quoted-string
-                             (string-emitting-form :stream *typesetting-stream*))
+                             (string-emitting-form :stream *typesetting-stream*)
+                             lambda-form
+                             lambda)
                            ast)))
     (is (string= expected
                  (bind ((*typesetting-stream* (make-string-output-stream)))
-                   (eval transformed)
+                   (emit (funcall transformed) *typesetting-stream*)
                    (get-output-stream-string *typesetting-stream*)))))
   ;; evaluate to binary
   (bind ((transformed
           (chain-transform '(quasi-quoted-xml
                              quasi-quoted-string
                              quasi-quoted-binary
-                             binary-emitting-form)
+                             binary-emitting-form
+                             lambda-form
+                             lambda)
                            ast)))
     (is (string= expected
-                 (babel:octets-to-string (qq::body-of (eval transformed))))))
+                 (babel:octets-to-string (emit (funcall transformed))))))
   ;; write to binary stream
   (bind ((transformed
           (chain-transform '(quasi-quoted-xml
                              quasi-quoted-string
                              quasi-quoted-binary
-                             (binary-emitting-form :stream *typesetting-stream*))
+                             (binary-emitting-form :stream *typesetting-stream*)
+                             lambda-form
+                             lambda)
                            ast)))
     (is (string= expected
                  (bind ((*typesetting-stream* (flexi-streams:make-in-memory-output-stream)))
-                   (eval transformed)
+                   (emit (funcall transformed) *typesetting-stream*)
                    (babel:octets-to-string (flexi-streams:get-output-stream-sequence *typesetting-stream*)))))))
 
 (def typesetting-test test/typesetting/simple ()

@@ -78,7 +78,9 @@
      (labels ((process (node)
                 (etypecase node
                   (binary `(write-sequence ,node ,stream))
-                  (binary-unquote `(write-quasi-quoted-binary ,(transform 'binary-emitting-form node :toplevel #f :stream stream) ,stream))))
+                  (binary-unquote
+                   `(write-quasi-quoted-binary
+                     ,(transform-quasi-quoted-binary-to-binary-emitting-form node :toplevel #f :stream stream) ,stream))))
               (single-string-list-p (node)
                 (and (= 1 (length node))
                      (stringp (first node)))))
@@ -102,16 +104,26 @@
                            ,@(unless (and toplevel
                                           internal-stream?)
                                      `((values)))))))
-         (if (and toplevel
-                  internal-stream?)
-             `(make-binary-quasi-quote ,form)
-             form))))
+         (cond ((and toplevel
+                     internal-stream?)
+                `(make-binary-quasi-quote ,form))
+               ((or (not internal-stream?)
+                    (not toplevel))
+                `(lambda () ,form))
+               (t form)))))
     (binary-unquote
      (map-tree (form-of input)
                (lambda (form)
                  (if (typep form 'quasi-quote)
-                     (chain-transform `((binary-emitting-form  :toplevel #f :stream ,stream) lambda-form) form)
+                     (transform-quasi-quoted-binary-to-binary-emitting-form form :toplevel #f :stream stream)
                      form))))))
 
 (def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-binary-to-binary-emitting-form input args))
+
+(def method emit ((node binary-syntax-node) &optional stream)
+  (bind ((body (call-next-method)))
+    (if (and stream
+             (not (typep stream 'string-stream)))
+        (write-sequence body stream)
+        body)))

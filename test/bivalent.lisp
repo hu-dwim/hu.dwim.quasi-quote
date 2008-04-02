@@ -16,13 +16,23 @@
 
 (def function test-bivalent-ast (expected ast)
   ;; evaluate to binary
-  (bind ((transformed (chain-transform '(quasi-quoted-binary binary-emitting-form) ast)))
-    (is (equalp expected (qq::body-of (eval transformed)))))
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-binary
+                             binary-emitting-form
+                             lambda-form
+                             lambda)
+                           ast)))
+    (is (equalp expected (emit (funcall transformed)))))
   ;; write to binary stream
-  (bind ((transformed (chain-transform '(quasi-quoted-binary (binary-emitting-form :stream *bivalent-stream*)) ast)))
+  (bind ((transformed
+          (chain-transform '(quasi-quoted-binary
+                             (binary-emitting-form :stream *bivalent-stream*)
+                             lambda-form
+                             lambda)
+                           ast)))
     (is (equalp expected
                 (bind ((*bivalent-stream* (flexi-streams:make-in-memory-output-stream)))
-                  (eval transformed)
+                  (emit (funcall transformed) *bivalent-stream*)
                   (flexi-streams:get-output-stream-sequence *bivalent-stream*))))))
 
 (def bivalent-test test/bivalent/simple ()

@@ -105,7 +105,9 @@
                    (if (= 1 (length node))
                        `(write-char ,(char node 0) ,stream)
                        `(write-string ,node ,stream)))
-                  (string-unquote `(write-quasi-quoted-string ,(transform 'string-emitting-form node :toplevel #f :stream stream) ,stream))))
+                  (string-unquote
+                   `(write-quasi-quoted-string ,
+                     (transform-quasi-quoted-string-to-string-emitting-form node :toplevel #f :stream stream) ,stream))))
               (single-string-list-p (node)
                 (and (= 1 (length node))
                      (stringp (first node)))))
@@ -129,15 +131,18 @@
                            ,@(unless (and toplevel
                                           internal-stream?)
                                      `((values)))))))
-         (if (and toplevel
-                  internal-stream?)
-             `(make-string-quasi-quote ,form)
-             form))))
+         (cond ((and toplevel
+                     internal-stream?)
+                `(make-string-quasi-quote ,form))
+               ((or (not internal-stream?)
+                    (not toplevel))
+                `(lambda () ,form))
+               (t form)))))
     (string-unquote
      (map-tree (form-of input)
                (lambda (form)
                  (if (typep form 'string-quasi-quote)
-                     (chain-transform `((string-emitting-form :toplevel #f :stream ,stream) lambda-form) form)
+                     (transform-quasi-quoted-string-to-string-emitting-form form :toplevel #f :stream stream)
                      form))))))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
@@ -159,3 +164,10 @@
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))
+
+(def method emit ((node string-syntax-node) &optional stream)
+  (bind ((body (call-next-method)))
+    (if (and stream
+             (typep stream 'string-stream))
+        (write-string body stream)
+        body)))
