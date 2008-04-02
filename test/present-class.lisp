@@ -4,7 +4,7 @@
 ;;; Turn on special syntax
 
 (enable-quasi-quoted-xml-syntax
- :transform '(quasi-quoted-string
+ :transform '(quasi-quoted-string ;; may (quasi-quoted-string :indent 2)
               (quasi-quoted-binary :encoding :utf-8)
               (binary-emitting-form :stream *http-stream*)))
 
@@ -14,17 +14,18 @@
 ;;; The class inspector
 
 (defun present-class (class)
-  (let ((class-name (symbol-name (class-name class))))
+  (let ((class-name (fully-qualified-symbol-name (class-name class))))
     <html
      <head
       <title ,class-name>>
-     <body
-      <h2 "The class " ,class-name " is an instance of " ,(symbol-name (class-name (class-of class)))>
-      ,(present-direct-superclasses class)
-      ,(present-direct-subclasses class)
-      ,(present-class-precedence-list class)
-      ,(present-direct-slots class)
-      ,(present-effective-slots class)>>))
+     <body (:style "font-size: small;")
+           <h2 "The class " <i ,class-name> " is an instance of " ,(present-class-reference (class-of class) #f)>
+           <p ,@(present-documentation class)>
+           ,(present-direct-superclasses class)
+           ,(present-direct-subclasses class)
+           ,(present-class-precedence-list class)
+           ,(present-direct-slots class)
+           ,(present-effective-slots class)>>))
 
 (defun present-direct-superclasses (class)
   <div
@@ -49,8 +50,11 @@
                  classes)>
       <span "There are none">))
 
-(defun present-class-reference (class)
-  <a (:href ,(arnesi:escape-as-uri (class-file-name class))) ,(symbol-name (class-name class))>)
+(defun present-class-reference (class &optional (documentation #t))
+  <span
+   <a (:href ,(arnesi:escape-as-uri (class-file-name class))) ,(fully-qualified-symbol-name (class-name class))>
+   <br>
+   ,@(when documentation (present-documentation class))>)
 
 (defun present-direct-slots (class)
   <div
@@ -64,31 +68,45 @@
 
 (defun present-slots (slots)
   (if slots
-      <table
-          <thead (:bgcolor "#888888")
-                 <td <i "Name">>
-                 <td <i "Type">>
-                 <td <i "Readers">>
-                 <td <i "Writers">>>
+      <table (:style "font-size: small;")
+        <thead (:bgcolor "#888888")
+               <td <i "Name">>
+               <td <i "Type">>
+               <td <i "Readers">>
+               <td <i "Writers">>>
         ,@(loop
              for index :from 0
              for slot :in slots
-             collect (present-slot slot index))>
+             appending (present-slot slot index))>
       <span "There are none">))
 
 (defun present-slot (slot index)
-  <tr (:bgcolor ,(if (oddp index) "#eeffbb" "#ffffff"))
-      <td <b ,(symbol-name (slot-definition-name slot))>>
-      <td ,(princ-to-string (slot-definition-type slot))>
-      <td ,(princ-to-string (slot-definition-readers slot))>
-      <td ,(princ-to-string (slot-definition-writers slot))>>)
+  (bind ((color (if (oddp index) "#eeffbb" "#ffffff")))
+    (list
+     <tr (:bgcolor ,color)
+         <td <b ,(fully-qualified-symbol-name (slot-definition-name slot))>>
+         <td ,(princ-to-string (slot-definition-type slot))>
+         <td ,(princ-to-string (slot-definition-readers slot))>
+         <td ,(princ-to-string (slot-definition-writers slot))>>
+     <tr (:bgcolor ,color)
+         <td (:colspan 5)
+             ,@(present-documentation slot)>>)))
+
+(defun present-documentation (what)
+  (bind ((content (documentation what t)))
+    (when content
+      (list content))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Present in a file
 
+(defun fully-qualified-symbol-name (symbol)
+  (bind ((*package* (find-package :keyword)))
+    (format nil "~S" symbol)))
+
 (defun class-file-name (class)
   (bind ((class-name (class-name class)))
-    (concatenate 'string (package-name (symbol-package class-name)) "::" (symbol-name class-name) ".html")))
+    (concatenate 'string (fully-qualified-symbol-name class-name) ".html")))
 
 (defun present-class-to-file (&optional (class (find-class 'standard-object)) file-name)
   (with-open-file (*http-stream* (or file-name (concatenate 'string  "/tmp/" (class-file-name class)))
@@ -101,12 +119,12 @@
 (defun present-class-to-web (path)
   (bind ((class
           (if (search ".html" path)
-              (bind ((name (subseq path 1 (- (length path) (length ".html"))))
-                     ((package-name nil symbol-name) (split-sequence:split-sequence #\: name)))
-                (find-class (find-symbol symbol-name package-name)))
+              (find-class (read-from-string (subseq path 1 (- (length path) (length ".html")))))
               (find-class 'standard-object)))
-         (*http-stream*
-          (ucw::network-stream (ucw:context.response ucw:*context*))))
+         (response (ucw:context.response ucw:*context*))
+         (*http-stream* (ucw::network-stream response)))
+    (setf (ucw::response-managed-p response) nil)
+    (ucw::send-headers response)
     (emit (present-class class) *http-stream*)))
 
 (defun start-server ()
