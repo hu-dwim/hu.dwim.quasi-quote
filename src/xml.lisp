@@ -161,11 +161,11 @@
 (def class* xml-quasi-quote (quasi-quote xml-syntax-node)
   ())
 
-(def class* xml-unquote (unquote xml-syntax-node)
-  ())
-
 (def (function e) make-xml-quasi-quote (body)
   (make-instance 'xml-quasi-quote :body body))
+
+(def class* xml-unquote (unquote xml-syntax-node)
+  ())
 
 (def (function e) make-xml-unquote (form &optional (spliced? #f))
   (make-instance 'xml-unquote :form form :spliced spliced?))
@@ -304,7 +304,10 @@
               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                 node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
         spliced?)))
-    (quasi-quote (body-of (transform 'quasi-quoted-string node)))
+    (quasi-quote
+     (if (typep node 'string-quasi-quote)
+         (body-of node)
+         node))
     (unquote (transform 'quasi-quoted-string node))))
 
 (def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &rest args &key &allow-other-keys)

@@ -168,7 +168,10 @@
                             (lambda (child)
                               (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary child args)))
         :encoding ,encoding)))
-    (quasi-quote (body-of (transform 'quasi-quoted-binary node)))
+    (quasi-quote
+     (if (typep node 'binary-quasi-quote)
+         (body-of node)
+         node))
     (unquote (transform 'quasi-quoted-binary node))))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)

@@ -21,9 +21,9 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
      (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
-       (readtime-chain-transform transform (make-instance 'typesetting-quasi-quote :body (parse-quasi-quoted-typesetting body)))))
+       (readtime-chain-transform transform (make-typesetting-quasi-quote (parse-quasi-quoted-typesetting body)))))
    (lambda (form spliced)
-     (make-instance 'typesetting-unquote :form form :spliced spliced))
+     (make-typesetting-unquote form spliced))
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
@@ -109,8 +109,14 @@
 (def class* typesetting-quasi-quote (quasi-quote typesetting-syntax-node)
   ())
 
+(def (function e) make-typesetting-quasi-quote (body)
+  (make-instance 'typesetting-quasi-quote :body body))
+
 (def class* typesetting-unquote (unquote typesetting-syntax-node)
   ())
+
+(def (function e) make-typesetting-unquote (form &optional (spliced? #f))
+  (make-instance 'typesetting-unquote :form form :spliced spliced?))
 
 (def (class* e) typesetting-screen (typesetting-syntax-node)
   ((content)))
