@@ -18,7 +18,6 @@
   ;; evaluate to string
   (bind ((transformed
           (chain-transform '(quasi-quoted-string
-                             quasi-quoted-string
                              string-emitting-form
                              lambda-form
                              lambda)
@@ -28,7 +27,6 @@
   ;; write to string stream
   (bind ((transformed
           (chain-transform '(quasi-quoted-string
-                             quasi-quoted-string
                              (string-emitting-form :stream *xml-stream*)
                              lambda-form
                              lambda)
