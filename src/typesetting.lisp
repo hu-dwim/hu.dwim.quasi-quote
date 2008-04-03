@@ -10,9 +10,6 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def function typesetting-syntax-node-name (name)
-  (format-symbol *package* "TYPESETTING-~A" name))
-
 (define-syntax quasi-quoted-typesetting (&key (quasi-quote-character #\[)
                                               (quasi-quote-end-character #\])
                                               (unquote-character #\,)
@@ -43,6 +40,9 @@
 
 (define-syntax quasi-quoted-typesetting-to-binary-stream-emitting-form (stream)
   (set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
+
+(def function typesetting-syntax-node-name (name)
+  (format-symbol (find-package :cl-quasi-quote) "TYPESETTING-~A" name))
 
 (def function parse-quasi-quoted-typesetting (form)
   (if (typep form 'syntax-node)
