@@ -51,7 +51,8 @@
              (:file "string" :depends-on ("suite"))
              (:file "bivalent" :depends-on ("suite"))
              (:file "xml" :depends-on ("suite" "string"))
-             (:file "typesetting" :depends-on ("suite"))))))
+             (:file "pdf" :depends-on ("suite"))
+             (:file "typesetting" :depends-on ("suite" "string"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)
