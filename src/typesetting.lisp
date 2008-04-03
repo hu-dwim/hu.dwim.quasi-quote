@@ -252,6 +252,8 @@
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
   <form ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)
 
+#||
+
 ;; TODO: the following parts are experimental and should be deleted
 #.(use-package :computed-class)
 
@@ -303,3 +305,5 @@
                      *registered-components*)
      (body-of (funcall screen-thunk)))
    (ucw:html-stream (ucw:context.response ucw:*context*))))
+
+||#
