@@ -14,8 +14,9 @@
 
 (def definer pdf-test (name args &body forms)
   `(def test ,name ,args
-     (with-open-file (*pdf-stream* "/tmp/test.pdf" :direction :output :element-type '(unsigned-byte 8) :if-does-not-exist :create :if-exists :supersede)
-       (emit ,@forms *pdf-stream*))))
+     (finishes
+       (with-open-file (*pdf-stream* "/tmp/test.pdf" :direction :output :element-type '(unsigned-byte 8) :if-does-not-exist :create :if-exists :supersede)
+         (emit ,@forms *pdf-stream*)))))
 
 (def pdf-test test/pdf/empty ()
   [document])
