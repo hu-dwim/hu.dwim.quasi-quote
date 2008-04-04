@@ -40,6 +40,8 @@
   ((form)
    (spliced #f :type boolean)))
 
+;; TODO: eliminate side effect and check for returning (values) from unqutes
+;; TODO: what if the unquote returns with another function
 (def (class* e) side-effect (syntax-node)
   ((form)))
 

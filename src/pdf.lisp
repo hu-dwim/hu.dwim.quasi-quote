@@ -139,6 +139,8 @@
 
 (def ast pdf)
 
+(def special-variable *compile-time-pdf-node-identity-counter* 0)
+
 (def class* pdf-syntax-node (syntax-node parent-mixin)
   ())
 
@@ -155,7 +157,8 @@
   (make-instance 'pdf-unquote :form form :spliced spliced?))
 
 (def (class*) pdf-object-identifier (pdf-syntax-node)
-  ((object-id :type integer)
+  ((node-identity (incf *compile-time-pdf-node-identity-counter*) :type integer)
+   (object-id nil :type integer)
    (generation-number 0 :type integer)))
 
 (def (class*) pdf-indirect-object (pdf-object-identifier)
@@ -267,7 +270,8 @@
 (def special-variable *pdf-environment*)
 
 (def class* pdf-environment ()
-  ((object-id 0 :type integer)
+  ((object-id-counter 0 :type integer)
+   (node-identity-to-object-id (make-hash-table) :type hash-table)
    (xref-position :type integer)
    (xref (make-instance 'pdf-xref) :type pdf-xref)
    (root-reference :type pdf-indirect-object-reference)
@@ -277,6 +281,14 @@
   ;; TODO: 1+ due to the default xref
   (1+ (iter (for section :in (sections-of xref))
             (sum (length (entries-of section))))))
+
+(def function ensure-pdf-object-id-for-node-identity (node-identity)
+  (bind ((map (node-identity-to-object-id-of *pdf-environment*))
+         (object-id (gethash node-identity map)))
+    (or object-id
+        (setf (gethash node-identity map) (incf (object-id-counter-of *pdf-environment*))))))
+
+(def function node-binary-position ())
 
 (def function push-xref-entry (object-id generation-number position)
   (bind ((xref (xref-of *pdf-environment*))
@@ -292,7 +304,8 @@
                          :position position
                          :object-id object-id
                          :generation-number generation-number)
-          (entries-of section))))
+          (entries-of section))
+    object-id))
 
 (flet ((recurse (node)
          (transform-quasi-quoted-pdf-to-quasi-quoted-bivalent node)))
@@ -308,6 +321,9 @@
   
     (:method ((node unquote))
       (transform 'quasi-quoted-binary node))
+
+    (:method ((node side-effect))
+      node)
 
     (:method ((node pdf-quasi-quote))
       (make-bivalent-quasi-quote (recurse (body-of node))))
@@ -327,10 +343,12 @@
 
     (:method ((node pdf-number))
       (bind ((value (value-of node)))
-        (if (integerp value)
-            (princ-to-string value)
-            ;; rationals and such are not allowed.
-            (format nil "~,3F" value))))
+        (etypecase value
+          (unquote (recurse value))
+          (side-effect (recurse value))
+          (integer (princ-to-string value))
+          ;; rationals and such are not allowed.
+          (t (format nil "~,3F" value)))))
 
     (:method ((node pdf-name))
       (format nil "/~A" (value-of node)))
@@ -347,14 +365,27 @@
             "]"))
 
     (:method ((node pdf-stream))
-      (list (format nil "stream~%<<~%/Length 42")
-            ;; TODO: (make-bivalent-unquote)
-            (format nil "~%>>~%")
-            (iter (for element :in (contents-of node))
-                  (unless (first-iteration-p)
-                    (collect #\Space))
-                  (collect (recurse element)))
-            (format nil "~%endstream")))
+      (with-unique-names (position)
+        (bind ((length-node (make-instance 'pdf-indirect-object :content (make-instance 'pdf-number))))
+          (setf (value-of (content-of length-node)) (make-bivalent-unquote `(princ-to-string ,position)))
+          (make-bivalent-unquote
+           `(let (,position)
+              ,(make-bivalent-quasi-quote
+                (list (format nil "<<~%/Length ")
+                      (make-bivalent-unquote
+                       `(transform-quasi-quoted-pdf-to-quasi-quoted-bivalent
+                         (make-instance 'pdf-indirect-object-reference
+                                        :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of length-node))
+                                        :generation-number ,(generation-number-of length-node))))
+                      (format nil "~%>>~%stream~%")
+                      (make-side-effect `(setf ,position (binary-position)))
+                      (iter (for element :in (contents-of node))
+                            (unless (first-iteration-p)
+                              (collect #\Space))
+                            (collect (recurse element)))
+                      (make-side-effect `(setf ,position (- (binary-position) ,position)))
+                      (format nil "~%endstream~%")
+                      (recurse length-node))))))))
 
     (:method ((node pdf-begin-text))
       "BT")
@@ -387,9 +418,9 @@
     (:method ((node pdf-indirect-object))
       (list
        (make-bivalent-unquote
-        `(let ((object-id (incf (object-id-of *pdf-environment*))))
-           (push-xref-entry object-id ,(generation-number-of node) (binary-position))
-           (princ-to-string object-id)))
+        `(princ-to-string
+          (push-xref-entry (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
+                           ,(generation-number-of node) (binary-position))))
        (format nil " ~D obj~%" (generation-number-of node))
        (recurse (content-of node))
        (format nil "~%endobj~%")))
@@ -403,25 +434,24 @@
                              (when (and (typep node 'pdf-indirect-object)
                                         (slot-boundp node 'name))
                                (name-of node))))))
-        (if (slot-boundp node 'object-id)
+        (if (object-id-of node)
             (format nil "~D ~D R" (object-id-of node) (generation-number-of node))
             (list
-             ;; TODO: the object-id here is clearly wrong
-             (make-bivalent-unquote '(princ-to-string (1+ (object-id-of *pdf-environment*))))
+             (make-bivalent-unquote `(princ-to-string (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))))
              (format nil " ~D R" (generation-number-of node))))))
 
     (:method ((node pdf-root))
       (list (call-next-method)
             (make-side-effect `(setf (root-reference-of *pdf-environment*)
                                      (make-instance 'pdf-indirect-object-reference
-                                                    :object-id (object-id-of *pdf-environment*)
+                                                    :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
                                                     :generation-number ,(generation-number-of node))))))
 
     (:method ((node pdf-info))
       (list (call-next-method)
             (make-side-effect `(setf (info-reference-of *pdf-environment*)
                                      (make-instance 'pdf-indirect-object-reference
-                                                    :object-id (object-id-of *pdf-environment*)
+                                                    :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
                                                     :generation-number ,(generation-number-of node))))))
 
     (:method ((node pdf-xref-entry))
@@ -448,7 +478,7 @@
             (recurse (dictionary-of node))
             (format nil "~%startxref~%")
             (make-bivalent-unquote '(princ-to-string (xref-position-of *pdf-environment*)))
-            (format nil "~%%%EOF")))
+            (format nil "~%%%EOF~%")))
 
     (:method ((node pdf-document))
       (list
