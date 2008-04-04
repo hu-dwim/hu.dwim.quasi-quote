@@ -63,8 +63,8 @@
   (etypecase node
     (vector (write-sequence node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
-    (binary-quasi-quote (write-quasi-quoted-binary (body-of node) stream))
-    (function (funcall node)))
+    (function (funcall node))
+    (binary-quasi-quote (write-quasi-quoted-binary (body-of node) stream)))
   (values))
 
 (def (macro e) with-binary-stream-to-binary (stream &body forms)

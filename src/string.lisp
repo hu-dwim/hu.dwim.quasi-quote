@@ -88,8 +88,8 @@
     (character (write-char node stream))
     (string (write-string node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-string node stream)) node))
-    (string-quasi-quote (write-quasi-quoted-string (body-of node) stream))
-    (function (funcall node)))
+    (function (funcall node))
+    (string-quasi-quote (write-quasi-quoted-string (body-of node) stream)))
   (values))
 
 (def macro with-string-stream-to-string (stream &body forms)
