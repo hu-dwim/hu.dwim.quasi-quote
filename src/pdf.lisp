@@ -81,8 +81,8 @@
                    :name (second whole)
                    :size (third whole)))
 
-  (:method ((first (eql 'pdf-set-text-position)) whole)
-    (make-instance 'pdf-set-text-position
+  (:method ((first (eql 'pdf-move-text)) whole)
+    (make-instance 'pdf-move-text
                    :x (second whole)
                    :y (third whole)))
 
@@ -199,7 +199,8 @@
   ((name :type string)
    (size :type float)))
 
-(def (class*) pdf-set-text-position (pdf-syntax-node)
+;; TODO: this is actually move text
+(def (class*) pdf-move-text (pdf-syntax-node)
   ((x :type float)
    (y :type float)))
 
@@ -396,8 +397,8 @@
     (:method ((node pdf-set-font))
       (format nil "/~A ~D Tf" (name-of node) (size-of node)))
 
-    (:method ((node pdf-set-text-position))
-      (format nil "~D ~D Td" (x-of node) (y-of node)))
+    (:method ((node pdf-move-text))
+      (format nil "~8f ~8f Td" (x-of node) (y-of node)))
 
     (:method ((node pdf-display-text))
       "Tj")

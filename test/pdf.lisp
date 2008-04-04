@@ -49,7 +49,7 @@
             (indirect-object stream1
                              (stream (begin-text)
                                      (set-font "F1" 12)
-                                     (set-text-position 72 712)
+                                     (move-text 72 712)
                                      (string "Hello World")
                                      (display-text)
                                      (end-text)))])
