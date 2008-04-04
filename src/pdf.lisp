@@ -67,31 +67,55 @@
   (:method ((first (eql 'pdf-array)) whole)
     (make-instance 'pdf-array :value (mapcar #'parse-quasi-quoted-pdf (cdr whole))))
 
+  (:method ((first (eql 'pdf-stream)) whole)
+    (make-instance 'pdf-stream :contents (mapcar #'parse-quasi-quoted-pdf (cdr whole))))
+
+  (:method ((first (eql 'pdf-begin-text)) whole)
+    (make-instance 'pdf-begin-text))
+
+  (:method ((first (eql 'pdf-end-text)) whole)
+    (make-instance 'pdf-end-text))
+
+  (:method ((first (eql 'pdf-set-font)) whole)
+    (make-instance 'pdf-set-font
+                   :name (second whole)
+                   :size (third whole)))
+
+  (:method ((first (eql 'pdf-set-text-position)) whole)
+    (make-instance 'pdf-set-text-position
+                   :x (second whole)
+                   :y (third whole)))
+
+  (:method ((first (eql 'pdf-display-text)) whole)
+    (make-instance 'pdf-display-text))
+
   (:method ((first (eql 'pdf-indirect-object)) whole)
-    (make-instance 'pdf-indirect-object :content (parse-quasi-quoted-pdf (second whole))))
+    (make-instance 'pdf-indirect-object
+                   :name (second whole)
+                   :content (parse-quasi-quoted-pdf (third whole))))
 
   (:method ((first (eql 'pdf-indirect-object-reference)) whole)
-    (assert nil) ;; TODO:
-    (make-instance 'pdf-indirect-object-reference))
+    (make-instance 'pdf-indirect-object-reference
+                   :name (second whole)))
 
   (:method ((first (eql 'pdf-dictionary)) whole)
     (bind ((dictionary (make-instance 'pdf-dictionary)))
-      (parse-dictionary-map (map-of dictionary) (cdr whole))
+      (parse-dictionary-map dictionary (cdr whole))
       dictionary))
 
   (:method ((first (eql 'pdf-catalog)) whole)
     (bind ((catalog (make-instance 'pdf-catalog)))
-      (parse-dictionary-map (map-of catalog) (cdr whole))
+      (parse-dictionary-map catalog (cdr whole))
       catalog))
 
   (:method ((first (eql 'pdf-pages)) whole)
     (bind ((pages (make-instance 'pdf-pages)))
-      (parse-dictionary-map (map-of pages) (cdr whole))
+      (parse-dictionary-map pages (cdr whole))
       pages))
 
   (:method ((first (eql 'pdf-page)) whole)
     (bind ((page (make-instance 'pdf-page)))
-      (parse-dictionary-map (map-of page) (cdr whole))
+      (parse-dictionary-map page (cdr whole))
       page))
 
   (:method ((first (eql 'pdf-root)) whole)
@@ -100,11 +124,15 @@
   (:method ((first (eql 'pdf-info)) whole)
     (make-instance 'pdf-info :content (parse-quasi-quoted-pdf (second whole)))))
 
-(def function parse-dictionary-map (map pairs)
-  (iter (for (key value) :on pairs :by 'cddr)
+(def function parse-dictionary-map (dictionary pairs)
+  (iter (with map = (map-of dictionary))
+        (for (key value) :on pairs :by 'cddr)
         (for parsed-key = (parse-quasi-quoted-pdf key))
+        (for parsed-value = (parse-quasi-quoted-pdf value))
         (assert (typep parsed-key 'pdf-name))
-        (setf (gethash parsed-key map) (parse-quasi-quoted-pdf value))))
+        (setf (parent-of parsed-value) dictionary)
+        (setf (parent-of parsed-key) dictionary)
+        (setf (gethash parsed-key map) parsed-value)))
 
 ;;;;;;;
 ;;; AST
@@ -131,10 +159,11 @@
    (generation-number 0 :type integer)))
 
 (def (class*) pdf-indirect-object (pdf-object-identifier)
-  ((content :type pdf-syntax-node)))
+  ((name :type symbol)
+   (content :type pdf-syntax-node)))
 
 (def (class*) pdf-indirect-object-reference (pdf-object-identifier)
-  ())
+  ((name nil :type symbol)))
 
 (def (class*) pdf-null (pdf-syntax-node)
   ())
@@ -152,7 +181,27 @@
   ((value :type string)))
 
 (def (class*) pdf-array (pdf-syntax-node)
-  ((value :type sequence)))
+  ((value :type list)))
+
+(def (class*) pdf-stream (pdf-syntax-node)
+  ((contents :type list)))
+
+(def (class*) pdf-begin-text (pdf-syntax-node)
+  ())
+
+(def (class*) pdf-end-text (pdf-syntax-node)
+  ())
+
+(def (class*) pdf-set-font (pdf-syntax-node)
+  ((name :type string)
+   (size :type float)))
+
+(def (class*) pdf-set-text-position (pdf-syntax-node)
+  ((x :type float)
+   (y :type float)))
+
+(def (class*) pdf-display-text (pdf-syntax-node)
+  ())
 
 (def (class*) pdf-dictionary (pdf-syntax-node)
   ((map (make-hash-table) :type hash-table)))
@@ -290,15 +339,43 @@
       (format nil "(~A)" (value-of node)))
 
     (:method ((node pdf-array))
-      (list "[ "
+      (list "["
             (iter (for element :in-sequence (value-of node))
                   (unless (first-iteration-p)
                     (collect #\Space))
                   (collect (recurse element)))
-            " ]"))
+            "]"))
+
+    (:method ((node pdf-stream))
+      (list (format nil "stream~%<<~%/Length 42")
+            ;; TODO: (make-bivalent-unquote)
+            (format nil "~%>>~%")
+            (iter (for element :in (contents-of node))
+                  (unless (first-iteration-p)
+                    (collect #\Space))
+                  (collect (recurse element)))
+            (format nil "~%endstream")))
+
+    (:method ((node pdf-begin-text))
+      "BT")
+
+    (:method ((node pdf-end-text))
+      "ET")
+
+    (:method ((node pdf-set-font))
+      (format nil "/~A ~D Tf" (name-of node) (size-of node)))
+
+    (:method ((node pdf-set-text-position))
+      (format nil "~D ~D Td" (x-of node) (y-of node)))
+
+    (:method ((node pdf-display-text))
+      "Tj")
 
     (:method ((node pdf-dictionary))
       (list (format nil "<<~%")
+            (bind ((class-name (class-name (class-of node))))
+              (unless (eq 'pdf-dictionary class-name)
+                (format nil "/Type /~A~%" (string-capitalize (subseq (string-downcase (symbol-name class-name)) 4))))) 
             (iter (for (key value) :in-hashtable (map-of node))
                   (assert (typep key 'pdf-name))
                   (collect (recurse key))
@@ -318,8 +395,20 @@
        (format nil "~%endobj~%")))
 
     (:method ((node pdf-indirect-object-reference))
-      (list
-       (format nil "~D ~D R" (object-id-of node) (generation-number-of node))))
+      (bind ((name (name-of node)))
+        (when name
+          (setf node
+                (find name (elements-of (find-ancestor node 'pdf-document))
+                      :key (lambda (node)
+                             (when (and (typep node 'pdf-indirect-object)
+                                        (slot-boundp node 'name))
+                               (name-of node))))))
+        (if (slot-boundp node 'object-id)
+            (format nil "~D ~D R" (object-id-of node) (generation-number-of node))
+            (list
+             ;; TODO: the object-id here is clearly wrong
+             (make-bivalent-unquote '(princ-to-string (1+ (object-id-of *pdf-environment*))))
+             (format nil " ~D R" (generation-number-of node))))))
 
     (:method ((node pdf-root))
       (list (call-next-method)

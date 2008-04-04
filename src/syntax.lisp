@@ -61,7 +61,7 @@
                         (setf (parent-of element) self)))))))))
 
 (def function find-ancestor (node type)
-  (iter (for current :initially node :then (parent-of node))
+  (iter (for current :initially node :then (parent-of current))
         (until (typep current type))
         (finally (return current))))
 
