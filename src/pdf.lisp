@@ -40,10 +40,9 @@
   (format-symbol (find-package :cl-quasi-quote) "PDF-~A" name))
 
 (def function parse-quasi-quoted-pdf (form)
-  (bind ((*pdf-object-id* 0))
-    (if (typep form 'syntax-node)
-        form
-        (parse-quasi-quoted-pdf* (pdf-syntax-node-name (first form)) form))))
+  (if (typep form 'syntax-node)
+      form
+      (parse-quasi-quoted-pdf* (pdf-syntax-node-name (first form)) form)))
 
 (defgeneric parse-quasi-quoted-pdf* (first whole)
   (:method ((first (eql 'pdf-document)) whole)
@@ -71,33 +70,49 @@
   (:method ((first (eql 'pdf-indirect-object)) whole)
     (make-instance 'pdf-indirect-object :content (parse-quasi-quoted-pdf (second whole))))
 
+  (:method ((first (eql 'pdf-indirect-object-reference)) whole)
+    (assert nil) ;; TODO:
+    (make-instance 'pdf-indirect-object-reference))
+
   (:method ((first (eql 'pdf-dictionary)) whole)
-    (bind ((dictionary (make-instance 'pdf-dictionary))
-           (map (map-of dictionary)))
-      (iter (for (key value) :on (cdr whole) :by 'cddr)
-            (for parsed-key = (parse-quasi-quoted-pdf key))
-            (assert (typep parsed-key 'pdf-name))
-            (setf (gethash parsed-key map) (parse-quasi-quoted-pdf value)))
-      dictionary)))
+    (bind ((dictionary (make-instance 'pdf-dictionary)))
+      (parse-dictionary-map (map-of dictionary) (cdr whole))
+      dictionary))
+
+  (:method ((first (eql 'pdf-catalog)) whole)
+    (bind ((catalog (make-instance 'pdf-catalog)))
+      (parse-dictionary-map (map-of catalog) (cdr whole))
+      catalog))
+
+  (:method ((first (eql 'pdf-pages)) whole)
+    (bind ((pages (make-instance 'pdf-pages)))
+      (parse-dictionary-map (map-of pages) (cdr whole))
+      pages))
+
+  (:method ((first (eql 'pdf-page)) whole)
+    (bind ((page (make-instance 'pdf-page)))
+      (parse-dictionary-map (map-of page) (cdr whole))
+      page))
+
+  (:method ((first (eql 'pdf-root)) whole)
+    (make-instance 'pdf-root :content (parse-quasi-quoted-pdf (second whole))))
+
+  (:method ((first (eql 'pdf-info)) whole)
+    (make-instance 'pdf-info :content (parse-quasi-quoted-pdf (second whole)))))
+
+(def function parse-dictionary-map (map pairs)
+  (iter (for (key value) :on pairs :by 'cddr)
+        (for parsed-key = (parse-quasi-quoted-pdf key))
+        (assert (typep parsed-key 'pdf-name))
+        (setf (gethash parsed-key map) (parse-quasi-quoted-pdf value))))
 
 ;;;;;;;
 ;;; AST
 
 (def ast pdf)
 
-(def special-variable *pdf-object-id*)
-
-(def class* pdf-syntax-node (syntax-node)
-  ((parent :type syntax-node)
-   (position 0 :type integer)))
-
-(def constructor pdf-syntax-node ()
-  (iter (with class = (class-of self))
-        (for slot :in (class-slots class))
-        (when (slot-boundp-using-class class self slot)
-          (bind ((value (slot-value-using-class class self slot)))
-            (when (typep value 'pdf-syntax-node)
-              (setf (parent-of value) self))))))
+(def class* pdf-syntax-node (syntax-node parent-mixin)
+  ())
 
 (def (class* e) pdf-quasi-quote (quasi-quote pdf-syntax-node)
   ())
@@ -112,7 +127,7 @@
   (make-instance 'pdf-unquote :form form :spliced spliced?))
 
 (def (class*) pdf-object-identifier (pdf-syntax-node)
-  ((object-id (incf *pdf-object-id*) :type integer)
+  ((object-id :type integer)
    (generation-number 0 :type integer)))
 
 (def (class*) pdf-indirect-object (pdf-object-identifier)
@@ -142,37 +157,93 @@
 (def (class*) pdf-dictionary (pdf-syntax-node)
   ((map (make-hash-table) :type hash-table)))
 
-(def (class*) pdf-page (pdf-syntax-node)
+(def (class*) pdf-catalog (pdf-dictionary)
   ())
 
-(def (class*) pdf-xref-entry (pdf-object-identifier)
+(def (class*) pdf-pages (pdf-dictionary)
+  ())
+
+(def (class*) pdf-page (pdf-dictionary)
+  ())
+
+(def (class*) pdf-root (pdf-indirect-object)
+  ((content)))
+
+(def (class*) pdf-info (pdf-indirect-object)
+  ((content)))
+
+(def (class*) pdf-position-mixin ()
+  ((position 0 :type integer)))
+
+(def (class*) pdf-xref-entry (pdf-object-identifier pdf-position-mixin)
   ((free :type boolean)))
 
 (def (class*) pdf-xref-section (pdf-syntax-node)
-  ((entries :type list)))
+  ((entries nil :type list)))
 
-(def (class*) pdf-xref (pdf-syntax-node)
-  ((sections (list (make-instance 'pdf-xref-section
-                                  :entries (list (make-instance 'pdf-xref-entry
-                                                                :free #t
-                                                                :object-id 0
-                                                                :generation-number 65535))))
-             :type list)))
+(def (class*) pdf-xref (pdf-syntax-node pdf-position-mixin)
+  ((sections nil :type list)))
 
 (def (class*) pdf-header (pdf-syntax-node)
   ((version "1.4" :type string)))
 
 (def (class*) pdf-trailer (pdf-syntax-node)
-  ((dictionary (make-instance 'pdf-dictionary) :type pdf-dictionary)))
+  ((dictionary (make-trailer-dictionary) :type pdf-dictionary)))
 
 (def (class*) pdf-document (pdf-syntax-node)
   ((header (make-instance 'pdf-header) :type pdf-header)
    (trailer (make-instance 'pdf-trailer) :type pdf-trailer)
    (elements :type list)
-   (xref (make-instance 'pdf-xref) :type pdf-xref)))
+   (xref (make-instance 'pdf-xref
+                        :sections (list (make-instance 'pdf-xref-section
+                                                       :entries (list (make-instance 'pdf-xref-entry
+                                                                                     :free #t
+                                                                                     :object-id 0
+                                                                                     :generation-number 65535)))))
+         :type pdf-xref)))
+
+(def function make-trailer-dictionary ()
+  (bind ((map (make-hash-table)))
+    (setf (gethash (make-instance 'pdf-name :value "Root") map)
+          (make-pdf-unquote '(root-reference-of *pdf-environment*)))
+    (setf (gethash (make-instance 'pdf-name :value "Info") map)
+          (make-pdf-unquote '(info-reference-of *pdf-environment*)))
+    (setf (gethash (make-instance 'pdf-name :value "Size") map)
+          (make-bivalent-unquote '(princ-to-string (compute-xref-size (xref-of *pdf-environment*)))))
+    (make-instance 'pdf-dictionary :map map)))
 
 ;;;;;;;;;;;;;
 ;;; Transform
+
+(def special-variable *pdf-environment*)
+
+(def class* pdf-environment ()
+  ((object-id 0 :type integer)
+   (xref-position :type integer)
+   (xref (make-instance 'pdf-xref) :type pdf-xref)
+   (root-reference :type pdf-indirect-object-reference)
+   (info-reference :type pdf-indirect-object-reference)))
+
+(def function compute-xref-size (xref)
+  ;; TODO: 1+ due to the default xref
+  (1+ (iter (for section :in (sections-of xref))
+            (sum (length (entries-of section))))))
+
+(def function push-xref-entry (object-id generation-number position)
+  (bind ((xref (xref-of *pdf-environment*))
+         (section (first (sections-of xref)))
+         (entry (when section (first (entries-of section)))))
+    (when (or (not entry)
+              (and entry
+                   (not (= object-id (1+ (object-id-of entry))))))
+      (setf section (make-instance 'pdf-xref-section))
+      (push section (sections-of xref)))
+    (push (make-instance 'pdf-xref-entry
+                         :free #f
+                         :position position
+                         :object-id object-id
+                         :generation-number generation-number)
+          (entries-of section))))
 
 (flet ((recurse (node)
          (transform-quasi-quoted-pdf-to-quasi-quoted-bivalent node)))
@@ -216,7 +287,7 @@
       (format nil "/~A" (value-of node)))
 
     (:method ((node pdf-string))
-      (format nil "( ~A )" (value-of node)))
+      (format nil "(~A)" (value-of node)))
 
     (:method ((node pdf-array))
       (list "[ "
@@ -227,37 +298,58 @@
             " ]"))
 
     (:method ((node pdf-dictionary))
-      (list "<<"
+      (list (format nil "<<~%")
             (iter (for (key value) :in-hashtable (map-of node))
                   (assert (typep key 'pdf-name))
-                  (collect #\Space)
                   (collect (recurse key))
                   (collect #\Space)
-                  (collect (recurse value)))
-            " >>"))
+                  (collect (recurse value))
+                  (collect #\NewLine))
+            ">>"))
 
     (:method ((node pdf-indirect-object))
       (list
-       (format nil "~D ~D obj~%" (object-id-of node) (generation-number-of node))
+       (make-bivalent-unquote
+        `(let ((object-id (incf (object-id-of *pdf-environment*))))
+           (push-xref-entry object-id ,(generation-number-of node) (binary-position))
+           (princ-to-string object-id)))
+       (format nil " ~D obj~%" (generation-number-of node))
        (recurse (content-of node))
-       (format nil "~%endobj")))
+       (format nil "~%endobj~%")))
 
     (:method ((node pdf-indirect-object-reference))
-      (format nil "~D ~D R" (object-id-of node) (generation-number-of node)))
+      (list
+       (format nil "~D ~D R" (object-id-of node) (generation-number-of node))))
+
+    (:method ((node pdf-root))
+      (list (call-next-method)
+            (make-side-effect `(setf (root-reference-of *pdf-environment*)
+                                     (make-instance 'pdf-indirect-object-reference
+                                                    :object-id (object-id-of *pdf-environment*)
+                                                    :generation-number ,(generation-number-of node))))))
+
+    (:method ((node pdf-info))
+      (list (call-next-method)
+            (make-side-effect `(setf (info-reference-of *pdf-environment*)
+                                     (make-instance 'pdf-indirect-object-reference
+                                                    :object-id (object-id-of *pdf-environment*)
+                                                    :generation-number ,(generation-number-of node))))))
 
     (:method ((node pdf-xref-entry))
-      (format nil "~10,'0D ~5,'0D ~A ~%" (object-id-of node) (generation-number-of node)
+      (format nil "~10,'0D ~5,'0D ~A ~%" (position-of node) (generation-number-of node)
               (if (free-p node) "f" "n")))
     
     (:method ((node pdf-xref-section))
       (bind ((entries (entries-of node)))
         (list
-         (format nil "~D ~D~%" (object-id-of (first entries)) (length entries))
-         (mapcar #'recurse entries))))
+         (format nil "~D ~D~%" (object-id-of (last-elt entries)) (length entries))
+         (mapcar #'recurse (reverse entries)))))
 
     (:method ((node pdf-xref))
-      (list (format nil "~%xref~%")
-            (mapcar #'recurse (sections-of node))))
+      (list (make-side-effect `(setf (xref-position-of *pdf-environment*) (binary-position)))
+            (format nil "xref~%")
+            (mapcar #'recurse (reverse (sections-of node)))
+            (make-bivalent-unquote '(mapcar 'transform-quasi-quoted-pdf-to-quasi-quoted-bivalent (sections-of (xref-of *pdf-environment*))))))
 
     (:method ((node pdf-header))
       (format nil "%PDF-~A~%%Non ASCII marker: í~%" (version-of node)))
@@ -265,7 +357,9 @@
     (:method ((node pdf-trailer))
       (list (format nil "trailer~%")
             (recurse (dictionary-of node))
-            (format nil "~%startxref~%~D~%%%EOF" (position-of (xref-of (parent-of node))))))
+            (format nil "~%startxref~%")
+            (make-bivalent-unquote '(princ-to-string (xref-position-of *pdf-environment*)))
+            (format nil "~%%%EOF")))
 
     (:method ((node pdf-document))
       (list
@@ -276,3 +370,8 @@
 
 (def method transform ((to (eql 'quasi-quoted-bivalent)) (input pdf-syntax-node) &key &allow-other-keys)
   (transform-quasi-quoted-pdf-to-quasi-quoted-bivalent input))
+
+;; TODO: how to factor this into emit?
+(def (function e) emit-pdf (node &optional stream)
+  (bind ((*pdf-environment* (make-instance 'pdf-environment)))
+    (emit node stream)))

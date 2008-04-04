@@ -267,7 +267,8 @@
        (if (typep node 'string-quasi-quote)
            (body-of node)
            node))
-      (unquote (transform 'quasi-quoted-string node)))))
+      (unquote (transform 'quasi-quoted-string node))
+      (side-effect node))))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
   (etypecase node

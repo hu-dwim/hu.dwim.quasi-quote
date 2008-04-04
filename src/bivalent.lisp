@@ -77,7 +77,8 @@
      (if (typep node 'binary-quasi-quote)
          (body-of node)
          node))
-    (unquote (transform 'quasi-quoted-binary node))))
+    (unquote (transform 'quasi-quoted-binary node))
+    (side-effect node)))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input bivalent-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-bivalent-to-quasi-quoted-binary input args))

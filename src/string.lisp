@@ -109,7 +109,8 @@
                        `(write-string ,node ,stream)))
                   (string-unquote
                    `(write-quasi-quoted-string ,
-                     (transform-quasi-quoted-string-to-string-emitting-form node :toplevel #f :stream stream) ,stream))))
+                     (transform-quasi-quoted-string-to-string-emitting-form node :toplevel #f :stream stream) ,stream))
+                  (side-effect (form-of node))))
               (single-string-list-p (node)
                 (and (= 1 (length node))
                      (stringp (first node)))))
@@ -143,9 +144,9 @@
     (string-unquote
      (map-tree (form-of input)
                (lambda (form)
-                 (if (typep form 'string-quasi-quote)
-                     (transform-quasi-quoted-string-to-string-emitting-form form :toplevel #f :stream stream)
-                     form))))))
+                 (cond ((typep form 'string-quasi-quote)
+                        (transform-quasi-quoted-string-to-string-emitting-form form :toplevel #f :stream stream))
+                       (t form)))))))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-string-emitting-form input args))
@@ -172,7 +173,8 @@
      (if (typep node 'binary-quasi-quote)
          (body-of node)
          node))
-    (unquote (transform 'quasi-quoted-binary node))))
+    (unquote (transform 'quasi-quoted-binary node))
+    (side-effect node)))
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))

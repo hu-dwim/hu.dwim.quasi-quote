@@ -40,6 +40,31 @@
   ((form)
    (spliced #f :type boolean)))
 
+(def (class* e) side-effect (syntax-node)
+  ((form)))
+
+(def function make-side-effect (form)
+  (make-instance 'side-effect :form form))
+
+(def (class* e) parent-mixin ()
+  ((parent :type syntax-node)))
+
+(def constructor parent-mixin ()
+  (iter (with class = (class-of self))
+        (for slot :in (class-slots class))
+        (when (slot-boundp-using-class class self slot)
+          (bind ((value (slot-value-using-class class self slot)))
+            (typecase value
+              (parent-mixin (setf (parent-of value) self))
+              (list (when (eq 'list (slot-definition-type slot))
+                      (dolist (element value)
+                        (setf (parent-of element) self)))))))))
+
+(def function find-ancestor (node type)
+  (iter (for current :initially node :then (parent-of node))
+        (until (typep current type))
+        (finally (return current))))
+
 (def function ast-package (name)
   (bind ((package (symbol-package name)))
     (if (eq package (find-package :common-lisp))
@@ -213,13 +238,17 @@
     (replace vector extension :start1 original-length)
     vector))
 
-(def (function e) map-tree (form map-function)
+(def (function e) map-tree (form map-function &optional (process-cons #f))
   (labels ((process (form)
              (cond ((null form)
                     nil)
                    ((consp form)
-                    (cons (process (car form))
-                          (process (cdr form))))
+                    (bind ((result
+                            (cons (process (car form))
+                                  (process (cdr form)))))
+                      (if process-cons
+                          (funcall map-function result)
+                          result)))
                    (t (funcall map-function form)))))
     (process form)))
 
