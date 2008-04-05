@@ -4,14 +4,11 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test)
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (use-package :cl-quasi-quote-pdf :cl-quasi-quote-test))
+(in-package :cl-quasi-quote-test-pdf)
 
 (enable-quasi-quoted-pdf-to-binary-stream-emitting-form-syntax '*pdf-stream*)
 
-(defsuite* (test/pdf :in test))
+(defsuite* (test/pdf :in cl-quasi-quote-test::test))
 
 (def special-variable *pdf-stream*)
 

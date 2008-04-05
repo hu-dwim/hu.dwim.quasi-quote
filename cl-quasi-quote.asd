@@ -59,7 +59,8 @@
   (operate 'load-op :cl-quasi-quote-test)
   (in-package :cl-quasi-quote-test)
   (declaim (optimize (debug 3)))
-  (warn "(declaim (optimize (debug 3))) was issued to help later C-c C-c'ing")
+  (pushnew :debug *features*)
+  (warn "Pushed :debug in *features* and (declaim (optimize (debug 3))) was issued to help later C-c C-c'ing")
   (eval (read-from-string "(progn
                              (stefil:funcall-test-with-feedback-message 'test))"))
   (values))

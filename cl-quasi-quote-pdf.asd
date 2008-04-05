@@ -36,29 +36,8 @@
                        (:file "syntax" :depends-on ("package" "ast"))
                        (:file "transform" :depends-on ("package" "syntax" "ast"))))))))
 
-(defsystem :cl-quasi-quote-pdf-test
-  :description "Tests for cl-quasi-quote-pdf."
-  :default-component-class cl-source-file-with-readtable
-  :class system-with-readtable
-  :setup-readtable-function "cl-quasi-quote::setup-readtable"
-  :depends-on (:cl-quasi-quote-pdf ;; and everything else it depends on...
-               :cl-quasi-quote-test
-               :stefil
-               )
-  :components
-  ((:module "test"
-	    :components
-            ((:file "pdf")))))
-
 (defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote-pdf))))
-  (operate 'load-op :cl-quasi-quote-pdf-test)
-  (in-package :cl-quasi-quote-test)
-  (pushnew :debug *features*)
-  (declaim (optimize (debug 3)))
-  (warn "Pushed :debug in *features* and (declaim (optimize (debug 3))) was issued to help later C-c C-c'ing")
-  (eval (read-from-string "(progn
-                             (stefil:funcall-test-with-feedback-message 'test/pdf))"))
-  (values))
+  (operate 'test-op :cl-quasi-quote))
 
 (defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote-pdf))))
   nil)

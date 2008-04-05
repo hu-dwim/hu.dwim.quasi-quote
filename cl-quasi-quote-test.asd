@@ -24,7 +24,9 @@
                :stefil
                :cl-def
                :cl-syntax-sugar
-               :cl-quasi-quote)
+               :cl-quasi-quote
+               :cl-quasi-quote-pdf
+               )
   :components
   ((:module :test
 	    :components
@@ -35,13 +37,14 @@
              (:file "string" :depends-on ("suite"))
              (:file "bivalent" :depends-on ("suite"))
              (:file "xml" :depends-on ("suite" "string"))
+             (:file "pdf" :depends-on ("suite"))
              (:file "typesetting" :depends-on ("suite" "string"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)
   (pushnew :debug *features*)
   (declaim (optimize (debug 3)))
-  (warn "Pushed :debug in *features*, set (declaim (optimize (debug 3)))."))
+  (warn "Pushed :debug in *features* and (declaim (optimize (debug 3))) was issued to help later C-c C-c'ing"))
 
 (defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote-test))))
   nil)

@@ -18,6 +18,20 @@
         :cl-syntax-sugar
         :cl-quasi-quote))
 
-(import
- '(escape-as-xml)
- (find-package :cl-quasi-quote-test))
+(defpackage :cl-quasi-quote-test-pdf
+  (:use :common-lisp
+        :metabang-bind
+        :alexandria
+        :iterate
+        :stefil
+        :cl-def
+        :cl-syntax-sugar
+        :cl-quasi-quote
+        :cl-quasi-quote-pdf
+        ))
+
+(dolist (package (list (find-package :cl-quasi-quote-test)
+                       (find-package :cl-quasi-quote-test-pdf)))
+  (import
+   '(escape-as-xml)
+   package))
