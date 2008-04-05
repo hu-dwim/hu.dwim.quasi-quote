@@ -28,19 +28,7 @@
                                                        splice-character
                                                        transform)
                          t
-                         *readtable*))
-
-  #+nil ;; TODO was. delme eventyually...
-  (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
-     (bind ((cl-quasi-quote::*quasi-quote-level* (1+ cl-quasi-quote::*quasi-quote-level*)))
-       (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body)))))
-   (lambda (form spliced)
-     (make-pdf-unquote form spliced))
-   :quasi-quote-character quasi-quote-character
-   :quasi-quote-end-character quasi-quote-end-character
-   :unquote-character unquote-character
-   :splice-character splice-character))
+                         *readtable*)))
 
 ;; TODO the quasi-quote reader in cl-syntax-sugar should be extended to accomodate this kind of usage.
 ;; TODO don't forget about the same for xml
