@@ -92,95 +92,56 @@
 (def function parse-pdf-reader-body (form)
   (if (typep form 'syntax-node)
       form
-      (parse-pdf-reader-body* (pdf-syntax-node-name (first form)) form)))
+      (bind ((sexp-parser (gethash (first form) *pdf-ast-node-name->sexp-parser*)))
+        (assert sexp-parser)
+        (funcall sexp-parser form))))
 
-(defgeneric parse-pdf-reader-body* (first whole)
-  (:method ((first (eql 'pdf-document)) whole)
-    (make-instance 'pdf-document
-                   :elements (mapcar #'parse-pdf-reader-body (cdr whole))))
+;;;
+;;; Override some parsers where the default expansion from the pdf-ast-node definer is not ok
+;;;
+(def pdf-ast-node-parser document
+  (make-pdf-document (rest -sexp-)))
 
-  (:method ((first (eql 'pdf-null)) whole)
-    (make-instance 'pdf-null))
+(def pdf-ast-node-parser array
+  (make-instance 'pdf-array :value (mapcar #'parse-into-pdf-syntax-node (rest -sexp-))))
 
-  (:method ((first (eql 'pdf-boolean)) whole)
-    (make-instance 'pdf-boolean :value (second whole)))
+(def pdf-ast-node-parser dictionary
+  (parse-dictionary-map (make-instance 'pdf-dictionary) (rest -sexp-)))
 
-  (:method ((first (eql 'pdf-number)) whole)
-    (make-instance 'pdf-number :value (second whole)))
+(def pdf-ast-node-parser catalog
+  (parse-dictionary-map (make-instance 'pdf-catalog) (rest -sexp-)))
 
-  (:method ((first (eql 'pdf-name)) whole)
-    (make-instance 'pdf-name :value (princ-to-string (second whole))))
+(def pdf-ast-node-parser pages
+  (parse-dictionary-map (make-instance 'pdf-pages) (rest -sexp-)))
 
-  (:method ((first (eql 'pdf-string)) whole)
-    (make-instance 'pdf-string :value (second whole)))
+(def pdf-ast-node-parser page
+  (parse-dictionary-map (make-instance 'pdf-page) (rest -sexp-)))
 
-  (:method ((first (eql 'pdf-array)) whole)
-    (make-instance 'pdf-array :value (mapcar #'parse-pdf-reader-body (cdr whole))))
+(def pdf-ast-node-parser stream
+  (make-instance 'pdf-stream :contents (rest -sexp-)))
 
-  (:method ((first (eql 'pdf-stream)) whole)
-    (make-instance 'pdf-stream :contents (mapcar #'parse-pdf-reader-body (cdr whole))))
+(def function parse-dictionary-map (dictionary elements)
+  (iter
+    (with map = (map-of dictionary))
+    (while elements)
+    (for key = (pop elements))
+    (for value = (pop elements))
+    (setf key (etypecase key
+                (pdf-name key)
+                (string (make-pdf-name key))
+                (symbol (make-pdf-name key))))
+    (setf value (parse-into-pdf-syntax-node value))
+    (setf (parent-of value) dictionary)
+    (setf (parent-of key) dictionary)
+    (setf (gethash key map) value))
+  dictionary)
 
-  (:method ((first (eql 'pdf-begin-text)) whole)
-    (make-instance 'pdf-begin-text))
-
-  (:method ((first (eql 'pdf-end-text)) whole)
-    (make-instance 'pdf-end-text))
-
-  (:method ((first (eql 'pdf-set-font)) whole)
-    (make-instance 'pdf-set-font
-                   :name (second whole)
-                   :size (third whole)))
-
-  (:method ((first (eql 'pdf-move-text)) whole)
-    (make-instance 'pdf-move-text
-                   :x (second whole)
-                   :y (third whole)))
-
-  (:method ((first (eql 'pdf-display-text)) whole)
-    (make-instance 'pdf-display-text))
-
-  (:method ((first (eql 'pdf-indirect-object)) whole)
-    (make-instance 'pdf-indirect-object
-                   :name (second whole)
-                   :content (parse-pdf-reader-body (third whole))))
-
-  (:method ((first (eql 'pdf-indirect-object-reference)) whole)
-    (make-instance 'pdf-indirect-object-reference
-                   :name (second whole)))
-
-  (:method ((first (eql 'pdf-dictionary)) whole)
-    (bind ((dictionary (make-instance 'pdf-dictionary)))
-      (parse-dictionary-map dictionary (cdr whole))
-      dictionary))
-
-  (:method ((first (eql 'pdf-catalog)) whole)
-    (bind ((catalog (make-instance 'pdf-catalog)))
-      (parse-dictionary-map catalog (cdr whole))
-      catalog))
-
-  (:method ((first (eql 'pdf-pages)) whole)
-    (bind ((pages (make-instance 'pdf-pages)))
-      (parse-dictionary-map pages (cdr whole))
-      pages))
-
-  (:method ((first (eql 'pdf-page)) whole)
-    (bind ((page (make-instance 'pdf-page)))
-      (parse-dictionary-map page (cdr whole))
-      page))
-
-  (:method ((first (eql 'pdf-root)) whole)
-    (make-instance 'pdf-root :content (parse-pdf-reader-body (second whole))))
-
-  (:method ((first (eql 'pdf-info)) whole)
-    (make-instance 'pdf-info :content (parse-pdf-reader-body (second whole)))))
-
-(def function parse-dictionary-map (dictionary pairs)
-  (iter (with map = (map-of dictionary))
-        (for (key value) :on pairs :by 'cddr)
-        (for parsed-key = (parse-pdf-reader-body key))
-        (for parsed-value = (parse-pdf-reader-body value))
-        (assert (typep parsed-key 'pdf-name))
-        (setf (parent-of parsed-value) dictionary)
-        (setf (parent-of parsed-key) dictionary)
-        (setf (gethash parsed-key map) parsed-value)))
-
+(def function parse-into-pdf-syntax-node (value)
+  (if (eq value #t)
+      (make-pdf-boolean #t)
+      (etypecase value
+        (pdf-syntax-node value)
+        ((or integer float) (make-pdf-number value))
+        (string (make-pdf-string value))
+        (null (make-pdf-boolean #f))
+        (vector (make-instance 'pdf-array :value (map 'list #'parse-into-pdf-syntax-node value))))))

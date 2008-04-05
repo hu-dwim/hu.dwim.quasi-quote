@@ -51,7 +51,7 @@
 (def (class* e) parent-mixin ()
   ((parent :type syntax-node)))
 
-(def constructor parent-mixin ()
+(def constructor parent-mixin
   (iter (with class = (class-of self))
         (for slot :in (class-slots class))
         (when (slot-boundp-using-class class self slot)
