@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote)
+(in-package :cl-quasi-quote-pdf)
 
 ;;;;;;;;;
 ;;; Parse
@@ -18,7 +18,7 @@
                                       (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
+     (bind ((cl-quasi-quote::*quasi-quote-level* (1+ cl-quasi-quote::*quasi-quote-level*)))
        (readtime-chain-transform transform (make-pdf-quasi-quote (parse-quasi-quoted-pdf body)))))
    (lambda (form spliced)
      (make-pdf-unquote form spliced))
@@ -37,7 +37,7 @@
   (set-quasi-quoted-pdf-syntax-in-readtable :transform `(quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream ,stream))))
 
 (def function pdf-syntax-node-name (name)
-  (format-symbol (find-package :cl-quasi-quote) "PDF-~A" name))
+  (format-symbol #.(find-package :cl-quasi-quote-pdf) "PDF-~A" name))
 
 (def function parse-quasi-quoted-pdf (form)
   (if (typep form 'syntax-node)
@@ -379,12 +379,12 @@
                                         :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of length-node))
                                         :generation-number ,(generation-number-of length-node))))
                       (format nil "~%>>~%stream~%")
-                      (make-side-effect `(setf ,position (binary-position)))
+                      (cl-quasi-quote::make-side-effect `(setf ,position (binary-position)))
                       (iter (for element :in (contents-of node))
                             (unless (first-iteration-p)
                               (collect #\Space))
                             (collect (recurse element)))
-                      (make-side-effect `(setf ,position (- (binary-position) ,position)))
+                      (cl-quasi-quote::make-side-effect `(setf ,position (- (binary-position) ,position)))
                       (format nil "~%endstream~%")
                       (recurse length-node))))))))
 
@@ -443,17 +443,19 @@
 
     (:method ((node pdf-root))
       (list (call-next-method)
-            (make-side-effect `(setf (root-reference-of *pdf-environment*)
-                                     (make-instance 'pdf-indirect-object-reference
-                                                    :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
-                                                    :generation-number ,(generation-number-of node))))))
+            (cl-quasi-quote::make-side-effect
+             `(setf (root-reference-of *pdf-environment*)
+                    (make-instance 'pdf-indirect-object-reference
+                                   :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
+                                   :generation-number ,(generation-number-of node))))))
 
     (:method ((node pdf-info))
       (list (call-next-method)
-            (make-side-effect `(setf (info-reference-of *pdf-environment*)
-                                     (make-instance 'pdf-indirect-object-reference
-                                                    :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
-                                                    :generation-number ,(generation-number-of node))))))
+            (cl-quasi-quote::make-side-effect
+             `(setf (info-reference-of *pdf-environment*)
+                    (make-instance 'pdf-indirect-object-reference
+                                   :object-id (ensure-pdf-object-id-for-node-identity ,(node-identity-of node))
+                                   :generation-number ,(generation-number-of node))))))
 
     (:method ((node pdf-xref-entry))
       (format nil "~10,'0D ~5,'0D ~A ~%" (position-of node) (generation-number-of node)
@@ -466,7 +468,7 @@
          (mapcar #'recurse (reverse entries)))))
 
     (:method ((node pdf-xref))
-      (list (make-side-effect `(setf (xref-position-of *pdf-environment*) (binary-position)))
+      (list (cl-quasi-quote::make-side-effect `(setf (xref-position-of *pdf-environment*) (binary-position)))
             (format nil "xref~%")
             (mapcar #'recurse (reverse (sections-of node)))
             (make-bivalent-unquote '(mapcar 'transform-quasi-quoted-pdf-to-quasi-quoted-bivalent (sections-of (xref-of *pdf-environment*))))))

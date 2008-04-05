@@ -73,7 +73,7 @@
         (find-package :cl-quasi-quote)
         package)))
 
-(def definer ast (name)
+(def (definer e) ast (name)
   (bind ((package (ast-package name)))
     (flet ((process (names)
              (apply 'format-symbol package

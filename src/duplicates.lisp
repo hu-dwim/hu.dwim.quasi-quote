@@ -23,3 +23,8 @@
   #-(or allegro cmu lispworks sbcl scl)
   (setq str (subseq str 0 size))
   str)
+
+(defun import-duplicate-symbols (&optional (package *package*))
+  (import
+   '(shrink-vector)
+   package))

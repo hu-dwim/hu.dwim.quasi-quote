@@ -53,7 +53,6 @@
              (:file "string" :depends-on ("syntax"))
              (:file "escaping" :depends-on ("syntax"))
              (:file "xml" :depends-on ("string" "escaping"))
-             (:file "pdf" :depends-on ("bivalent"))
              (:file "typesetting" :depends-on ("xml"))))))
 
 (defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote))))

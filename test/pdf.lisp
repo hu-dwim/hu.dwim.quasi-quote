@@ -6,6 +6,9 @@
 
 (in-package :cl-quasi-quote-test)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (use-package :cl-quasi-quote-pdf :cl-quasi-quote-test))
+
 (enable-quasi-quoted-pdf-to-binary-stream-emitting-form-syntax '*pdf-stream*)
 
 (defsuite* (test/pdf :in test))

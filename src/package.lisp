@@ -16,13 +16,18 @@
         :defclass-star
         :closer-mop
         :cl-def
-        :cl-syntax-sugar)
+        :cl-syntax-sugar
+        )
 
-  (:export))
+  (:export
+   ))
 
 (in-package :cl-quasi-quote)
 
-(defun transform-function-definer-options (options)
-  (if cl-quasi-quote-system:*load-as-production-p*
-      options
-      (remove-from-plist options :inline :optimize)))
+(def function import-semi-external-quasi-quote-symbols (&optional (package *package*))
+  "Import those symbols in PACKAGE that are public to extensions of cl-quasi-quote but not to its users."
+  (import
+   '(form-of parent-of splicedp body-of
+     syntax-node
+     find-ancestor binary-position readtime-chain-transform)
+   package))
