@@ -24,34 +24,34 @@
 
 (def pdf-test test/pdf/empty ()
   [document
-   [info [dictionary [name "Author"] [string "levy"]]]
-   [root [catalog [name "Pages"]
-                  [pages [name "Count"] [number 0]
-                         [name "MediaBox"] [array [number 0] [number 0] [number 612] [number 792]]]]]])
+   [info [dictionary "Author" "levy"]]
+   [root [catalog "Pages" [pages "Count" 0
+                                 "MediaBox" [array 0 0 612 792]]]]])
 
 (def pdf-test test/pdf/simple ()
   [document
-   [info [dictionary [name "Author"] [string "levy"]]]
-   [root [catalog [name "Pages"] [indirect-object-reference pages]]]
+   [info [dictionary "Author" "levy"]]
+   [root [catalog "Pages" [indirect-object-reference pages]]]
    [indirect-object pages
-                    [pages [name "Count"] [number 1]
-                           [name "Kids"] [array [indirect-object-reference page1]]
-                           [name "MediaBox"] [array [number 0] [number 0] [number 612] [number 792]]]]
+                    [pages "Count" 1
+                           "Kids" [array [indirect-object-reference page1]]
+                           "MediaBox" [array 0 0 612 792]]]
    [indirect-object page1
-                    [page [name "Parent"]
-                          [indirect-object-reference pages]
-                          [name "Resources"]
-                          [dictionary [name "ProcSet"] [array [name "PDF"] [name "Text"]]
-                                      [name "Font"] [dictionary [name "F1"]
-                                                                [dictionary [name "Type"] [name "Font"]
-                                                                            [name "Subtype"] [name "Type1"]
-                                                                            [name "Name"] [name "F1"]
-                                                                            [name "BaseFont"] [name "Times-Roman"]]]]
-                          [name "Contents"] [indirect-object-reference stream1]]]
+                    [page "Parent" [indirect-object-reference pages]
+                          "Resources" [dictionary
+                                       "ProcSet" [array [name "PDF"] [name "Text"]]
+                                       "Font" [dictionary
+                                               "F1" [dictionary
+                                                     "Type"     [name "Font"]
+                                                     "Subtype"  [name "Type1"]
+                                                     "Name"     [name "F1"]
+                                                     "BaseFont" [name "Times-Roman"]]]]
+                          "Contents" [indirect-object-reference stream1]]]
    [indirect-object stream1
-                    [stream [begin-text]
-                            [set-font "F1" 12]
-                            [move-text 72 712]
-                            [string "Hello World"]
-                            [display-text]
-                            [end-text]]]])
+                    [stream
+                     [begin-text]
+                     [set-font "F1" 12]
+                     [move-text 72 712]
+                     [string "Hello World"]
+                     [display-text]
+                     [end-text]]]])
