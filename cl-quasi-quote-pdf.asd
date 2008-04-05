@@ -32,7 +32,9 @@
             ((:module "pdf"
                       :components
                       ((:file "package")
-                       (:file "pdf" :depends-on ("package"))))))))
+                       (:file "ast" :depends-on ("package"))
+                       (:file "syntax" :depends-on ("package" "ast"))
+                       (:file "transform" :depends-on ("package" "syntax" "ast"))))))))
 
 (defsystem :cl-quasi-quote-pdf-test
   :description "Tests for cl-quasi-quote-pdf."
