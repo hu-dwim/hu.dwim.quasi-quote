@@ -26,33 +26,35 @@
        (test-pdf-ast ',name ,@forms))))
 
 (def pdf-test test/pdf/empty ()
-  [document (info (dictionary (name "Author") (string "levy")))
-            (root (catalog (name "Pages")
-                           (pages (name "Count") (number 0)
-                                  (name "MediaBox") (array (number 0) (number 0) (number 612) (number 792)))))])
+  [document
+   [info [dictionary [name "Author"] [string "levy"]]]
+   [root [catalog [name "Pages"]
+                  [pages [name "Count"] [number 0]
+                         [name "MediaBox"] [array [number 0] [number 0] [number 612] [number 792]]]]]])
 
 (def pdf-test test/pdf/simple ()
-  [document (info (dictionary (name "Author") (string "levy")))
-            (root (catalog (name "Pages") (indirect-object-reference pages)))
-            (indirect-object pages
-                             (pages (name "Count") (number 1)
-                                    (name "Kids") (array (indirect-object-reference page1))
-                                    (name "MediaBox") (array (number 0) (number 0) (number 612) (number 792))))
-            (indirect-object page1
-                             (page (name "Parent")
-                                   (indirect-object-reference pages)
-                                   (name "Resources")
-                                   (dictionary (name "ProcSet") (array (name "PDF") (name "Text"))
-                                               (name "Font") (dictionary (name "F1")
-                                                                         (dictionary (name "Type") (name "Font")
-                                                                                     (name "Subtype") (name "Type1")
-                                                                                     (name "Name") (name "F1")
-                                                                                     (name "BaseFont") (name "Times-Roman"))))
-                                   (name "Contents") (indirect-object-reference stream1)))
-            (indirect-object stream1
-                             (stream (begin-text)
-                                     (set-font "F1" 12)
-                                     (move-text 72 712)
-                                     (string "Hello World")
-                                     (display-text)
-                                     (end-text)))])
+  [document
+   [info [dictionary [name "Author"] [string "levy"]]]
+   [root [catalog [name "Pages"] [indirect-object-reference pages]]]
+   [indirect-object pages
+                    [pages [name "Count"] [number 1]
+                           [name "Kids"] [array [indirect-object-reference page1]]
+                           [name "MediaBox"] [array [number 0] [number 0] [number 612] [number 792]]]]
+   [indirect-object page1
+                    [page [name "Parent"]
+                          [indirect-object-reference pages]
+                          [name "Resources"]
+                          [dictionary [name "ProcSet"] [array [name "PDF"] [name "Text"]]
+                                      [name "Font"] [dictionary [name "F1"]
+                                                                [dictionary [name "Type"] [name "Font"]
+                                                                            [name "Subtype"] [name "Type1"]
+                                                                            [name "Name"] [name "F1"]
+                                                                            [name "BaseFont"] [name "Times-Roman"]]]]
+                          [name "Contents"] [indirect-object-reference stream1]]]
+   [indirect-object stream1
+                    [stream [begin-text]
+                            [set-font "F1" 12]
+                            [move-text 72 712]
+                            [string "Hello World"]
+                            [display-text]
+                            [end-text]]]])
