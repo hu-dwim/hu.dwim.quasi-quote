@@ -107,13 +107,13 @@
                  (set-macro-character open-bracket-character #'nested-quasi-quoted-xml-reader)
                  (set-syntax-from-char close-bracket-character #\) *readtable*)
                  (bind ((body (read-delimited-list close-bracket-character stream t)))
-                   (readtime-chain-transform transform (make-xml-quasi-quote (process-xml-reader-body stream body)))))))
+                   (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body stream body)))))))
            (nested-quasi-quoted-xml-reader (stream char)
              (declare (ignore char))
-             (process-xml-reader-body stream (read-delimited-list close-bracket-character stream t))))
+             (parse-xml-reader-body stream (read-delimited-list close-bracket-character stream t))))
     #'toplevel-quasi-quoted-xml-reader))
 
-(def (function d) process-xml-reader-body (stream form)
+(def (function d) parse-xml-reader-body (stream form)
   (etypecase form
     (syntax-node form)
     (cons
