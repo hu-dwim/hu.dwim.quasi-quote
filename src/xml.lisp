@@ -73,7 +73,9 @@
                (when (zerop *xml-quasi-quote-level*)
                  ;; restore the original unquote reader when we are leaving our nesting. this way it's possible
                  ;; to use #\, in its normal meanings when being outside our own nesting levels.
-                 (apply 'set-macro-character unquote-character original-reader-on-unquote-character))
+                 (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
+                 (apply 'set-macro-character open-bracket-character original-reader-on-open-bracket-character)
+                 (apply 'set-macro-character close-bracket-character original-reader-on-close-bracket-character))
                (set-macro-character open-bracket-character #'toplevel-quasi-quoted-xml-reader)
                (bind ((body (read stream t nil t)))
                  (make-xml-unquote body spliced?))))
