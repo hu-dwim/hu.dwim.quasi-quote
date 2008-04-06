@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote)
+(in-package :cl-quasi-quote-xml)
 
 (def (constant :test #'equalp) +character-code->xml-escaped-entity+
   (bind ((result (make-array 256 :initial-element nil)))
@@ -15,7 +15,7 @@
           (setf (aref result (char-code character)) entity))
     result))
 
-(def (function o) escape-as-xml (string &optional destination)
+(def (function eo) escape-as-xml (string &optional destination)
   (declare (type string string)
            (type (or null (array character (*))) destination))
   (bind ((result destination))

@@ -8,7 +8,7 @@
 
 (enable-quasi-quoted-pdf-to-binary-stream-emitting-form-syntax '*pdf-stream*)
 
-(defsuite* (test/pdf :in cl-quasi-quote-test::test))
+(defsuite* (test/pdf :in test))
 
 (def special-variable *pdf-stream*)
 

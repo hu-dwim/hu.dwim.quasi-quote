@@ -26,6 +26,7 @@
                :cl-syntax-sugar
                :cl-quasi-quote
                :cl-quasi-quote-pdf
+               :cl-quasi-quote-xml
                )
   :components
   ((:module :test
@@ -38,7 +39,8 @@
              (:file "bivalent" :depends-on ("suite"))
              (:file "xml" :depends-on ("suite" "string"))
              (:file "pdf" :depends-on ("suite"))
-             (:file "typesetting" :depends-on ("suite" "string"))))))
+             ;; TODO move into its own system (:file "typesetting" :depends-on ("suite" "string"))
+             ))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)

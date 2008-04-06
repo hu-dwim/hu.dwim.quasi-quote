@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test)
+(in-package :cl-quasi-quote-test-xml)
 
 (enable-quasi-quoted-xml-syntax)
 

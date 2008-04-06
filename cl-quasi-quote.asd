@@ -51,9 +51,8 @@
              (:file "bivalent" :depends-on ("binary"))
              (:file "binary" :depends-on ("syntax"))
              (:file "string" :depends-on ("syntax" "binary"))
-             (:file "escaping" :depends-on ("syntax"))
-             (:file "xml" :depends-on ("string" "escaping"))
-             (:file "typesetting" :depends-on ("xml"))))))
+             ;; TODO move into its own system (:file "typesetting" :depends-on ("xml"))
+             ))))
 
 (defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   (operate 'load-op :cl-quasi-quote-test)

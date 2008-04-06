@@ -27,7 +27,9 @@
 (def function import-semi-external-quasi-quote-symbols (&optional (package *package*))
   "Import those symbols in PACKAGE that are public to extensions of cl-quasi-quote but not to its users."
   (import
-   '(form-of parent-of splicedp body-of
+   '(form-of parent-of spliced-p body-of
      syntax-node
-     find-ancestor binary-position readtime-chain-transform)
+     find-ancestor binary-position readtime-chain-transform
+     vector-extend wrap-forms-with-bindings
+     )
    package))

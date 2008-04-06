@@ -261,7 +261,3 @@
                   (funcall map-function form)
                   form))))
 
-(def function name-as-string (name)
-  (etypecase name
-    (string name)
-    (symbol (string-downcase name))))
