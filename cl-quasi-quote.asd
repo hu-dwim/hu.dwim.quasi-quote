@@ -67,3 +67,30 @@
 
 (defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   nil)
+
+(defmacro defsubsystem (name &key components version author maintainer description setup-readtable-function)
+  `(progn
+     (defsystem ,name
+       :version ,version
+       :author ,(or author
+                    '("Attila Lendvai <attila.lendvai@gmail.com>"
+                      "Tamás Borbély <tomi.borbely@gmail.com>"
+                      "Levente Mészáros <levente.meszaros@gmail.com>"))
+       :maintainer ,(or maintainer
+                        '("Attila Lendvai <attila.lendvai@gmail.com>"
+                          "Tamás Borbély <tomi.borbely@gmail.com>"
+                          "Levente Mészáros <levente.meszaros@gmail.com>"))
+       :licence "BSD / Public domain"
+       :description ,description
+       :default-component-class cl-source-file-with-readtable
+       :class system-with-readtable
+       :setup-readtable-function ,setup-readtable-function
+       :depends-on (:cl-quasi-quote ;; and everything else it depends on...
+                    )
+       :components ,components)
+
+     (defmethod perform ((op test-op) (system (eql (find-system ,name))))
+       (operate 'test-op :cl-quasi-quote))
+
+     (defmethod operation-done-p ((op test-op) (system (eql (find-system ,name))))
+       nil)))
