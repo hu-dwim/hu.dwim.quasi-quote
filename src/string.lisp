@@ -9,6 +9,8 @@
 ;;;;;;;;;
 ;;; Parse
 
+(def special-variable *quasi-quoted-string-nesting-level*)
+
 (define-syntax quasi-quoted-string (&key (quasi-quote-character #\[)
                                          (quasi-quote-end-character #\])
                                          (unquote-character #\,)
@@ -20,6 +22,7 @@
        (readtime-chain-transform transform (make-string-quasi-quote body))))
    (lambda (form spliced)
      (make-string-unquote form spliced))
+   '*quasi-quoted-string-nesting-level*
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character

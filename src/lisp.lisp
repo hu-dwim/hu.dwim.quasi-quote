@@ -9,6 +9,8 @@
 ;;;;;;;;;
 ;;; Parse
 
+(def special-variable *quasi-quoted-lisp-nesting-level*)
+
 (define-syntax quasi-quoted-lisp (&key (quasi-quote-character #\`)
                                        (quasi-quote-end-character nil)
                                        (unquote-character #\,)
@@ -20,6 +22,7 @@
        (readtime-chain-transform transform (make-lisp-quasi-quote body))))
    (lambda (form spliced)
      (make-lisp-unquote form spliced))
+   '*quasi-quoted-lisp-nesting-level*
    :quasi-quote-character quasi-quote-character
    :quasi-quote-end-character quasi-quote-end-character
    :unquote-character unquote-character
