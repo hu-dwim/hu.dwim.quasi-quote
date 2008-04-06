@@ -7,6 +7,8 @@
 ;; TODO: separate package?
 (in-package :cl-quasi-quote)
 
+(enable-quasi-quoted-xml-to-xml-emitting-form-syntax)
+
 ;;;;;;;;;
 ;;; Parse
 
@@ -161,8 +163,6 @@
 
 ;;;;;;;;;;;;;
 ;;; Transform
-
-(enable-quasi-quoted-xml-to-xml-emitting-form-syntax)
 
 (def method transform ((to (eql 'quasi-quoted-xml)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-typesetting-to-quasi-quoted-xml input args))

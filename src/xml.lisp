@@ -9,31 +9,55 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def special-variable *xml-quasi-quote-level* 0)
+(def special-variable *quasi-quoted-xml-nesting-level*)
 
 (define-syntax (quasi-quoted-xml :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)
                                        (make-xml-quasi-quote (mapcar 'body-of result))
                                        (first result))))
-    (&key (open-bracket-character #\<)
-          (close-bracket-character #\>)
+    (&key (quasi-quote-character #\<)
+          (quasi-quote-end-character #\>)
           (unquote-character #\,)
           (splice-character #\@)
           (transform nil))
-  (bind ((original-reader-on-open-bracket-character  (multiple-value-list (get-macro-character open-bracket-character *readtable*)))
-         (original-reader-on-close-bracket-character (multiple-value-list (get-macro-character close-bracket-character *readtable*)))
-         (original-reader-on-unquote-character       (multiple-value-list (get-macro-character unquote-character *readtable*))))
-    (set-macro-character open-bracket-character
-                         (make-quasi-quoted-xml-reader original-reader-on-open-bracket-character
-                                                       original-reader-on-close-bracket-character
-                                                       original-reader-on-unquote-character
-                                                       open-bracket-character close-bracket-character
-                                                       unquote-character
-                                                       splice-character
-                                                       transform)
-                         t
-                         *readtable*)))
+  (bind ((original-reader-on-quasi-quote-character     (multiple-value-list (get-macro-character quasi-quote-character *readtable*)))
+         (original-reader-on-quasi-quote-end-character (when quasi-quote-end-character
+                                                         (multiple-value-list (get-macro-character quasi-quote-end-character *readtable*))))
+         (original-reader-on-unquote-character         (multiple-value-list (get-macro-character unquote-character *readtable*))))
+    (set-quasi-quote-syntax-in-readtable
+     (lambda (body)
+       (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body nil body))))
+     (lambda (body spliced?)
+       (make-xml-unquote body spliced?))
+     '*quasi-quoted-xml-nesting-level*
+     :nested-quasi-quote-wrapper (lambda (body)
+                                   (parse-xml-reader-body nil body))
+     :quasi-quote-character quasi-quote-character
+     :quasi-quote-end-character quasi-quote-end-character
+     :unquote-character unquote-character
+     :splice-character splice-character
+     :toplevel-reader-wrapper (lambda (reader)
+                                (lambda (stream char)
+                                  (block nil
+                                    (bind ((next-char (peek-char nil stream nil :eof t)))
+                                      (if (or (eq next-char :eof)
+                                              (not (or (alphanumericp next-char)
+                                                       (char= unquote-character next-char))))
+                                          (progn
+                                            ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
+                                            ;; but i don't care much: it works fine on lisps with sane stream buffering,
+                                            ;; which includes SBCL.
+                                            (unread-char quasi-quote-character stream)
+                                            (bind ((*readtable* (copy-readtable)))
+                                              ;; disable us and call READ recursively to make things like (< a b) work in unquoted parts
+                                              (apply 'set-macro-character quasi-quote-character original-reader-on-quasi-quote-character)
+                                              (when quasi-quote-end-character
+                                                (apply 'set-macro-character quasi-quote-end-character original-reader-on-quasi-quote-end-character))
+                                              (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
+                                              ;;(setf (readtable-case *readtable*) original-readtable-case)
+                                              (return (read stream t nil t))))
+                                          (funcall reader stream char)))))))))
 
 (define-syntax quasi-quoted-xml-to-xml ()
   (set-quasi-quoted-xml-syntax-in-readtable :transform '(xml)))
@@ -55,63 +79,6 @@
 
 (define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream)
   (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
-
-(def function make-quasi-quoted-xml-reader (original-reader-on-open-bracket-character
-                                             original-reader-on-close-bracket-character
-                                             original-reader-on-unquote-character
-                                             open-bracket-character close-bracket-character
-                                             unquote-character splice-character
-                                             transform)
-  (labels ((unquote-reader (stream char)
-             (declare (ignore char))
-             (bind ((*readtable* (copy-readtable))
-                    (*xml-quasi-quote-level* (1- *xml-quasi-quote-level*))
-                    (spliced? (eq (peek-char nil stream t nil t) splice-character)))
-               (when spliced?
-                 (read-char stream t nil t))
-               (assert (<= 0 *xml-quasi-quote-level*))
-               (when (zerop *xml-quasi-quote-level*)
-                 ;; restore the original unquote reader when we are leaving our nesting. this way it's possible
-                 ;; to use #\, in its normal meanings when being outside our own nesting levels.
-                 (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
-                 (apply 'set-macro-character open-bracket-character original-reader-on-open-bracket-character)
-                 (apply 'set-macro-character close-bracket-character original-reader-on-close-bracket-character))
-               (set-macro-character open-bracket-character #'toplevel-quasi-quoted-xml-reader)
-               (bind ((body (read stream t nil t)))
-                 (make-xml-unquote body spliced?))))
-           (toplevel-quasi-quoted-xml-reader (stream char)
-             (declare (ignore char))
-             (bind ((next-char (peek-char nil stream nil :eof t)))
-               (when (or (eq next-char :eof)
-                         (not (or (alphanumericp next-char)
-                                  (char= unquote-character next-char))))
-                 ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
-                 ;; but i don't care much: it works fine on lisps with sane stream buffering,
-                 ;; which includes SBCL.
-                 (unread-char open-bracket-character stream)
-                 (bind ((*readtable* (copy-readtable)))
-                   ;; disable us and call READ recursively to make things like (< a b) work in unquoted parts
-                   (apply 'set-macro-character open-bracket-character original-reader-on-open-bracket-character)
-                   (apply 'set-macro-character close-bracket-character original-reader-on-close-bracket-character)
-                   (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
-                   (return-from toplevel-quasi-quoted-xml-reader (read stream t nil t))))
-               ;; we must set the syntax on the end char to be like #\)
-               ;; until we read out our entire body. this is needed to
-               ;; make "<... 5> style inputs work where '5' is not
-               ;; separated from '>'.
-               (bind ((*xml-quasi-quote-level* (1+ *xml-quasi-quote-level*))
-                      (*quasi-quote-level* (1+ *quasi-quote-level*))
-                      (*readtable* (copy-readtable)))
-                 (set-macro-character unquote-character #'unquote-reader)
-                 ;; on nested invocations we want to do something else then on the toplevel invocation
-                 (set-macro-character open-bracket-character #'nested-quasi-quoted-xml-reader)
-                 (set-syntax-from-char close-bracket-character #\) *readtable*)
-                 (bind ((body (read-delimited-list close-bracket-character stream t)))
-                   (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body stream body)))))))
-           (nested-quasi-quoted-xml-reader (stream char)
-             (declare (ignore char))
-             (parse-xml-reader-body stream (read-delimited-list close-bracket-character stream t))))
-    #'toplevel-quasi-quoted-xml-reader))
 
 (def (function d) parse-xml-reader-body (stream form)
   (etypecase form
