@@ -15,12 +15,14 @@
   :version "0.1"
   :description "Quasi quote transformations for emitting PDF"
   :setup-readtable-function "cl-quasi-quote-pdf::setup-readtable"
+  :depends-on (:cl-quasi-quote :cffi)
   :components
   ((:module "src"
             :components
             ((:module "pdf"
                       :components
                       ((:file "package")
+                       (:file "zlib")
                        (:file "ast" :depends-on ("package"))
                        (:file "syntax" :depends-on ("package" "ast"))
                        (:file "transform" :depends-on ("package" "syntax" "ast"))))))))

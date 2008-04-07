@@ -67,7 +67,8 @@
 (defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   nil)
 
-(defmacro defsubsystem (name &key components version author maintainer description setup-readtable-function)
+(defmacro defsubsystem (name &key components version author maintainer description
+                        setup-readtable-function depends-on)
   `(progn
      (defsystem ,name
        :version ,version
@@ -84,8 +85,9 @@
        :default-component-class cl-source-file-with-readtable
        :class system-with-readtable
        :setup-readtable-function ,setup-readtable-function
-       :depends-on (:cl-quasi-quote ;; and everything else it depends on...
-                    )
+       :depends-on ,(or depends-on
+                        '(:cl-quasi-quote ; and everything else it depends on...
+                          ))
        :components ,components)
 
      (defmethod perform ((op test-op) (system (eql (find-system ,name))))
