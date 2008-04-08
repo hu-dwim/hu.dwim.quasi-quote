@@ -13,15 +13,15 @@
                                    (if (rest result)
                                        (make-xml-quasi-quote (mapcar 'body-of result))
                                        (first result))))
-    (&key (quasi-quote-character #\<)
-          (quasi-quote-end-character #\>)
+    (&key (start-character #\<)
+          (end-character #\>)
           (unquote-character #\,)
           (splice-character #\@)
           (transform nil))
-  (bind ((original-reader-on-quasi-quote-character     (multiple-value-list (get-macro-character quasi-quote-character *readtable*)))
-         (original-reader-on-quasi-quote-end-character (when quasi-quote-end-character
-                                                         (multiple-value-list (get-macro-character quasi-quote-end-character *readtable*))))
-         (original-reader-on-unquote-character         (multiple-value-list (get-macro-character unquote-character *readtable*))))
+  (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character start-character *readtable*)))
+         (original-reader-on-end-character     (when end-character
+                                                 (multiple-value-list (get-macro-character end-character *readtable*))))
+         (original-reader-on-unquote-character (multiple-value-list (get-macro-character unquote-character *readtable*))))
     (set-quasi-quote-syntax-in-readtable
      (lambda (body)
        (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body nil body))))
@@ -30,8 +30,8 @@
      '*quasi-quoted-xml-nesting-level*
      :nested-quasi-quote-wrapper (lambda (body)
                                    (parse-xml-reader-body nil body))
-     :quasi-quote-character quasi-quote-character
-     :quasi-quote-end-character quasi-quote-end-character
+     :start-character start-character
+     :end-character end-character
      :unquote-character unquote-character
      :splice-character splice-character
      :toplevel-reader-wrapper (lambda (reader)
@@ -45,12 +45,12 @@
                                             ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
                                             ;; but i don't care much: it works fine on lisps with sane stream buffering,
                                             ;; which includes SBCL.
-                                            (unread-char quasi-quote-character stream)
+                                            (unread-char start-character stream)
                                             (bind ((*readtable* (copy-readtable)))
                                               ;; disable us and call READ recursively to make things like (< a b) work in unquoted parts
-                                              (apply 'set-macro-character quasi-quote-character original-reader-on-quasi-quote-character)
-                                              (when quasi-quote-end-character
-                                                (apply 'set-macro-character quasi-quote-end-character original-reader-on-quasi-quote-end-character))
+                                              (apply 'set-macro-character start-character original-reader-on-start-character)
+                                              (when end-character
+                                                (apply 'set-macro-character end-character original-reader-on-end-character))
                                               (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
                                               ;;(setf (readtable-case *readtable*) original-readtable-case)
                                               (return (read stream t nil t))))

@@ -14,8 +14,8 @@
 
 (def special-variable *quasi-quoted-typesetting-nesting-level*)
 
-(define-syntax quasi-quoted-typesetting (&key (quasi-quote-character #\[)
-                                              (quasi-quote-end-character #\])
+(define-syntax quasi-quoted-typesetting (&key (start-character #\[)
+                                              (end-character #\])
                                               (unquote-character #\,)
                                               (splice-character #\@)
                                               (transform nil))
@@ -26,8 +26,8 @@
    (lambda (form spliced)
      (make-typesetting-unquote form spliced))
    '*quasi-quoted-typesetting-nesting-level*
-   :quasi-quote-character quasi-quote-character
-   :quasi-quote-end-character quasi-quote-end-character
+   :start-character start-character
+   :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character))
 

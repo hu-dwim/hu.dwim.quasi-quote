@@ -11,8 +11,8 @@
 
 (def special-variable *quasi-quoted-binary-nesting-level*)
 
-(define-syntax quasi-quoted-binary (&key (quasi-quote-character #\[)
-                                         (quasi-quote-end-character #\])
+(define-syntax quasi-quoted-binary (&key (start-character #\[)
+                                         (end-character #\])
                                          (unquote-character #\,)
                                          (splice-character #\@)
                                          (transform nil))
@@ -23,8 +23,8 @@
    (lambda (form spliced)
      (make-binary-unquote form spliced))
    '*quasi-quoted-binary-nesting-level*
-   :quasi-quote-character quasi-quote-character
-   :quasi-quote-end-character quasi-quote-end-character
+   :start-character start-character
+   :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character))
 
