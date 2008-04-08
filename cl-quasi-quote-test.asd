@@ -27,6 +27,7 @@
                :cl-quasi-quote
                :cl-quasi-quote-pdf
                :cl-quasi-quote-xml
+               :cl-quasi-quote-js
                )
   :components
   ((:module :test
@@ -38,6 +39,7 @@
              (:file "string" :depends-on ("suite"))
              (:file "bivalent" :depends-on ("suite"))
              (:file "xml" :depends-on ("suite" "string"))
+             (:file "js" :depends-on ("suite" "string"))
              (:file "pdf" :depends-on ("suite"))
              ;; TODO move into its own system (:file "typesetting" :depends-on ("suite" "string"))
              ))))

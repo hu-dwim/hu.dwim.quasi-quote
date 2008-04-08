@@ -47,7 +47,26 @@
         :cl-quasi-quote-xml
         ))
 
-(dolist (package (mapcar 'find-package '(:cl-quasi-quote-test :cl-quasi-quote-test-pdf :cl-quasi-quote-test-xml)) )
+(defpackage :cl-quasi-quote-test-js
+  (:use :common-lisp
+        :metabang-bind
+        :alexandria
+        :iterate
+        :stefil
+        :cl-def
+        :cl-syntax-sugar
+        :cl-quasi-quote
+        :cl-quasi-quote-test
+        :cl-quasi-quote-js
+        :cl-walker
+        )
+  (:shadowing-import-from :cl-quasi-quote
+   #:body-of
+   #:parent-of
+   ))
+
+(dolist (package (mapcar 'find-package '(:cl-quasi-quote-test :cl-quasi-quote-test-pdf :cl-quasi-quote-test-xml
+                                         :cl-quasi-quote-test-js)))
   (import
    '()
    package))

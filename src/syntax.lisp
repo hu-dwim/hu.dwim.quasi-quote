@@ -261,3 +261,5 @@
                   (funcall map-function form)
                   form))))
 
+(def (function io) make-spaces (count)
+  (make-string count :initial-element #\Space))

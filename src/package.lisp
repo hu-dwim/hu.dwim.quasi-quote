@@ -28,7 +28,7 @@
   "Import those symbols in PACKAGE that are public to extensions of cl-quasi-quote but not to its users."
   (import
    '(form-of parent-of spliced-p body-of
-     syntax-node
+     syntax-node make-spaces
      find-ancestor binary-position readtime-chain-transform
      vector-extend wrap-forms-with-bindings
      )
