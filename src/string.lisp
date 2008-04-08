@@ -118,9 +118,17 @@
                 (and (= 1 (length node))
                      (stringp (first node)))))
        (bind ((forms (reduce-subsequences (flatten (body-of input))
-                                          #'stringp
+                                          (lambda (el)
+                                            (or (stringp el)
+                                                (characterp el)))
                                           (lambda (&rest elements)
-                                            (apply #'concatenate 'string elements))))
+                                            (bind ((*print-pretty* #f)
+                                                   (*print-readably* #f))
+                                              (with-output-to-string (*standard-output*)
+                                                (dolist (el elements)
+                                                  (etypecase el
+                                                    (string (write-string el))
+                                                    (character (write-char el)))))))))
               (internal-stream? (eq stream '*string-stream*))
               (processed-forms (if (and toplevel
                                         internal-stream?
