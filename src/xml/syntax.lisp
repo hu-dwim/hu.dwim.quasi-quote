@@ -38,9 +38,10 @@
                                 (lambda (stream char)
                                   (block nil
                                     (bind ((next-char (peek-char nil stream nil :eof t)))
-                                      (if (or (eq next-char :eof)
-                                              (not (or (alphanumericp next-char)
-                                                       (char= unquote-character next-char))))
+                                      (if (and (char= char #\<) ; we are installed on the less-then sign...
+                                               (or (eq next-char :eof)
+                                                   (not (or (alphanumericp next-char)
+                                                            (char= unquote-character next-char)))))
                                           (progn
                                             ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
                                             ;; but i don't care much: it works fine on lisps with sane stream buffering,
