@@ -14,11 +14,13 @@
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node &rest args &key (indent #f) &allow-other-keys)
   (bind ((indent-level
           (when indent
-            (list (make-string (* indent *xml-indent-level*) :initial-element #\Space))))(indent-new-line
+            (list (make-spaces (* indent *xml-indent-level*)))))
+         (indent-new-line
           (when indent
             (list #\NewLine))))
     (etypecase node
       (function node)
+      ;; TODO indent for strings, too?
       (string `(,@indent-level ,(escape-as-xml node) ,@indent-new-line))
       (xml-element
        (bind ((attributes (attributes-of node))
@@ -49,6 +51,7 @@
                  `("/>" ,@indent-new-line)))))
       (xml-text
        (bind ((content (content-of node)))
+         ;; TODO indent for xml-text, too?
          `(,@indent-level
            ,(etypecase content
                        (xml-unquote (make-string-quasi-quote (form-of node)))

@@ -36,9 +36,8 @@
                              lambda)
                            ast)))
     (is (string= expected
-                 (bind ((*typesetting-stream* (make-string-output-stream)))
-                   (emit (funcall transformed) *typesetting-stream*)
-                   (get-output-stream-string *typesetting-stream*)))))
+                 (with-output-to-string (*typesetting-stream*)
+                   (emit (funcall transformed) *typesetting-stream*)))))
   ;; evaluate to binary
   (bind ((transformed
           (chain-transform '(quasi-quoted-xml
