@@ -34,6 +34,7 @@
      :end-character end-character
      :unquote-character unquote-character
      :splice-character splice-character
+     :readtable-case :preserve
      :toplevel-reader-wrapper (lambda (reader)
                                 (lambda (stream char)
                                   (block nil
@@ -53,7 +54,6 @@
                                               (when end-character
                                                 (apply 'set-macro-character end-character original-reader-on-end-character))
                                               (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
-                                              ;;(setf (readtable-case *readtable*) original-readtable-case)
                                               (return (read stream t nil t))))
                                           (funcall reader stream char)))))))))
 
@@ -118,4 +118,4 @@
 (def function name-as-string (name)
   (etypecase name
     (string name)
-    (symbol (string-downcase name))))
+    (symbol (symbol-name name))))
