@@ -111,6 +111,15 @@
               "aTTriUte5" "5"
               ,(make-xml-attribute "attribute6" "6"))>))
 
+(def xml-test test/xml/case-sensitivity ()
+   ;; the xml reader is case sensitive, but unquoted regions are returning to the toplevel readtable's readtable-case
+  ("<eLement AttributE1=\"1\"><ElemenT/><fOOO baR=\"42\"/></eLement>"
+    <eLement (AttributE1 1)
+    ,@(progn
+       (list
+        <ElemenT>
+        <fOOO (baR 42)>))>))
+
 (def test test/xml/errors ()
   (enable-quasi-quoted-xml-syntax)
   (signals reader-error
