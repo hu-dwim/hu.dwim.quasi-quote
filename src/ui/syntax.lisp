@@ -18,7 +18,7 @@
                                      (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (bind ((*quasi-quoted-ui-nesting-level* (1+ *quasi-quoted-ui-nesting-level*)))
+     (bind ((cl-quasi-quote::*quasi-quote-level* (1+ cl-quasi-quote::*quasi-quote-level*)))
        (readtime-chain-transform transform (make-ui-quasi-quote (parse-quasi-quoted-ui body)))))
    (lambda (form spliced)
      (make-ui-unquote form spliced))

@@ -143,4 +143,8 @@
     [document [info [dictionary "Author" "levy"]]
               [root [catalog "Pages"
                              [pages "Count" 0
-                                    "MediaBox" [array 0 0 612 792]]]]]))
+                                    "MediaBox" [array 0 0 612 792]]]]])
+
+  (:method ((node ui-list))
+    ;; TODO:
+    [null]))

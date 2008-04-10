@@ -41,7 +41,7 @@
              (:file "xml" :depends-on ("suite" "string"))
              (:file "js" :depends-on ("suite" "string"))
              (:file "pdf" :depends-on ("suite"))
-             (:file "ui" :depends-on ("suite" "string"))))))
+             (:file "ui" :depends-on ("suite" "pdf" "xml"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)
