@@ -11,6 +11,16 @@
 
 (enable-quasi-quoted-xml-to-xml-emitting-form-syntax)
 
+(def macro registered-action (&body forms)
+  `(progn
+     ,@forms
+     "TODO"))
+
+(def macro registered-input (&body forms)
+  `(progn
+     ,@forms
+     "TODO"))
+
 (defgeneric transform-quasi-quoted-ui-to-quasi-quoted-xml (node)
   (:method ((node function))
     node)
@@ -62,11 +72,7 @@
                (elements-of node))>>)))
 
   (:method ((node ui-text))
-    <span ,@(mapcar (lambda (node)
-                      (if (typep node 'ui-unquote)
-                          (make-xml-unquote `(make-xml-text ,(form-of node)))
-                          (make-xml-text node)))
-                    (contents-of node))>)
+    <span ,@(mapcar #'transform-quasi-quoted-ui-to-quasi-quoted-xml (contents-of node))>)
 
   (:method ((node ui-menu))
     <ul ,@(mapcar 'transform-quasi-quoted-ui-to-quasi-quoted-xml (menu-items-of node))>)
@@ -85,14 +91,11 @@
   (:method ((node ui-menu-item))
     <li
      <a (:href ,(make-xml-unquote `(registered-action ,(form-of (action-of node)))))
-        ,(make-xml-text (label-of node))>>)
+        ,(transform-quasi-quoted-ui-to-quasi-quoted-xml (label-of node))>>)
 
   (:method ((node ui-action))
     <a (:href ,(make-xml-unquote `(registered-action ,(form-of (action-of node)))))
-       ,(bind ((label (label-of node)))
-              (if (typep label 'ui-unquote)
-                  (make-xml-unquote `(make-xml-text (princ-to-string ,(form-of label))))
-                  (make-xml-text (transform-quasi-quoted-ui-to-quasi-quoted-xml label))))>)
+       ,(transform-quasi-quoted-ui-to-quasi-quoted-xml (label-of node))>)
 
   (:method ((node ui-text-field))
     <input (:type "text"
