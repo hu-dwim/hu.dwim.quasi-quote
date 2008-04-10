@@ -157,8 +157,8 @@
               [indirect-object content ,(transform-quasi-quoted-ui-to-quasi-quoted-pdf (content-of node))]])
 
   (:method ((node ui-list))
-    ;; TODO:
-    [null])
+    [stream
+     ,@(mapcar 'transform-quasi-quoted-ui-to-quasi-quoted-pdf (elements-of node))])
 
   (:method ((node ui-text))
     ;; TODO:
@@ -168,7 +168,16 @@
      [move-text 72 712]
      ,@(mapcar 'transform-quasi-quoted-ui-to-quasi-quoted-pdf (contents-of node))
      [display-text]
-     [end-text]]))
+     [end-text]])
+
+  (:method ((node ui-table))
+    )
+
+  (:method ((node ui-row))
+    )
+
+  (:method ((node ui-cell))
+    ))
 
 (def method transform ((to (eql 'quasi-quoted-pdf)) (input ui-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-ui-to-quasi-quoted-pdf input args))

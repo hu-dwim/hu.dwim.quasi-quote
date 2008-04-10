@@ -84,6 +84,17 @@
     (text "Hello")
     (text "World")]))
 
-(def ui-pdf-test test/ui/pdf/simple ()
+(def ui-pdf-test test/ui/pdf/hello-world ()
   [screen
    (text "Hello World")])
+
+(def ui-pdf-test test/ui/pdf/simple ()
+  [screen
+   (vertical-list
+    (text "Hello World")
+    (table
+      (row
+        (cell
+          (text "one"))
+        (cell
+          (text "Two")))))])

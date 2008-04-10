@@ -100,3 +100,12 @@
 
 (def ui-ast-node form (ui-syntax-node)
   ((content)))
+
+(def ui-ast-node table (ui-syntax-node)
+  ((rows)))
+
+(def ui-ast-node row (ui-syntax-node)
+  ((cells)))
+
+(def ui-ast-node cell (ui-syntax-node)
+  ((content)))

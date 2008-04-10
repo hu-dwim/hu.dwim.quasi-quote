@@ -98,3 +98,15 @@
 (def method parse-quasi-quoted-ui* ((first (eql 'ui-form)) whole)
   (make-instance 'ui-form
                  :content (parse-quasi-quoted-ui (second whole))))
+
+(def method parse-quasi-quoted-ui* ((first (eql 'ui-table)) whole)
+  (make-instance 'ui-table
+                 :rows (mapcar #'parse-quasi-quoted-ui (cdr whole))))
+
+(def method parse-quasi-quoted-ui* ((first (eql 'ui-row)) whole)
+  (make-instance 'ui-row
+                 :cells (mapcar #'parse-quasi-quoted-ui (cdr whole))))
+
+(def method parse-quasi-quoted-ui* ((first (eql 'ui-cell)) whole)
+  (make-instance 'ui-cell
+                 :content (parse-quasi-quoted-ui (second whole))))
