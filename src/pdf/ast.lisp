@@ -62,7 +62,7 @@
            result))
        (export ',name *package*))))
 
-(def pdf-ast-node object-identifier ()
+(def pdf-ast-node object-identifier (pdf-syntax-node)
   ;; TODO atomic-incf
   ((node-identity (incf *compile-time-pdf-node-identity-counter*) :type integer)
    (object-id nil :type integer)

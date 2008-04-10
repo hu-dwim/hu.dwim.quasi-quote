@@ -4,26 +4,22 @@
 ;;;
 ;;; See LICENCE for details.
 
-(cl:in-package :cl-quasi-quote)
+(cl:in-package :cl-user)
 
-(defpackage :cl-quasi-quote-js
+(defpackage :cl-quasi-quote-ui
   (:use :common-lisp
         :metabang-bind
         :alexandria
         :iterate
         :cl-def
-        :cl-walker
         :cl-syntax-sugar
-        :cl-quasi-quote)
+        :cl-quasi-quote
+        :cl-quasi-quote-xml
+        :cl-quasi-quote-pdf)
 
-  (:shadowing-import-from :cl-quasi-quote
-   #:body-of
-   #:parent-of)
+  (:export))
 
-  (:export
-   ))
-
-(in-package :cl-quasi-quote-js)
+(in-package :cl-quasi-quote-ui)
 
 (cl-quasi-quote::import-duplicate-symbols)
 (cl-quasi-quote::import-semi-external-quasi-quote-symbols)
@@ -37,4 +33,4 @@
 
 #+#.(cl:when (cl:find-package "SWANK") '(:and))
 (register-readtable-for-swank
- '("CL-QUASI-QUOTE-JS") 'setup-readtable)
+ '("CL-QUASI-QUOTE-UI") 'setup-readtable)

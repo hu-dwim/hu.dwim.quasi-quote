@@ -8,13 +8,12 @@
 
 (defpackage :cl-quasi-quote-xml
   (:use :common-lisp
-        :cl-syntax-sugar
-        :cl-quasi-quote
         :metabang-bind
         :alexandria
         :iterate
         :cl-def
-        )
+        :cl-syntax-sugar
+        :cl-quasi-quote)
 
   (:export
    ))

@@ -80,6 +80,9 @@
                                         (read stream t nil t)))))
     #'toplevel-quasi-quoted-pdf-reader))
 
+(define-syntax quasi-quoted-pdf-to-pdf-emitting-form ()
+  (set-quasi-quoted-pdf-syntax-in-readtable :transform '(pdf-emitting-form)))
+
 (define-syntax quasi-quoted-pdf-to-binary ()
   (set-quasi-quoted-pdf-syntax-in-readtable :transform '(quasi-quoted-bivalent quasi-quoted-binary binary)))
 

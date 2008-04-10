@@ -28,7 +28,7 @@
                :cl-quasi-quote-pdf
                :cl-quasi-quote-xml
                :cl-quasi-quote-js
-               )
+               :cl-quasi-quote-ui)
   :components
   ((:module :test
 	    :components
@@ -41,8 +41,7 @@
              (:file "xml" :depends-on ("suite" "string"))
              (:file "js" :depends-on ("suite" "string"))
              (:file "pdf" :depends-on ("suite"))
-             ;; TODO move into its own system (:file "typesetting" :depends-on ("suite" "string"))
-             ))))
+             (:file "ui" :depends-on ("suite" "string"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)

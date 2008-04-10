@@ -48,6 +48,19 @@
         :cl-quasi-quote-test
         :cl-quasi-quote-xml))
 
+(defpackage :cl-quasi-quote-test-ui
+  (:use :common-lisp
+        :metabang-bind
+        :alexandria
+        :iterate
+        :stefil
+        :flexi-streams
+        :cl-def
+        :cl-syntax-sugar
+        :cl-quasi-quote
+        :cl-quasi-quote-test
+        :cl-quasi-quote-ui))
+
 (defpackage :cl-quasi-quote-test-js
   (:use :common-lisp
         :metabang-bind
