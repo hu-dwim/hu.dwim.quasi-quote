@@ -20,7 +20,6 @@
      (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body))))
    (lambda (body spliced?)
      (make-pdf-unquote body spliced?))
-   '*quasi-quote-nesting-level*
    :nested-quasi-quote-wrapper (lambda (body)
                                  (parse-pdf-reader-body body))
    :start-character start-character

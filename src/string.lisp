@@ -19,7 +19,6 @@
      (readtime-chain-transform transform (make-string-quasi-quote body)))
    (lambda (form spliced)
      (make-string-unquote form spliced))
-   '*quasi-quote-nesting-level*
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character

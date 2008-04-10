@@ -9,8 +9,6 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def (special-variable e) *quasi-quote-nesting-level* 0)
-
 (def function readtime-chain-transform (to from)
   (if (= 1 *quasi-quote-nesting-level*)
       (chain-transform to from)

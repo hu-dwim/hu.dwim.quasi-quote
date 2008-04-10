@@ -22,7 +22,6 @@
      `(transform-js-reader-body ,body ,transform))
    (lambda (body spliced?)
      `(transform-js-reader-unquote ,body ,spliced?))
-   '*quasi-quote-nesting-level*
    :nested-quasi-quote-wrapper (lambda (body)
                                  `(transform-js-reader-body ,body ,transform))
    :start-character start-character

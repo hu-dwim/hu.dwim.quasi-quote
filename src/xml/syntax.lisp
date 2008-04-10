@@ -25,7 +25,6 @@
        (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body nil body))))
      (lambda (body spliced?)
        (make-xml-unquote body spliced?))
-     '*quasi-quote-nesting-level*
      :nested-quasi-quote-wrapper (lambda (body)
                                    (parse-xml-reader-body nil body))
      :start-character start-character
