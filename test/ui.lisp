@@ -19,7 +19,6 @@
   (is (string= expected
                (transform-and-emit '(quasi-quoted-xml
                                      quasi-quoted-string
-                                     quasi-quoted-string
                                      string-emitting-form
                                      lambda-form
                                      lambda)
@@ -28,7 +27,6 @@
   (is (string= expected
                (with-output-to-string (*ui-stream*)
                  (transform-and-emit '(quasi-quoted-xml
-                                       quasi-quoted-string
                                        quasi-quoted-string
                                        (string-emitting-form :stream-name *ui-stream*)
                                        lambda-form
