@@ -9,8 +9,6 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def special-variable *quasi-quoted-bivalent-nesting-level*)
-
 (define-syntax quasi-quoted-bivalent (&key (start-character #\[)
                                            (end-character #\])
                                            (unquote-character #\,)
@@ -18,11 +16,10 @@
                                            (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (bind ((*quasi-quote-level* (1+ *quasi-quote-level*)))
-       (readtime-chain-transform transform (make-bivalent-quasi-quote body))))
+     (readtime-chain-transform transform (make-bivalent-quasi-quote body)))
    (lambda (form spliced)
      (make-bivalent-unquote form spliced))
-   '*quasi-quoted-bivalent-nesting-level*
+   '*quasi-quote-nesting-level*
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character

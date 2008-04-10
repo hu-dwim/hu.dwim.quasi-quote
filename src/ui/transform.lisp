@@ -34,8 +34,6 @@
 
   (:method ((node ui-unquote))
     (make-xml-unquote
-     ;; TODO: computed states should capture lexical variables and cache in hash-table like defcfun
-     ;; `(transform-quasi-quoted-ui-to-quasi-quoted-xml (registered-component ,(form-of node)))))
      `(transform-quasi-quoted-ui-to-quasi-quoted-xml
        ,(map-filtered-tree (form-of node) 'ui-quasi-quote #'transform-quasi-quoted-ui-to-quasi-quoted-xml))))
 

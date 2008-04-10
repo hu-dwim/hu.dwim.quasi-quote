@@ -6,8 +6,6 @@
 
 (in-package :cl-quasi-quote-xml)
 
-(def special-variable *quasi-quoted-xml-nesting-level*)
-
 (define-syntax (quasi-quoted-xml :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)
@@ -27,7 +25,7 @@
        (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body nil body))))
      (lambda (body spliced?)
        (make-xml-unquote body spliced?))
-     '*quasi-quoted-xml-nesting-level*
+     '*quasi-quote-nesting-level*
      :nested-quasi-quote-wrapper (lambda (body)
                                    (parse-xml-reader-body nil body))
      :start-character start-character

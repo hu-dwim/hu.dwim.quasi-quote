@@ -6,8 +6,6 @@
 
 (in-package :cl-quasi-quote-js)
 
-(def special-variable *quasi-quoted-js-nesting-level*)
-
 (define-syntax (quasi-quoted-js :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)
@@ -24,7 +22,7 @@
      `(transform-js-reader-body ,body ,transform))
    (lambda (body spliced?)
      `(transform-js-reader-unquote ,body ,spliced?))
-   '*quasi-quoted-js-nesting-level*
+   '*quasi-quote-nesting-level*
    :nested-quasi-quote-wrapper (lambda (body)
                                  `(transform-js-reader-body ,body ,transform))
    :start-character start-character

@@ -9,7 +9,6 @@
 ;;;;;;;;;
 ;;; Parse
 ;;;
-(def special-variable *pdf-quasi-quote-level* 0)
 
 (define-syntax quasi-quoted-pdf (&key (start-character #\[)
                                       (end-character #\])
@@ -18,13 +17,10 @@
                                       (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     ;; TODO: this is needed so that only the top level gets transformed
-     ;; TODO: i don't know what it has to do with the nesting level in the reader
-     (bind ((cl-quasi-quote::*quasi-quote-level* (1+ cl-quasi-quote::*quasi-quote-level*)))
-       (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body)))))
+     (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body))))
    (lambda (body spliced?)
      (make-pdf-unquote body spliced?))
-   '*quasi-quoted-xml-nesting-level*
+   '*quasi-quote-nesting-level*
    :nested-quasi-quote-wrapper (lambda (body)
                                  (parse-pdf-reader-body body))
    :start-character start-character
