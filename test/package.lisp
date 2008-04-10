@@ -59,7 +59,9 @@
         :cl-syntax-sugar
         :cl-quasi-quote
         :cl-quasi-quote-test
-        :cl-quasi-quote-ui))
+        :cl-quasi-quote-ui
+        :cl-quasi-quote-xml
+        :cl-quasi-quote-pdf))
 
 (defpackage :cl-quasi-quote-test-js
   (:use :common-lisp

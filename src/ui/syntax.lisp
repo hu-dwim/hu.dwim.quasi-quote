@@ -44,7 +44,7 @@
   (set-quasi-quoted-ui-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def function ui-syntax-node-name (name)
-  (format-symbol (find-package :cl-quasi-quote) "UI-~A" name))
+  (format-symbol (find-package :cl-quasi-quote-ui) "UI-~A" name))
 
 (def function parse-quasi-quoted-ui (form)
   (if (typep form 'syntax-node)

@@ -14,13 +14,13 @@
 (def class* js-syntax-node (syntax-node)
   ())
 
-(def class* js-quasi-quote (quasi-quote js-syntax-node)
+(def (class* e) js-quasi-quote (quasi-quote js-syntax-node)
   ())
 
 (def (function e) make-js-quasi-quote (body)
   (make-instance 'js-quasi-quote :body body))
 
-(def class* js-unquote (unquote js-syntax-node)
+(def (class* e) js-unquote (unquote js-syntax-node)
   ())
 
 (def (function e) make-js-unquote (form &optional (spliced? #f))

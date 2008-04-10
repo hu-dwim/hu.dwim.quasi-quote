@@ -13,13 +13,13 @@
 (def class* xml-syntax-node (syntax-node)
   ())
 
-(def class* xml-quasi-quote (quasi-quote xml-syntax-node)
+(def (class* e) xml-quasi-quote (quasi-quote xml-syntax-node)
   ())
 
 (def (function e) make-xml-quasi-quote (body)
   (make-instance 'xml-quasi-quote :body body))
 
-(def class* xml-unquote (unquote xml-syntax-node)
+(def (class* e) xml-unquote (unquote xml-syntax-node)
   ())
 
 (def (function e) make-xml-unquote (form &optional (spliced? #f))
