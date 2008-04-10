@@ -180,8 +180,11 @@
     node)
 
   (:method ((node hash-table))
-    ;; TODO: recurse into make-syntax-node-emitting-form
-    (make-load-form node))
+    (with-unique-names (table)
+      `(bind ((,table (make-hash-table :test ',(hash-table-test node))))
+         ,@(iter (for (key value) :in-hashtable node)
+                 (collect `(setf (gethash ,(make-syntax-node-emitting-form key) ,table)
+                                 ,(make-syntax-node-emitting-form value)))))))
 
   (:method ((node list))
     (iter (for element :in node)
