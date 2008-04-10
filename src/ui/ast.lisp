@@ -18,6 +18,7 @@
   ())
 
 (def (function e) make-ui-quasi-quote (body)
+  (assert (not (typep body 'quasi-quote)))
   (make-instance 'ui-quasi-quote :body body))
 
 (def (class* e) ui-unquote (unquote ui-syntax-node)

@@ -28,20 +28,23 @@
    :unquote-character unquote-character
    :splice-character splice-character))
 
-(define-syntax quasi-quoted-ui-to-string ()
+(define-syntax quasi-quoted-ui-to-xml-string ()
   (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string)))
 
-(define-syntax quasi-quoted-ui-to-string-emitting-form ()
+(define-syntax quasi-quoted-ui-to-xml-string-emitting-form ()
   (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string-emitting-form)))
 
-(define-syntax quasi-quoted-ui-to-binary ()
+(define-syntax quasi-quoted-ui-to-xml-binary ()
   (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary)))
 
-(define-syntax quasi-quoted-ui-to-binary-emitting-form ()
+(define-syntax quasi-quoted-ui-to-xml-binary-emitting-form ()
   (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-ui-to-binary-stream-emitting-form (stream-name)
+(define-syntax quasi-quoted-ui-to-xml-binary-stream-emitting-form (stream-name)
   (set-quasi-quoted-ui-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+
+(define-syntax quasi-quoted-ui-to-pdf-binary-stream-emitting-form (stream-name)
+  (set-quasi-quoted-ui-syntax-in-readtable :transform `(quasi-quoted-pdf quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def function ui-syntax-node-name (name)
   (format-symbol (find-package :cl-quasi-quote-ui) "UI-~A" name))

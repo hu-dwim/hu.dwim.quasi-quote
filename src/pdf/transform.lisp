@@ -19,7 +19,7 @@
    (xref-position :type integer)
    (xref (make-instance 'pdf-xref) :type pdf-xref)
    (root-reference :type pdf-indirect-object-reference)
-   (info-reference :type pdf-indirect-object-reference)))
+   (info-reference nil :type pdf-indirect-object-reference)))
 
 (def function compute-xref-size (xref)
   ;; TODO: 1+ due to the default xref
@@ -51,8 +51,13 @@
           (entries-of section))
     object-id))
 
-(flet ((recurse (node)
-         (transform-quasi-quoted-pdf-to-quasi-quoted-bivalent node)))
+(labels ((recurse (node)
+           (transform-quasi-quoted-pdf-to-quasi-quoted-bivalent node))
+         (transform-dictionary-entry (key value)
+           (list (recurse key)
+                 #\Space
+                 (recurse value)
+                 #\NewLine)))
   (declare (inline recurse))
   (defgeneric transform-quasi-quoted-pdf-to-quasi-quoted-bivalent (node)
     (:method ((node function))
@@ -148,18 +153,21 @@
     (:method ((node pdf-display-text))
       "Tj")
 
+    (:method :around ((node pdf-dictionary))
+             (list (format nil "<<~%")
+                   (call-next-method)
+                   ">>"))
+
     (:method ((node pdf-dictionary))
-      (list (format nil "<<~%")
-            (bind ((class-name (class-name (class-of node))))
+      (iter (for (key value) :in-hashtable (map-of node))
+            (assert (typep key 'pdf-name))
+            (appending (transform-dictionary-entry key value))))
+
+    (:method ((node pdf-typed-dictionary))
+      (list (bind ((class-name (class-name (class-of node))))
               (unless (eq 'pdf-dictionary class-name)
                 (format nil "/Type /~A~%" (string-capitalize (subseq (string-downcase (symbol-name class-name)) 4))))) 
-            (iter (for (key value) :in-hashtable (map-of node))
-                  (assert (typep key 'pdf-name))
-                  (collect (recurse key))
-                  (collect #\Space)
-                  (collect (recurse value))
-                  (collect #\NewLine))
-            ">>"))
+            (call-next-method)))
 
     (:method ((node pdf-indirect-object))
       (list
@@ -221,12 +229,24 @@
     (:method ((node pdf-header))
       (format nil "%PDF-~A~%%Non ASCII marker: í~%" (version-of node)))
 
+    (:method :around ((node pdf-trailer))
+             (list (format nil "trailer~%")
+                   (call-next-method)
+                   (format nil "~%startxref~%")
+                   (make-bivalent-unquote '(princ-to-string (xref-position-of *pdf-environment*)))
+                   (format nil "~%%%EOF~%")))
+
     (:method ((node pdf-trailer))
-      (list (format nil "trailer~%")
-            (recurse (dictionary-of node))
-            (format nil "~%startxref~%")
-            (make-bivalent-unquote '(princ-to-string (xref-position-of *pdf-environment*)))
-            (format nil "~%%%EOF~%")))
+      (list
+       (transform-dictionary-entry
+        (make-pdf-name "Root")
+        (make-bivalent-unquote '(transform-quasi-quoted-pdf-to-quasi-quoted-bivalent (root-reference-of *pdf-environment*))))
+       (transform-dictionary-entry
+        (make-pdf-name "Info")
+        (make-bivalent-unquote '(transform-quasi-quoted-pdf-to-quasi-quoted-bivalent (info-reference-of *pdf-environment*))))
+       (transform-dictionary-entry
+        (make-pdf-name "Size")
+        (make-bivalent-unquote '(princ-to-string (compute-xref-size (xref-of *pdf-environment*)))))))
 
     (:method ((node pdf-document))
       (list

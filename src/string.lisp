@@ -54,6 +54,7 @@
   ())
 
 (def (function e) make-string-quasi-quote (body)
+  (assert (not (typep body 'quasi-quote)))
   (make-instance 'string-quasi-quote :body body))
 
 (def (class* e) string-unquote (unquote string-syntax-node)

@@ -18,6 +18,7 @@
   ())
 
 (def (function e) make-pdf-quasi-quote (body)
+  (assert (not (typep body 'quasi-quote)))
   (make-instance 'pdf-quasi-quote :body body))
 
 (def (class* e) pdf-unquote (unquote pdf-syntax-node)
@@ -139,13 +140,16 @@
 (def pdf-ast-node dictionary ()
   ((map (make-hash-table) :type hash-table)))
 
-(def pdf-ast-node catalog (pdf-dictionary)
+(def pdf-ast-node typed-dictionary (pdf-dictionary)
   ())
 
-(def pdf-ast-node pages (pdf-dictionary)
+(def pdf-ast-node catalog (pdf-typed-dictionary)
   ())
 
-(def pdf-ast-node page (pdf-dictionary)
+(def pdf-ast-node pages (pdf-typed-dictionary)
+  ())
+
+(def pdf-ast-node page (pdf-typed-dictionary)
   ())
 
 (def pdf-ast-node root (pdf-indirect-object)
@@ -178,21 +182,11 @@
 (def pdf-ast-node header ()
   ((version "1.4" :type string)))
 
-(def pdf-ast-node trailer ()
-  ((dictionary (make-trailer-dictionary) :type pdf-dictionary)))
+(def pdf-ast-node trailer (pdf-dictionary)
+  ())
 
 (def function make-pdf-trailer ()
   (make-instance 'pdf-trailer))
-
-(def function make-trailer-dictionary ()
-  (bind ((map (make-hash-table)))
-    (setf (gethash (make-pdf-name "Root") map)
-          (make-pdf-unquote '(root-reference-of *pdf-environment*)))
-    (setf (gethash (make-pdf-name "Info") map)
-          (make-pdf-unquote '(info-reference-of *pdf-environment*)))
-    (setf (gethash (make-pdf-name "Size") map)
-          (make-bivalent-unquote '(princ-to-string (compute-xref-size (xref-of *pdf-environment*)))))
-    (make-instance 'pdf-dictionary :map map)))
 
 (def pdf-ast-node document ()
   ((header (make-instance 'pdf-header) :type pdf-header)

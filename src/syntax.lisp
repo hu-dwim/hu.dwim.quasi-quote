@@ -48,6 +48,7 @@
 (def (function e) make-side-effect (form)
   (make-instance 'side-effect :form form))
 
+;; TODO: revise this, how to make it safe
 (def (class* e) parent-mixin ()
   ((parent :type syntax-node)))
 
@@ -56,11 +57,19 @@
         (for slot :in (class-slots class))
         (when (slot-boundp-using-class class self slot)
           (bind ((value (slot-value-using-class class self slot)))
+            ;; TODO: this is really fragile
             (typecase value
               (parent-mixin (setf (parent-of value) self))
-              (list (when (eq 'list (slot-definition-type slot))
-                      (dolist (element value)
-                        (setf (parent-of element) self)))))))))
+              (list
+               (when (eq 'list (slot-definition-type slot))
+                 (dolist (element value)
+                   (setf (parent-of element) self))))
+              (hash-table
+               (iter (for (key value) :in-hashtable value)
+                     (when (typep value 'parent-mixin)
+                       (setf (parent-of value) self))
+                     (when (typep key 'parent-mixin)
+                       (setf (parent-of key) self)))))))))
 
 (def function find-ancestor (node type)
   (iter (for current :initially node :then (parent-of current))
@@ -171,7 +180,7 @@
 
 (defgeneric make-syntax-node-emitting-form (node)
   (:method ((node symbol))
-    node)
+    (list 'quote node))
 
   (:method ((node number))
     node)
@@ -181,7 +190,7 @@
 
   (:method ((node hash-table))
     (with-unique-names (table)
-      `(bind ((,table (make-hash-table :test ',(hash-table-test node))))
+      `(prog1-bind ,table (make-hash-table :test ',(hash-table-test node))
          ,@(iter (for (key value) :in-hashtable node)
                  (collect `(setf (gethash ,(make-syntax-node-emitting-form key) ,table)
                                  ,(make-syntax-node-emitting-form value)))))))

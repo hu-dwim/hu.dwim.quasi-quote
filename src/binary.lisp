@@ -49,6 +49,7 @@
   ())
 
 (def (function e) make-binary-quasi-quote (body)
+  (assert (not (typep body 'quasi-quote)))
   (make-instance 'binary-quasi-quote :body body))
 
 (def (class* e) binary-unquote (unquote binary-syntax-node)

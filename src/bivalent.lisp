@@ -52,6 +52,7 @@
   ())
 
 (def (function e) make-bivalent-quasi-quote (body)
+  (assert (not (typep body 'quasi-quote)))
   (make-instance 'bivalent-quasi-quote :body body))
 
 (def (class* e) bivalent-unquote (unquote bivalent-syntax-node)

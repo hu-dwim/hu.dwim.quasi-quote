@@ -18,7 +18,10 @@
                                       (transform nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body))))
+     ;; TODO: this is needed so that only the top level gets transformed
+     ;; TODO: i don't know what it has to do with the nesting level in the reader
+     (bind ((cl-quasi-quote::*quasi-quote-level* (1+ cl-quasi-quote::*quasi-quote-level*)))
+       (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body)))))
    (lambda (body spliced?)
      (make-pdf-unquote body spliced?))
    '*quasi-quoted-xml-nesting-level*
@@ -85,8 +88,9 @@
                 (string (make-pdf-name key))
                 (symbol (make-pdf-name key))))
     (setf value (parse-into-pdf-syntax-node value))
-    (setf (parent-of value) dictionary)
+    ;; TODO: revise with parent-mixin
     (setf (parent-of key) dictionary)
+    (setf (parent-of value) dictionary)
     (setf (gethash key map) value))
   dictionary)
 
