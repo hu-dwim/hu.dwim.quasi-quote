@@ -261,6 +261,44 @@
 (def method transform-quasi-quoted-typesetting-to-quasi-quoted-xml ((node typesetting-form))
   <form ,(transform-quasi-quoted-typesetting-to-quasi-quoted-xml (content-of node))>)
 
+
+
+
+
+(enable-quasi-quoted-pdf-to-pdf-emitting-form-syntax)
+
+#+nil ;; use in tests
+(set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-pdf quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream *pdf-stream*)))
+
+(def method transform ((to (eql 'quasi-quoted-pdf)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
+  (apply #'transform-quasi-quoted-typesetting-to-quasi-quoted-pdf input args))
+
+(defgeneric transform-quasi-quoted-typesetting-to-quasi-quoted-pdf (node)
+  (:method ((node function))
+    node)
+
+  (:method ((node quasi-quote))
+    (if (typep node 'xml-quasi-quote)
+        (body-of node)
+        node))
+
+  (:method ((node unquote))
+    (transform 'quasi-quoted-xml node))
+
+  (:method ((node typesetting-quasi-quote))
+    (make-pdf-quasi-quote (transform-quasi-quoted-typesetting-to-quasi-quoted-pdf (body-of node))))
+
+  (:method ((node typesetting-unquote))
+    (make-pdf-unquote
+     `(transform-quasi-quoted-typesetting-to-quasi-quoted-pdf
+       ,(map-filtered-tree (form-of node) 'typesetting-quasi-quote #'transform-quasi-quoted-typesetting-to-quasi-quoted-pdf))))
+
+  (:method ((node typesetting-screen))
+    [document (info (dictionary (name "Author") (string "levy")))
+              (root (catalog (name "Pages")
+                             (pages (name "Count") (number 0)
+                                    (name "MediaBox") (array (number 0) (number 0) (number 612) (number 792)))))]))
+
 #||
 
 ;; TODO: the following parts are experimental and should be deleted
