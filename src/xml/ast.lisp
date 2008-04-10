@@ -17,6 +17,7 @@
   ())
 
 (def (function e) make-xml-quasi-quote (body)
+  (assert (not (typep body 'quasi-quote)))
   (make-instance 'xml-quasi-quote :body body))
 
 (def (class* e) xml-unquote (unquote xml-syntax-node)
