@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test-pdf)
+(in-package :cl-quasi-quote-test)
 
 (enable-quasi-quoted-pdf-syntax)
 
