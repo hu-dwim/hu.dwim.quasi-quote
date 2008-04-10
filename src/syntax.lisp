@@ -147,7 +147,7 @@
            (package (ast-package to)))
       (cond ((ends-with-subseq "-EMITTING-FORM" name)
              ;; call generic form emitter for CLOS AST 
-             (syntax-node-emitting-form from))
+             (make-syntax-node-emitting-form from))
             ((and (not (search "QUASI-QUOTED-" name))
                   (typep from (format-symbol package "~A-SYNTAX-NODE" name)))
              (funcall (chain-transform `(,(format-symbol package "~A-EMITTING-FORM" name) lambda-form lambda) from)))
@@ -173,7 +173,7 @@
         (for element :in through)
         (finally (return node))))
 
-(defgeneric syntax-node-emitting-form (node)
+(defgeneric make-syntax-node-emitting-form (node)
   (:method ((node symbol))
     node)
 
@@ -183,11 +183,15 @@
   (:method ((node string))
     node)
 
+  (:method ((node hash-table))
+    ;; TODO: recurse into make-syntax-node-emitting-form
+    (make-load-form node))
+
   (:method ((node list))
     (iter (for element :in node)
           (collect (when (typep element 'unquote)
                      (spliced-p element)) :into spliced-elements)
-          (collect (syntax-node-emitting-form element) :into transformed-elements)
+          (collect (make-syntax-node-emitting-form element) :into transformed-elements)
           (finally (return
                      (cond ((every #'identity spliced-elements)
                             `(append ,@transformed-elements))
@@ -200,20 +204,21 @@
                                                  spliced-elements transformed-elements))))))))
 
   (:method ((node quasi-quote))
-    (syntax-node-emitting-form (body-of node)))
+    (make-syntax-node-emitting-form (body-of node)))
 
   (:method ((node unquote))
-    (map-filtered-tree (form-of node) 'quasi-quote #'syntax-node-emitting-form))
+    (map-filtered-tree (form-of node) 'quasi-quote #'make-syntax-node-emitting-form))
 
   (:method ((node syntax-node))
     (bind ((class (class-of node)))
       `(make-instance ',(class-name class)
                       ,@(iter (for slot :in (class-slots class))
-                              (when (slot-boundp-using-class class node slot)
+                              (when (and (not (eq 'parent (slot-definition-name slot)))
+                                         (slot-boundp-using-class class node slot))
                                 (appending (list (first (slot-definition-initargs slot))
-                                                 (syntax-node-emitting-form (slot-value-using-class class node slot))))))))))
+                                                 (make-syntax-node-emitting-form (slot-value-using-class class node slot))))))))))
 
-(export 'syntax-node-emitting-form)
+(export 'make-syntax-node-emitting-form)
 
 (defgeneric emit (node &optional stream)
   (:method ((node syntax-node) &optional stream)
