@@ -16,69 +16,20 @@
                                       (unquote-character #\,)
                                       (splice-character #\@)
                                       (transform nil))
-  (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character start-character *readtable*)))
-         (original-reader-on-end-character     (multiple-value-list (get-macro-character end-character *readtable*)))
-         (original-reader-on-unquote-character (multiple-value-list (get-macro-character unquote-character *readtable*))))
-    (set-macro-character start-character
-                         (make-quasi-quoted-pdf-reader original-reader-on-start-character
-                                                       original-reader-on-end-character
-                                                       original-reader-on-unquote-character
-                                                       start-character end-character
-                                                       unquote-character
-                                                       splice-character
-                                                       transform)
-                         t
-                         *readtable*)))
-
-;; TODO the quasi-quote reader in cl-syntax-sugar should be extended to accomodate this kind of usage.
-;; TODO don't forget about the same for xml
-(def function make-quasi-quoted-pdf-reader (original-reader-on-start-character
-                                             original-reader-on-end-character
-                                             original-reader-on-unquote-character
-                                             start-character end-character
-                                             unquote-character splice-character
-                                             transform)
-  (labels ((unquote-reader (stream char)
-             (declare (ignore char))
-             (bind ((*readtable* (copy-readtable))
-                    (*pdf-quasi-quote-level* (1- *pdf-quasi-quote-level*))
-                    (spliced? (eq (peek-char nil stream t nil t) splice-character)))
-               (when spliced?
-                 (read-char stream t nil t))
-               (assert (<= 0 *pdf-quasi-quote-level*))
-               (when (zerop *pdf-quasi-quote-level*)
-                 ;; restore the original unquote reader when we are leaving our nesting. this way it's possible
-                 ;; to use #\, in its normal meanings when being outside our own nesting levels.
-                 (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
-                 (apply 'set-macro-character start-character original-reader-on-start-character)
-                 (apply 'set-macro-character end-character original-reader-on-end-character))
-               (set-macro-character start-character #'toplevel-quasi-quoted-pdf-reader)
-               (bind ((body (read stream t nil t)))
-                 (make-pdf-unquote body spliced?))))
-           (toplevel-quasi-quoted-pdf-reader (stream char)
-             (declare (ignore char))
-             ;; we must set the syntax on the end char to be like #\)
-             ;; until we read out our entire body. this is needed to
-             ;; make "<... 5> style inputs work where '5' is not
-             ;; separated from '>'.
-             (bind ((*pdf-quasi-quote-level* (1+ *pdf-quasi-quote-level*))
-                    (cl-quasi-quote::*quasi-quote-level* (1+ cl-quasi-quote::*quasi-quote-level*))
-                    (*readtable* (copy-readtable)))
-               (set-macro-character unquote-character #'unquote-reader)
-               ;; on nested invocations we want to do something else then on the toplevel invocation
-               (set-macro-character start-character #'nested-quasi-quoted-pdf-reader)
-               (bind ((body (if end-character
-                                (bind ((*readtable* (copy-readtable)))
-                                  (set-syntax-from-char end-character #\) *readtable*)
-                                  (read-delimited-list end-character stream t))
-                                (read stream t nil t))))
-                 (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body))))))
-           (nested-quasi-quoted-pdf-reader (stream char)
-             (declare (ignore char))
-             (parse-pdf-reader-body (if end-character
-                                        (read-delimited-list end-character stream t)
-                                        (read stream t nil t)))))
-    #'toplevel-quasi-quoted-pdf-reader))
+  (set-quasi-quote-syntax-in-readtable
+   (lambda (body)
+     (readtime-chain-transform transform (make-pdf-quasi-quote (parse-pdf-reader-body body))))
+   (lambda (body spliced?)
+     (make-pdf-unquote body spliced?))
+   '*quasi-quoted-xml-nesting-level*
+   :nested-quasi-quote-wrapper (lambda (body)
+                                 (parse-pdf-reader-body body))
+   :start-character start-character
+   :end-character end-character
+   :unquote-character unquote-character
+   :splice-character splice-character
+   ;;:readtable-case :preserve
+   ))
 
 (define-syntax quasi-quoted-pdf-to-pdf-emitting-form ()
   (set-quasi-quoted-pdf-syntax-in-readtable :transform '(pdf-emitting-form)))
