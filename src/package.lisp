@@ -17,10 +17,9 @@
         :closer-mop
         :cl-def
         :cl-syntax-sugar
-        )
+        :flexi-streams)
 
-  (:export
-   ))
+  (:export))
 
 (in-package :cl-quasi-quote)
 
@@ -30,6 +29,5 @@
    '(form-of parent-of spliced-p body-of
      syntax-node make-spaces
      find-ancestor binary-position readtime-chain-transform
-     vector-extend wrap-forms-with-bindings
-     )
+     vector-extend wrap-forms-with-bindings)
    package))

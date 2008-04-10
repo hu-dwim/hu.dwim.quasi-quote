@@ -86,8 +86,8 @@
 (define-syntax quasi-quoted-pdf-to-binary-emitting-form ()
   (set-quasi-quoted-pdf-syntax-in-readtable :transform '(quasi-quoted-bivalent quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-pdf-to-binary-stream-emitting-form (stream)
-  (set-quasi-quoted-pdf-syntax-in-readtable :transform `(quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream ,stream))))
+(define-syntax quasi-quoted-pdf-to-binary-stream-emitting-form (stream-name)
+  (set-quasi-quoted-pdf-syntax-in-readtable :transform `(quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def function parse-pdf-reader-body (form)
   (if (typep form 'syntax-node)

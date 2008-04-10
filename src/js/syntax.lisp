@@ -51,8 +51,8 @@
 (define-syntax quasi-quoted-js-to-binary-emitting-form ()
   (set-quasi-quoted-js-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-js-to-binary-stream-emitting-form (stream)
-  (set-quasi-quoted-js-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
+(define-syntax quasi-quoted-js-to-binary-stream-emitting-form (stream-name)
+  (set-quasi-quoted-js-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def macro transform-js-reader-body (form transform &environment lexenv)
   (chain-transform transform (typecase form

@@ -48,7 +48,7 @@
              (:file "configuration" :depends-on ("duplicates"))
              (:file "syntax" :depends-on ("configuration"))
              (:file "lisp" :depends-on ("syntax"))
-             (:file "bivalent" :depends-on ("binary"))
+             (:file "bivalent" :depends-on ("string" "binary"))
              (:file "binary" :depends-on ("syntax"))
              (:file "string" :depends-on ("syntax" "binary"))
              ;; TODO move into its own system (:file "typesetting" :depends-on ("xml"))

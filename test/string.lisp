@@ -16,41 +16,36 @@
 
 (def function test-string-ast (expected ast)
   ;; evaluate to string
-  (bind ((transformed
-          (chain-transform '(string-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected (emit (funcall transformed)))))
+  (is (string= expected
+               (transform-and-emit '(string-emitting-form
+                                     lambda-form
+                                     lambda)
+                                   ast)))
   ;; write to string stream
-  (bind ((transformed
-          (chain-transform '((string-emitting-form :stream *string-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (bind ((*string-stream* (make-string-output-stream)))
-                   (emit (funcall transformed) *string-stream*)
-                   (get-output-stream-string *string-stream*)))))
+  (is (string= expected
+               (bind ((*string-stream* (make-string-output-stream)))
+                 (transform-and-emit '((string-emitting-form :stream-name *string-stream*)
+                                       lambda-form
+                                       lambda)
+                                     ast)
+                 (get-output-stream-string *string-stream*))))
   ;; evaluate to binary
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-binary
-                             binary-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected (babel:octets-to-string (emit (funcall transformed))))))
+  (is (string= expected
+               (babel:octets-to-string
+                (transform-and-emit '(quasi-quoted-binary
+                                      binary-emitting-form
+                                      lambda-form
+                                      lambda)
+                                    ast))))
   ;; write to binary stream
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-binary
-                             (binary-emitting-form :stream *string-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (bind ((*string-stream* (flexi-streams:make-in-memory-output-stream)))
-                   (emit (funcall transformed) *string-stream*)
-                   (babel:octets-to-string (flexi-streams:get-output-stream-sequence *string-stream*)))))))
+  (is (string= expected
+               (bind ((*string-stream* (make-in-memory-output-stream)))
+                 (transform-and-emit '(quasi-quoted-binary
+                                       (binary-emitting-form :stream-name *string-stream*)
+                                       lambda-form
+                                       lambda)
+                                     ast)
+                 (babel:octets-to-string (get-output-stream-sequence *string-stream*))))))
 
 (def string-test test/string/simple ()
   ("1 2"

@@ -12,12 +12,11 @@
 
 (def function test-lisp-ast (expected ast)
   ;; evaluate to lisp
-  (bind ((transformed
-          (chain-transform '(lisp-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (equalp expected (emit (funcall transformed))))))
+  (is (equalp expected
+              (transform-and-emit '(lisp-emitting-form
+                                    lambda-form
+                                    lambda)
+                                  ast))))
 
 (def lisp-test test/lisp/simple ()
   (`(a b)

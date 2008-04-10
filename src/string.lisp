@@ -65,102 +65,64 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def special-variable *string-stream*)
-
-(def function reduce-subsequences (sequence predicate reducer)
-  (iter (with completely-reduced? = #t)
-        (with length = (length sequence))
-        (for index :from 0 :below length)
-        (for reducibles = (iter (while (< index length))
-                                (for element = (elt sequence index))
-                                (while (funcall predicate element))
-                                (collect element)
-                                (incf index)))
-        (collect (if (zerop (length reducibles))
-                     (progn
-                       (setf completely-reduced? #f)
-                       (elt sequence index))
-                     (progn
-                       (decf index)
-                       (apply reducer reducibles)))
-          :into result)
-        (finally (return (values result completely-reduced?)))))
-
-(def function write-quasi-quoted-string (node stream)
-  (etypecase node
-    (character (write-char node stream))
-    (string (write-string node stream))
-    (list (mapc (lambda (node) (write-quasi-quoted-string node stream)) node))
-    (function (funcall node))
-    (string-quasi-quote (write-quasi-quoted-string (body-of node) stream)))
-  (values))
+(def function string-concatenate (elements)
+  (bind ((*print-pretty* #f)
+         (*print-readably* #f))
+    (with-output-to-string (stream)
+      (dolist (el elements)
+        (etypecase el
+          (string (write-string el stream))
+          (character (write-char el stream)))))))
 
 (def macro with-string-stream-to-string (stream &body forms)
   `(bind ((,stream (make-string-output-stream)))
      ,@forms
      (get-output-stream-string ,stream)))
 
-(def function transform-quasi-quoted-string-to-string-emitting-form (input &key (toplevel #t) (stream '*string-stream*) &allow-other-keys)
+(def function write-quasi-quoted-string (node stream)
+  (etypecase node
+    (character (write-char node stream))
+    (string (write-string node stream))
+    (list (mapc (lambda (node) (write-quasi-quoted-string node stream)) node))
+    (function (funcall node)))
+  (values))
+
+(def function make-quasi-quoted-string-emitting-form (node)
+  (etypecase node
+    (character `(write-char ,node *quasi-quote-stream*))
+    (string
+     (if (= 1 (length node))
+         `(write-char ,(char node 0) *quasi-quote-stream*)
+         `(write-string ,node *quasi-quote-stream*)))
+    (string-unquote
+     `(write-quasi-quoted-string ,(transform-quasi-quoted-string-to-string-emitting-form node :toplevel #f) *quasi-quote-stream*))
+    (side-effect (form-of node))))
+
+(def function reduce-string-subsequences (sequence)
+  (reduce-subsequences sequence
+                       (lambda (el) (typep el '(or character string)))
+                       #'string-concatenate))
+
+(def function transform-quasi-quoted-string-to-string-emitting-form (input &key &allow-other-keys)
   (etypecase input
     (string-quasi-quote
-     (labels ((process (node)
-                (etypecase node
-                  (character `(write-char ,node ,stream))
-                  (string
-                   (if (= 1 (length node))
-                       `(write-char ,(char node 0) ,stream)
-                       `(write-string ,node ,stream)))
-                  (string-unquote
-                   `(write-quasi-quoted-string ,
-                     (transform-quasi-quoted-string-to-string-emitting-form node :toplevel #f :stream stream) ,stream))
-                  (side-effect (form-of node))))
-              (single-string-list-p (node)
-                (and (= 1 (length node))
-                     (stringp (first node)))))
-       (bind ((forms (reduce-subsequences (flatten (body-of input))
-                                          (lambda (el)
-                                            (or (stringp el)
-                                                (characterp el)))
-                                          (lambda (&rest elements)
-                                            (bind ((*print-pretty* #f)
-                                                   (*print-readably* #f))
-                                              (with-output-to-string (*standard-output*)
-                                                (dolist (el elements)
-                                                  (etypecase el
-                                                    (string (write-string el))
-                                                    (character (write-char el)))))))))
-              (internal-stream? (eq stream '*string-stream*))
-              (processed-forms (if (and toplevel
-                                        internal-stream?
-                                        (single-string-list-p forms))
-                                   forms
-                                   (mapcar #'process forms)))
-              (form (if (and toplevel
-                             internal-stream?
-                             (not (single-string-list-p processed-forms)))
-                        `(with-string-stream-to-string ,stream
-                           ,@processed-forms)
-                        (wrap-forms-with-progn
-                         (append processed-forms
-                                 (unless (and toplevel
-                                              internal-stream?)
-                                   `((values))))))))
-         (cond ((and toplevel
-                     internal-stream?)
-                `(make-string-quasi-quote ,form))
-               ((or (not internal-stream?)
-                    (not toplevel))
-                (wrap-forms-with-lambda form nil))
-               (t form)))))
+     (wrap-forms-with-lambda
+      (append (mapcar #'make-quasi-quoted-string-emitting-form
+                      (reduce-string-subsequences (flatten (body-of input))))
+              '((values)))))
     (string-unquote
-     (map-tree (form-of input)
-               (lambda (form)
-                 (cond ((typep form 'string-quasi-quote)
-                        (transform-quasi-quoted-string-to-string-emitting-form form :toplevel #f :stream stream))
-                       (t form)))))))
+     (map-filtered-tree (form-of input) 'string-quasi-quote
+                        #'transform-quasi-quoted-string-to-string-emitting-form))))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-string-emitting-form input args))
+
+(def method setup-emitting-environment ((to (eql 'string-emitting-form)) &key stream-name next-method &allow-other-keys)
+  (if stream-name
+      (bind ((*quasi-quote-stream* (symbol-value stream-name)))
+        (funcall next-method))
+      (with-string-stream-to-string *quasi-quote-stream*
+        (funcall next-method))))
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &rest args &key (encoding :utf-8) &allow-other-keys)
   (etypecase node
@@ -189,10 +151,3 @@
 
 (def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))
-
-(def method emit ((node string-syntax-node) &optional stream)
-  (bind ((body (call-next-method)))
-    (if (and stream
-             (typep stream 'string-stream))
-        (write-string body stream)
-        body)))

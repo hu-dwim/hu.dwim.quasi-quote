@@ -43,8 +43,8 @@
 (define-syntax quasi-quoted-typesetting-to-binary-emitting-form ()
   (set-quasi-quoted-typesetting-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-typesetting-to-binary-stream-emitting-form (stream)
-  (set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
+(define-syntax quasi-quoted-typesetting-to-binary-stream-emitting-form (stream-name)
+  (set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def function typesetting-syntax-node-name (name)
   (format-symbol (find-package :cl-quasi-quote) "TYPESETTING-~A" name))
@@ -268,7 +268,7 @@
 (enable-quasi-quoted-pdf-to-pdf-emitting-form-syntax)
 
 #+nil ;; use in tests
-(set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-pdf quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream *pdf-stream*)))
+(set-quasi-quoted-typesetting-syntax-in-readtable :transform `(quasi-quoted-pdf quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream-name *pdf-stream*)))
 
 (def method transform ((to (eql 'quasi-quoted-pdf)) (input typesetting-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-typesetting-to-quasi-quoted-pdf input args))

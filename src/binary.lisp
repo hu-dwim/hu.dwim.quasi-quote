@@ -60,84 +60,55 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def special-variable *binary-stream*)
+(def function binary-position ()
+  (file-position *quasi-quote-stream*))
 
-(def function binary-position (&optional (stream *binary-stream*))
-  (file-position stream))
+(def function binary-concatenate (elements)
+  (with-output-to-sequence (stream)
+    (dolist (el elements)
+      (write-sequence el stream))))
+
+(def (macro e) with-binary-stream-to-binary (stream &body forms)
+  `(bind ((,stream (make-in-memory-output-stream :element-type '(unsigned-byte 8))))
+     ,@forms
+     (get-output-stream-sequence ,stream)))
 
 (def function write-quasi-quoted-binary (node stream)
   (etypecase node
     (vector (write-sequence node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
-    (function (funcall node))
-    (binary-quasi-quote (write-quasi-quoted-binary (body-of node) stream)))
+    (function (funcall node)))
   (values))
 
-(def (macro e) with-binary-stream-to-binary (stream &body forms)
-  `(bind ((,stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
-     ,@forms
-     (flexi-streams:get-output-stream-sequence ,stream)))
+(def function make-quasi-quoted-binary-emitting-form (node)
+  (etypecase node
+    (binary `(write-sequence ,node *quasi-quote-stream*))
+    (binary-unquote
+     `(write-quasi-quoted-binary
+       ,(transform-quasi-quoted-binary-to-binary-emitting-form node :toplevel #f) *quasi-quote-stream*))
+    (side-effect (form-of node))))
 
-(def function transform-quasi-quoted-binary-to-binary-emitting-form (input &key (toplevel #t) (stream '*binary-stream*) &allow-other-keys)
-  (flet ((process-form (form)
-           (cond ((typep form 'quasi-quote)
-                  (transform-quasi-quoted-binary-to-binary-emitting-form form :toplevel #f :stream stream))
-                 ;; TODO: this is fragile
-                 ;; TODO: we would be better of having the stream on the ast returned (even if it is a function)
-                 ((and (consp form)
-                       (null (cdr form))
-                       (eq 'binary-position (car form))
-                       (not (eq stream '*binary-stream*)))
-                  `(binary-position ,stream))
-                 (t form))))
-    (etypecase input
-      (binary-quasi-quote
-       (labels ((process (node)
-                  (etypecase node
-                    (binary `(write-sequence ,node ,stream))
-                    (binary-unquote
-                     `(write-quasi-quoted-binary
-                       ,(transform-quasi-quoted-binary-to-binary-emitting-form node :toplevel #f :stream stream) ,stream))
-                    (side-effect (map-tree (form-of node) #'process-form #t))))
-                (single-string-list-p (node)
-                  (and (= 1 (length node))
-                       (stringp (first node)))))
-         (bind ((forms (reduce-subsequences (flatten (body-of input))
-                                            #'vectorp
-                                            (lambda (&rest elements)
-                                              (apply #'concatenate 'binary elements))))
-                (internal-stream? (eq stream '*binary-stream*))
-                (processed-forms (if (and toplevel
-                                          internal-stream?
-                                          (single-string-list-p forms))
-                                     forms
-                                     (mapcar #'process forms)))
-                (form (if (and toplevel
-                               internal-stream?
-                               (not (single-string-list-p processed-forms)))
-                          `(with-binary-stream-to-binary ,stream
-                             ,@processed-forms)
-                          (wrap-forms-with-progn
-                           (append processed-forms
-                                   (unless (and toplevel
-                                                internal-stream?)
-                                     `((values))))))))
-           (cond ((and toplevel
-                       internal-stream?)
-                  `(make-binary-quasi-quote ,form))
-                 ((or (not internal-stream?)
-                      (not toplevel))
-                  (wrap-forms-with-lambda form nil))
-                 (t form)))))
-      (binary-unquote
-       (map-tree (form-of input) #'process-form #t)))))
+(def function reduce-binary-subsequences (sequence)
+  (reduce-subsequences sequence
+                       (lambda (el) (typep el '(or (vector (not string)) binary)))
+                       #'binary-concatenate))
+
+(def function transform-quasi-quoted-binary-to-binary-emitting-form (input &key &allow-other-keys)
+  (etypecase input
+    (binary-quasi-quote
+     (wrap-forms-with-lambda
+      (append (mapcar #'make-quasi-quoted-binary-emitting-form
+                      (reduce-binary-subsequences (flatten (body-of input))))
+              '((values)))))
+    (binary-unquote
+     (map-filtered-tree (form-of input) 'binary-quasi-quote #'transform-quasi-quoted-binary-to-binary-emitting-form))))
 
 (def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-binary-to-binary-emitting-form input args))
 
-(def method emit ((node binary-syntax-node) &optional stream)
-  (bind ((body (call-next-method)))
-    (if (and stream
-             (not (typep stream 'string-stream)))
-        (write-sequence body stream)
-        body)))
+(def method setup-emitting-environment ((to (eql 'binary-emitting-form)) &key stream-name next-method &allow-other-keys)
+  (if stream-name
+      (bind ((*quasi-quote-stream* (symbol-value stream-name)))
+        (funcall next-method))
+      (with-binary-stream-to-binary *quasi-quote-stream*
+        (funcall next-method))))

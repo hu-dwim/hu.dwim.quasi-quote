@@ -75,8 +75,8 @@
 (define-syntax quasi-quoted-xml-to-binary-emitting-form ()
   (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream)
-  (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream ,stream))))
+(define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream-name)
+  (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def (function d) parse-xml-reader-body (stream form)
   (etypecase form

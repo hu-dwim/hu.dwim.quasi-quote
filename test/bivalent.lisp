@@ -15,25 +15,37 @@
 (def special-variable *bivalent-stream*)
 
 (def function test-bivalent-ast (expected ast)
+  ;; evaluate to bivalent
+  (is (equalp expected
+              (transform-and-emit '(bivalent-emitting-form
+                                    lambda-form
+                                    lambda)
+                                  ast)))
+  ;; write to bivalent stream
+  (is (equalp expected
+              (bind ((binary-stream (make-in-memory-output-stream))
+                     (*bivalent-stream* (make-flexi-stream binary-stream :external-format :utf-8)))
+                (transform-and-emit '((bivalent-emitting-form :stream-name *bivalent-stream*)
+                                      lambda-form
+                                      lambda)
+                                    ast)
+                (get-output-stream-sequence binary-stream))))
   ;; evaluate to binary
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-binary
-                             binary-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (equalp expected (emit (funcall transformed)))))
+  (is (equalp expected
+              (transform-and-emit '(quasi-quoted-binary
+                                    binary-emitting-form
+                                    lambda-form
+                                    lambda)
+                                  ast)))
   ;; write to binary stream
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-binary
-                             (binary-emitting-form :stream *bivalent-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (equalp expected
-                (bind ((*bivalent-stream* (flexi-streams:make-in-memory-output-stream)))
-                  (emit (funcall transformed) *bivalent-stream*)
-                  (flexi-streams:get-output-stream-sequence *bivalent-stream*))))))
+  (is (equalp expected
+              (bind ((*bivalent-stream* (make-in-memory-output-stream)))
+                (transform-and-emit '(quasi-quoted-binary
+                                      (binary-emitting-form :stream-name *bivalent-stream*)
+                                      lambda-form
+                                      lambda)
+                                    ast)
+                (get-output-stream-sequence *bivalent-stream*)))))
 
 (def bivalent-test test/bivalent/simple ()
   ;; binary

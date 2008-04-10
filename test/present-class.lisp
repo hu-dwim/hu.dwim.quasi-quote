@@ -6,7 +6,7 @@
 (enable-quasi-quoted-xml-syntax
  :transform '(quasi-quoted-string ;; may (quasi-quoted-string :indent 2)
               (quasi-quoted-binary :encoding :utf-8)
-              (binary-emitting-form :stream *http-stream*)))
+              (binary-emitting-form :stream-name *http-stream*)))
 
 (defvar *http-stream*)
 

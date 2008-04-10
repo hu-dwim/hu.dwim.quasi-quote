@@ -45,7 +45,7 @@
 (def (class* e) side-effect (syntax-node)
   ((form)))
 
-(def function make-side-effect (form)
+(def (function e) make-side-effect (form)
   (make-instance 'side-effect :form form))
 
 (def (class* e) parent-mixin ()
@@ -114,20 +114,16 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def function wrap-forms-with-lambda (forms optimize)
+(def (special-variable e) *quasi-quote-stream*)
+
+(def function wrap-forms-with-lambda (forms &optional optimize)
   `(lambda ()
      ,@(when optimize
              `((declare (optimize ,@optimize))))
      ,@(if (and (consp forms)
                 (eq 'progn (first forms)))
            (cdr forms)
-           (list forms))))
-
-(def function wrap-forms-with-progn (forms)
-  (if (= 1 (length forms))
-      (first forms)
-      `(progn
-         ,@forms)))
+           forms)))
 
 (def function wrap-forms-with-bindings (bindings forms)
   (if bindings
@@ -139,7 +135,7 @@
   (:method (to from &key &allow-other-keys)
     (error "Don't know how to transform ~A to ~A" from to))
 
-  (:method ((to list) from &key &allow-other-keys)
+  (:method ((to cons) from &key &allow-other-keys)
     (apply #'transform (first to) from (cdr to)))
 
   (:method ((to symbol) from &key &allow-other-keys)
@@ -161,7 +157,7 @@
             (t (call-next-method)))))
 
   (:method ((to (eql 'lambda-form)) (from cons) &key optimize &allow-other-keys)
-    (wrap-forms-with-lambda from optimize))
+    (wrap-forms-with-lambda (list from) optimize))
 
   (:method ((to (eql 'lambda)) (from cons) &key &allow-other-keys)
     (compile nil from)))
@@ -220,16 +216,30 @@
 
 (export 'make-syntax-node-emitting-form)
 
-(defgeneric emit (node &optional stream)
-  (:method ((node syntax-node) &optional stream)
-    (declare (ignore stream))
-    (body-of node))
+;;;;;;;;
+;;; Emit
 
-  (:method ((node function) &optional stream)
-    (declare (ignore stream))
-    (funcall node)))
+(defgeneric setup-emitting-environment (to &key &allow-other-keys)
+  (:method (to &key next-method &allow-other-keys)
+    (funcall next-method))
 
-(export 'emit)
+  (:method ((to cons) &rest args &key &allow-other-keys)
+    (apply #'setup-emitting-environment (first to) (append (cdr to) args))))
+
+(export 'setup-emitting-environment)
+
+(def (function e) emit (through from)
+  (iter (for thunk
+             :initially (lambda ()
+                          (etypecase from
+                            (syntax-node (body-of from))
+                            (function (funcall from))))
+             :then (bind ((thunk thunk)
+                          (element element))
+                     (lambda ()
+                       (setup-emitting-environment element :next-method thunk))))
+        (for element :in (reverse through))
+        (finally (return (funcall thunk)))))
 
 ;;;;;;;;
 ;;; Util
@@ -244,6 +254,25 @@
     (setf (fill-pointer vector) new-length)
     (replace vector extension :start1 original-length)
     vector))
+
+(def function reduce-subsequences (sequence predicate reducer)
+  (iter (with completely-reduced? = #t)
+        (with length = (length sequence))
+        (for index :from 0 :below length)
+        (for reducibles = (iter (while (< index length))
+                                (for element = (elt sequence index))
+                                (while (funcall predicate element))
+                                (collect element)
+                                (incf index)))
+        (collect (if (zerop (length reducibles))
+                     (progn
+                       (setf completely-reduced? #f)
+                       (elt sequence index))
+                     (progn
+                       (decf index)
+                       (funcall reducer reducibles)))
+          :into result)
+        (finally (return (values result completely-reduced?)))))
 
 (def (function e) map-tree (form map-function &optional (process-cons #f))
   (labels ((process (form)

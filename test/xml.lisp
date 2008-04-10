@@ -16,46 +16,39 @@
 
 (def function test-xml-ast (expected ast)
   ;; evaluate to string
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-string
-                             string-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (emit (funcall transformed)))))
+  (is (string= expected
+               (transform-and-emit '(quasi-quoted-string
+                                     string-emitting-form
+                                     lambda-form
+                                     lambda)
+                                   ast)))
   ;; write to string stream
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-string
-                             (string-emitting-form :stream *xml-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (with-output-to-string (*xml-stream*)
-                   (emit (funcall transformed) *xml-stream*)))))
+  (is (string= expected
+               (with-output-to-string (*xml-stream*)
+                 (transform-and-emit '(quasi-quoted-string
+                                       (string-emitting-form :stream-name *xml-stream*)
+                                       lambda-form
+                                       lambda)
+                                     ast))))
   ;; evaluate to binary
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-string
-                             quasi-quoted-binary
-                             binary-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (babel:octets-to-string (emit (funcall transformed))))))
+  (is (string= expected
+               (babel:octets-to-string
+                (transform-and-emit '(quasi-quoted-string
+                                      quasi-quoted-binary
+                                      binary-emitting-form
+                                      lambda-form
+                                      lambda)
+                                    ast))))
   ;; write to binary stream
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-string
-                             quasi-quoted-binary
-                             (binary-emitting-form :stream *xml-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (bind ((*xml-stream* (flexi-streams:make-in-memory-output-stream)))
-                   (emit (funcall transformed) *xml-stream*)
-                   (babel:octets-to-string (flexi-streams:get-output-stream-sequence *xml-stream*)))))))
+  (is (string= expected
+               (bind ((*xml-stream* (make-in-memory-output-stream)))
+                 (transform-and-emit '(quasi-quoted-string
+                                       quasi-quoted-binary
+                                       (binary-emitting-form :stream-name *xml-stream*)
+                                       lambda-form
+                                       lambda)
+                                     ast)
+                 (babel:octets-to-string (get-output-stream-sequence *xml-stream*))))))
 
 (def test test/xml/escaping ()
   (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"

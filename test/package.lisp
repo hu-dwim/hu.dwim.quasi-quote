@@ -14,6 +14,7 @@
         :alexandria
         :iterate
         :stefil
+        :flexi-streams
         :cl-def
         :cl-syntax-sugar
         :cl-quasi-quote)
@@ -27,12 +28,12 @@
         :alexandria
         :iterate
         :stefil
+        :flexi-streams
         :cl-def
         :cl-syntax-sugar
         :cl-quasi-quote
         :cl-quasi-quote-test
-        :cl-quasi-quote-pdf
-        ))
+        :cl-quasi-quote-pdf))
 
 (defpackage :cl-quasi-quote-test-xml
   (:use :common-lisp
@@ -40,12 +41,12 @@
         :alexandria
         :iterate
         :stefil
+        :flexi-streams
         :cl-def
         :cl-syntax-sugar
         :cl-quasi-quote
         :cl-quasi-quote-test
-        :cl-quasi-quote-xml
-        ))
+        :cl-quasi-quote-xml))
 
 (defpackage :cl-quasi-quote-test-js
   (:use :common-lisp
@@ -53,13 +54,14 @@
         :alexandria
         :iterate
         :stefil
+        :flexi-streams
         :cl-def
         :cl-syntax-sugar
         :cl-quasi-quote
         :cl-quasi-quote-test
         :cl-quasi-quote-js
-        :cl-walker
-        )
+        :cl-walker)
+  
   (:shadowing-import-from :cl-quasi-quote
    #:body-of
    #:parent-of
@@ -70,4 +72,3 @@
   (import
    '()
    package))
-

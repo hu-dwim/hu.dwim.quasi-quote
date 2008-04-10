@@ -6,7 +6,7 @@
 
 (in-package :cl-quasi-quote-test-pdf)
 
-(enable-quasi-quoted-pdf-to-binary-stream-emitting-form-syntax '*pdf-stream*)
+(enable-quasi-quoted-pdf-syntax)
 
 (defsuite* (test/pdf :in test))
 
@@ -15,7 +15,13 @@
 (def function test-pdf-ast (name ast)
   (with-open-file (*pdf-stream* (string-downcase (concatenate 'string "/tmp/" (substitute #\- #\/ (symbol-name name)) ".pdf"))
                                 :direction :output :element-type '(unsigned-byte 8) :if-does-not-exist :create :if-exists :supersede)
-    (emit-pdf ast *pdf-stream*)))
+    (transform-and-emit '(quasi-quoted-pdf
+                          quasi-quoted-bivalent
+                          quasi-quoted-binary
+                          (binary-emitting-form :stream-name *pdf-stream*)
+                          lambda-form
+                          lambda)
+                        ast)))
 
 (def definer pdf-test (name args &body forms)
   `(def test ,name ,args

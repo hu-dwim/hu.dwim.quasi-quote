@@ -16,52 +16,45 @@
 
 (def function test-typesetting-ast (expected ast)
   ;; evaluate to string
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-xml
-                             quasi-quoted-string
-                             quasi-quoted-string
-                             string-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (emit (funcall transformed)))))
+  (is (string= expected
+               (transform-and-emit '(quasi-quoted-xml
+                                     quasi-quoted-string
+                                     quasi-quoted-string
+                                     string-emitting-form
+                                     lambda-form
+                                     lambda)
+                                   ast)))
   ;; write to string stream
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-xml
-                             quasi-quoted-string
-                             quasi-quoted-string
-                             (string-emitting-form :stream *typesetting-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (with-output-to-string (*typesetting-stream*)
-                   (emit (funcall transformed) *typesetting-stream*)))))
+  (is (string= expected
+               (with-output-to-string (*typesetting-stream*)
+                 (transform-and-emit '(quasi-quoted-xml
+                                       quasi-quoted-string
+                                       quasi-quoted-string
+                                       (string-emitting-form :stream-name *typesetting-stream*)
+                                       lambda-form
+                                       lambda)
+                                     ast))))
   ;; evaluate to binary
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-xml
-                             quasi-quoted-string
-                             quasi-quoted-binary
-                             binary-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (babel:octets-to-string (emit (funcall transformed))))))
+  (is (string= expected
+               (babel:octets-to-string
+                (transform-and-emit '(quasi-quoted-xml
+                                      quasi-quoted-string
+                                      quasi-quoted-binary
+                                      binary-emitting-form
+                                      lambda-form
+                                      lambda)
+                                    ast))))
   ;; write to binary stream
-  (bind ((transformed
-          (chain-transform '(quasi-quoted-xml
-                             quasi-quoted-string
-                             quasi-quoted-binary
-                             (binary-emitting-form :stream *typesetting-stream*)
-                             lambda-form
-                             lambda)
-                           ast)))
-    (is (string= expected
-                 (bind ((*typesetting-stream* (flexi-streams:make-in-memory-output-stream)))
-                   (emit (funcall transformed) *typesetting-stream*)
-                   (babel:octets-to-string (flexi-streams:get-output-stream-sequence *typesetting-stream*)))))))
+  (is (string= expected
+               (bind ((*typesetting-stream* (make-in-memory-output-stream)))
+                 (transform-and-emit '(quasi-quoted-xml
+                                       quasi-quoted-string
+                                       quasi-quoted-binary
+                                       (binary-emitting-form :stream-name *typesetting-stream*)
+                                       lambda-form
+                                       lambda)
+                                     ast)
+                 (babel:octets-to-string (get-output-stream-sequence *typesetting-stream*))))))
 
 (def typesetting-test test/typesetting/simple ()
   ("<table/>"

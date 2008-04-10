@@ -64,7 +64,9 @@
           node))
   
     (:method ((node unquote))
-      (transform 'quasi-quoted-binary node))
+      (if (typep node 'bivalent-quasi-quote)
+          (body-of node)
+          node))
 
     (:method ((node side-effect))
       node)
@@ -236,7 +238,6 @@
 (def method transform ((to (eql 'quasi-quoted-bivalent)) (input pdf-syntax-node) &key &allow-other-keys)
   (transform-quasi-quoted-pdf-to-quasi-quoted-bivalent input))
 
-;; TODO: how to factor this into emit?
-(def (function e) emit-pdf (node &optional stream)
+(def method setup-emitting-environment ((to (eql 'quasi-quoted-pdf)) &key next-method &allow-other-keys)
   (bind ((*pdf-environment* (make-instance 'pdf-environment)))
-    (emit node stream)))
+    (funcall next-method)))
