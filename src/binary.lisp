@@ -77,12 +77,12 @@
     (function (funcall node)))
   (values))
 
-(def function make-quasi-quoted-binary-emitting-form (node)
+(def function make-quasi-quoted-binary-emitting-form (node args)
   (etypecase node
     (binary `(write-sequence ,node *quasi-quote-stream*))
     (binary-unquote
      `(write-quasi-quoted-binary
-       ,(transform-quasi-quoted-binary-to-binary-emitting-form node :toplevel #f) *quasi-quote-stream*))
+       ,(apply #'transform-quasi-quoted-binary-to-binary-emitting-form node args) *quasi-quote-stream*))
     (side-effect (form-of node))))
 
 (def function reduce-binary-subsequences (sequence)
@@ -90,15 +90,17 @@
                        (lambda (el) (typep el '(or (vector (not string)) binary)))
                        #'binary-concatenate))
 
-(def function transform-quasi-quoted-binary-to-binary-emitting-form (input &key &allow-other-keys)
+(def function transform-quasi-quoted-binary-to-binary-emitting-form (input &rest args &key (properly-ordered #f) &allow-other-keys)
   (etypecase input
     (binary-quasi-quote
-     (wrap-forms-with-lambda
-      (append (mapcar #'make-quasi-quoted-binary-emitting-form
-                      (reduce-binary-subsequences (flatten (body-of input))))
-              '((values)))))
+     (wrap-emitting-forms properly-ordered
+                          (mapcar (lambda (node)
+                                    (make-quasi-quoted-binary-emitting-form node args))
+                                  (reduce-binary-subsequences (flatten (body-of input))))))
     (binary-unquote
-     (map-filtered-tree (form-of input) 'binary-quasi-quote #'transform-quasi-quoted-binary-to-binary-emitting-form))))
+     (map-filtered-tree (form-of input) 'binary-quasi-quote
+                        (lambda (node)
+                          (apply #'transform-quasi-quoted-binary-to-binary-emitting-form node args))))))
 
 (def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-binary-to-binary-emitting-form input args))

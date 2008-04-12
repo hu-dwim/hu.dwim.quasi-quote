@@ -84,7 +84,7 @@
     (function (funcall node)))
   (values))
 
-(def function make-quasi-quoted-string-emitting-form (node)
+(def function make-quasi-quoted-string-emitting-form (node args)
   (etypecase node
     (character `(write-char ,node *quasi-quote-stream*))
     (string
@@ -92,7 +92,8 @@
          `(write-char ,(char node 0) *quasi-quote-stream*)
          `(write-string ,node *quasi-quote-stream*)))
     (string-unquote
-     `(write-quasi-quoted-string ,(transform-quasi-quoted-string-to-string-emitting-form node :toplevel #f) *quasi-quote-stream*))
+     `(write-quasi-quoted-string
+       ,(apply #'transform-quasi-quoted-string-to-string-emitting-form node args) *quasi-quote-stream*))
     (side-effect (form-of node))))
 
 (def function reduce-string-subsequences (sequence)
@@ -100,16 +101,17 @@
                        (lambda (el) (typep el '(or character string)))
                        #'string-concatenate))
 
-(def function transform-quasi-quoted-string-to-string-emitting-form (input &key &allow-other-keys)
+(def function transform-quasi-quoted-string-to-string-emitting-form (input &rest args &key (properly-ordered #f) &allow-other-keys)
   (etypecase input
     (string-quasi-quote
-     (wrap-forms-with-lambda
-      (append (mapcar #'make-quasi-quoted-string-emitting-form
-                      (reduce-string-subsequences (flatten (body-of input))))
-              '((values)))))
+     (wrap-emitting-forms properly-ordered
+                          (mapcar (lambda (node)
+                                    (make-quasi-quoted-string-emitting-form node args))
+                                  (reduce-string-subsequences (flatten (body-of input))))))
     (string-unquote
      (map-filtered-tree (form-of input) 'string-quasi-quote
-                        #'transform-quasi-quoted-string-to-string-emitting-form))))
+                        (lambda (node)
+                          (apply #'transform-quasi-quoted-string-to-string-emitting-form node args))))))
 
 (def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-string-to-string-emitting-form input args))

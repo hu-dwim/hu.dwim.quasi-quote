@@ -76,7 +76,7 @@
     (function (funcall node)))
   (values))
 
-(def function make-quasi-quoted-bivalent-emitting-form (node)
+(def function make-quasi-quoted-bivalent-emitting-form (node args)
   (etypecase node
     (binary `(write-sequence ,node *quasi-quote-stream*))
     (character `(write-char ,node *quasi-quote-stream*))
@@ -85,18 +85,21 @@
          `(write-char ,(char node 0) *quasi-quote-stream*)
          `(write-string ,node *quasi-quote-stream*)))
     (bivalent-unquote
-     `(write-quasi-quoted-bivalent ,(transform-quasi-quoted-bivalent-to-bivalent-emitting-form node :toplevel #f) *quasi-quote-stream*))
+     `(write-quasi-quoted-bivalent
+       ,(apply #'transform-quasi-quoted-bivalent-to-bivalent-emitting-form node args) *quasi-quote-stream*))
     (side-effect (form-of node))))
 
-(def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input &key &allow-other-keys)
+(def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input &rest args &key (properly-ordered #f) &allow-other-keys)
   (etypecase input
     (bivalent-quasi-quote
-     (wrap-forms-with-lambda
-      (append (mapcar #'make-quasi-quoted-bivalent-emitting-form
-                      (reduce-binary-subsequences (reduce-string-subsequences (flatten (body-of input)))))
-              '((values)))))
+     (wrap-emitting-forms properly-ordered
+                          (mapcar (lambda (node)
+                                    (make-quasi-quoted-bivalent-emitting-form node args))
+                                  (reduce-binary-subsequences (reduce-string-subsequences (flatten (body-of input)))))))
     (bivalent-unquote
-     (map-filtered-tree (form-of input) 'bivalent-quasi-quote #'transform-quasi-quoted-bivalent-to-bivalent-emitting-form))))
+     (map-filtered-tree (form-of input) 'bivalent-quasi-quote
+                        (lambda (node)
+                          (apply #'transform-quasi-quoted-bivalent-to-bivalent-emitting-form node args))))))
 
 (def method transform ((to (eql 'bivalent-emitting-form)) (input bivalent-syntax-node) &rest args &key &allow-other-keys)
   (apply #'transform-quasi-quoted-bivalent-to-bivalent-emitting-form input args))

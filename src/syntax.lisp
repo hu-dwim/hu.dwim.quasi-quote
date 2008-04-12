@@ -18,14 +18,14 @@
   (lambda (reader)
     (bind (((name &rest args) (ensure-list (first transformatations))))
       (chain-transform (cdr transformatations)
-                       (funcall (apply (format-symbol *package*  "WITH-~A-SYNTAX" name) args)
+                       (funcall (apply (format-symbol (symbol-package name)  "WITH-~A-SYNTAX" name) args)
                                 reader)))))
 
 ;;;;;;;
 ;;; AST
 
 ;; TODO: +void+ should be replaced by using (values) in user code (somewhat difficult)
-(def (constant e :test (lambda (o1 o2) (eq (type-of o1) (type-of o2)))) +void+ (lambda ()))
+(def (constant e :test (lambda (o1 o2) (eq (type-of o1) (type-of o2)))) +void+ (lambda () (values)))
 
 (def class* syntax-node ()
   ())
@@ -122,16 +122,31 @@
 
 (def (special-variable e) *quasi-quote-stream*)
 
+(def function wrap-forms-with-progn (forms)
+  (if (and (consp forms)
+           (eq 'progn (first forms)))
+      forms
+      `(progn ,@forms)))
+
 (def function wrap-forms-with-lambda (forms &optional optimize)
   `(lambda ()
      ,@(when optimize
              `((declare (optimize ,@optimize))))
      ,@(if (and (consp forms)
-                (eq 'progn (first forms)))
+                (consp (first forms))
+                (eq 'progn (first (first forms))))
            (cdr forms)
            forms)))
 
-(def function wrap)
+(def function wrap-emitting-forms (properly-ordered forms)
+  (bind ((forms
+          (append forms
+                  (if properly-ordered
+                      '(+void+)
+                      '((values))))))
+    (if properly-ordered
+        (wrap-forms-with-progn forms)
+        (wrap-forms-with-lambda forms))))
 
 (def function wrap-forms-with-bindings (bindings forms)
   (if bindings
@@ -238,12 +253,16 @@
 
 (export 'setup-emitting-environment)
 
-(def (function e) emit (transformation from)
+(def (macro e) emit (transformation ast)
+  `(emit-tunk ,transformation (lambda () ,ast)))
+
+(def function emit-tunk (transformation ast-emitting-thunk)
   (iter (for thunk
              :initially (lambda ()
-                          (etypecase from
-                            (syntax-node (body-of from))
-                            (function (funcall from))))
+                          (bind ((ast (funcall ast-emitting-thunk)))
+                            (etypecase ast
+                              (syntax-node (body-of ast))
+                              (function (funcall ast)))))
              :then (bind ((thunk thunk)
                           (element element))
                      (lambda ()
