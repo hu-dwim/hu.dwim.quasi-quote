@@ -15,14 +15,14 @@
           (end-character #\>)
           (unquote-character #\,)
           (splice-character #\@)
-          (transform nil))
+          (transformation nil))
   (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character start-character *readtable*)))
          (original-reader-on-end-character     (when end-character
                                                  (multiple-value-list (get-macro-character end-character *readtable*))))
          (original-reader-on-unquote-character (multiple-value-list (get-macro-character unquote-character *readtable*))))
     (set-quasi-quote-syntax-in-readtable
      (lambda (body)
-       (readtime-chain-transform transform (make-xml-quasi-quote (parse-xml-reader-body nil body))))
+       (readtime-chain-transform transformation (make-xml-quasi-quote (parse-xml-reader-body nil body))))
      (lambda (body spliced?)
        (make-xml-unquote body spliced?))
      :nested-quasi-quote-wrapper (lambda (body)
@@ -55,25 +55,25 @@
                                           (funcall reader stream char)))))))))
 
 (define-syntax quasi-quoted-xml-to-xml ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transform '(xml)))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(xml)))
 
 (define-syntax quasi-quoted-xml-to-xml-emitting-form ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transform '(xml-emitting-form)))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(xml-emitting-form)))
 
 (define-syntax quasi-quoted-xml-to-string ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string string)))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string string)))
 
 (define-syntax quasi-quoted-xml-to-string-emitting-form ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string string-emitting-form)))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string string-emitting-form)))
 
 (define-syntax quasi-quoted-xml-to-binary ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary)))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary)))
 
 (define-syntax quasi-quoted-xml-to-binary-emitting-form ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
 (define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream-name)
-  (set-quasi-quoted-xml-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+  (set-quasi-quoted-xml-syntax-in-readtable :transformation `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def (function d) parse-xml-reader-body (stream form)
   (etypecase form

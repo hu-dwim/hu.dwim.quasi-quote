@@ -13,10 +13,10 @@
                                      (end-character #\])
                                      (unquote-character #\,)
                                      (splice-character #\@)
-                                     (transform nil))
+                                     (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (readtime-chain-transform transform (make-ui-quasi-quote (parse-quasi-quoted-ui body))))
+     (readtime-chain-transform transformation (make-ui-quasi-quote (parse-quasi-quoted-ui body))))
    (lambda (form spliced)
      (make-ui-unquote form spliced))
    :start-character start-character
@@ -25,22 +25,22 @@
    :splice-character splice-character))
 
 (define-syntax quasi-quoted-ui-to-xml-string ()
-  (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string)))
+  (set-quasi-quoted-ui-syntax-in-readtable :transformation '(quasi-quoted-xml quasi-quoted-string string)))
 
 (define-syntax quasi-quoted-ui-to-xml-string-emitting-form ()
-  (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string string-emitting-form)))
+  (set-quasi-quoted-ui-syntax-in-readtable :transformation '(quasi-quoted-xml quasi-quoted-string string-emitting-form)))
 
 (define-syntax quasi-quoted-ui-to-xml-binary ()
-  (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary)))
+  (set-quasi-quoted-ui-syntax-in-readtable :transformation '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary)))
 
 (define-syntax quasi-quoted-ui-to-xml-binary-emitting-form ()
-  (set-quasi-quoted-ui-syntax-in-readtable :transform '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
+  (set-quasi-quoted-ui-syntax-in-readtable :transformation '(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
 (define-syntax quasi-quoted-ui-to-xml-binary-stream-emitting-form (stream-name)
-  (set-quasi-quoted-ui-syntax-in-readtable :transform `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+  (set-quasi-quoted-ui-syntax-in-readtable :transformation `(quasi-quoted-xml quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (define-syntax quasi-quoted-ui-to-pdf-binary-stream-emitting-form (stream-name)
-  (set-quasi-quoted-ui-syntax-in-readtable :transform `(quasi-quoted-pdf quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+  (set-quasi-quoted-ui-syntax-in-readtable :transformation `(quasi-quoted-pdf quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def function ui-syntax-node-name (name)
   (format-symbol (find-package :cl-quasi-quote-ui) "UI-~A" name))

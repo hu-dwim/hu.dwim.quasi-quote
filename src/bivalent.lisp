@@ -13,10 +13,10 @@
                                            (end-character #\])
                                            (unquote-character #\,)
                                            (splice-character #\@)
-                                           (transform nil))
+                                           (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (readtime-chain-transform transform (make-bivalent-quasi-quote body)))
+     (readtime-chain-transform transformation (make-bivalent-quasi-quote body)))
    (lambda (form spliced)
      (make-bivalent-unquote form spliced))
    :start-character start-character
@@ -25,16 +25,16 @@
    :splice-character splice-character))
 
 (define-syntax quasi-quoted-bivalent-to-bivalent ()
-  (set-quasi-quoted-bivalent-syntax-in-readtable :transform '(bivalent)))
+  (set-quasi-quoted-bivalent-syntax-in-readtable :transformation '(bivalent)))
 
 (define-syntax quasi-quoted-bivalent-to-bivalent-emitting-form ()
-  (set-quasi-quoted-bivalent-syntax-in-readtable :transform '(bivalent-emitting-form)))
+  (set-quasi-quoted-bivalent-syntax-in-readtable :transformation '(bivalent-emitting-form)))
 
 (define-syntax quasi-quoted-bivalent-to-binary ()
-  (set-quasi-quoted-bivalent-syntax-in-readtable :transform '(quasi-quoted-binary binary)))
+  (set-quasi-quoted-bivalent-syntax-in-readtable :transformation '(quasi-quoted-binary binary)))
 
 (define-syntax quasi-quoted-bivalent-to-binary-emitting-form ()
-  (set-quasi-quoted-bivalent-syntax-in-readtable :transform '(quasi-quoted-binary binary-emitting-form)))
+  (set-quasi-quoted-bivalent-syntax-in-readtable :transformation '(quasi-quoted-binary binary-emitting-form)))
 
 ;;;;;;;
 ;;; AST

@@ -1,12 +1,14 @@
-(in-package :cl-quasi-quote)
+(in-package :cl-quasi-quote-xml)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Turn on special syntax
 
-(enable-quasi-quoted-xml-syntax
- :transform '(quasi-quoted-string ;; may (quasi-quoted-string :indent 2)
-              (quasi-quoted-binary :encoding :utf-8)
-              (binary-emitting-form :stream-name *http-stream*)))
+(defvar *transformation*
+  '(quasi-quoted-string ;; may (quasi-quoted-string :indent 2)
+    (quasi-quoted-binary :encoding :utf-8)
+    (binary-emitting-form :stream-name *http-stream* :properly-ordered #t)))
+
+(enable-quasi-quoted-xml-syntax :transformation *transformation*)
 
 (defvar *http-stream*)
 

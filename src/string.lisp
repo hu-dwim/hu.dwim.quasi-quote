@@ -13,10 +13,10 @@
                                          (end-character #\])
                                          (unquote-character #\,)
                                          (splice-character #\@)
-                                         (transform nil))
+                                         (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (readtime-chain-transform transform (make-string-quasi-quote body)))
+     (readtime-chain-transform transformation (make-string-quasi-quote body)))
    (lambda (form spliced)
      (make-string-unquote form spliced))
    :start-character start-character
@@ -25,16 +25,16 @@
    :splice-character splice-character))
 
 (define-syntax quasi-quoted-string-to-string ()
-  (set-quasi-quoted-string-syntax-in-readtable :transform '(string)))
+  (set-quasi-quoted-string-syntax-in-readtable :transformation '(string)))
 
 (define-syntax quasi-quoted-string-to-string-emitting-form ()
-  (set-quasi-quoted-string-syntax-in-readtable :transform '(string-emitting-form)))
+  (set-quasi-quoted-string-syntax-in-readtable :transformation '(string-emitting-form)))
 
 (define-syntax quasi-quoted-string-to-binary ()
-  (set-quasi-quoted-string-syntax-in-readtable :transform '(quasi-quoted-binary binary)))
+  (set-quasi-quoted-string-syntax-in-readtable :transformation '(quasi-quoted-binary binary)))
 
 (define-syntax quasi-quoted-string-to-binary-emitting-form ()
-  (set-quasi-quoted-string-syntax-in-readtable :transform '(quasi-quoted-binary binary-emitting-form)))
+  (set-quasi-quoted-string-syntax-in-readtable :transformation '(quasi-quoted-binary binary-emitting-form)))
 
 ;;;;;;;
 ;;; AST

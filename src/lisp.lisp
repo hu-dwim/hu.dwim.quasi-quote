@@ -13,10 +13,10 @@
                                        (end-character nil)
                                        (unquote-character #\,)
                                        (splice-character #\@)
-                                       (transform nil))
+                                       (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (readtime-chain-transform transform (make-lisp-quasi-quote body)))
+     (readtime-chain-transform transformation (make-lisp-quasi-quote body)))
    (lambda (form spliced)
      (make-lisp-unquote form spliced))
    :start-character start-character
@@ -25,7 +25,7 @@
    :splice-character splice-character))
 
 (define-syntax quasi-quoted-lisp-to-lisp-emitting-form ()
-  (set-quasi-quoted-lisp-syntax-in-readtable :transform '(lisp-emitting-form)))
+  (set-quasi-quoted-lisp-syntax-in-readtable :transformation '(lisp-emitting-form)))
 
 ;;;;;;;
 ;;; AST

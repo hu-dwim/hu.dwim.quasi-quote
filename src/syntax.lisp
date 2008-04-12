@@ -9,15 +9,15 @@
 ;;;;;;;;;
 ;;; Parse
 
-(def function readtime-chain-transform (to from)
+(def function readtime-chain-transform (transformatation from)
   (if (= 1 *quasi-quote-nesting-level*)
-      (chain-transform to from)
+      (chain-transform transformatation from)
       from))
 
-(def (function e) with-transformed-quasi-quoted-syntax (&rest transforms)
+(def (function e) with-transformed-quasi-quoted-syntax (&rest transformatations)
   (lambda (reader)
-    (bind (((name &rest args) (ensure-list (first transforms))))
-      (chain-transform (cdr transforms)
+    (bind (((name &rest args) (ensure-list (first transformatations))))
+      (chain-transform (cdr transformatations)
                        (funcall (apply (format-symbol *package*  "WITH-~A-SYNTAX" name) args)
                                 reader)))))
 
@@ -131,6 +131,8 @@
            (cdr forms)
            forms)))
 
+(def function wrap)
+
 (def function wrap-forms-with-bindings (bindings forms)
   (if bindings
       `(bind ,bindings
@@ -170,9 +172,9 @@
 
 (export 'transform)
 
-(def (function e) chain-transform (through from)
+(def (function e) chain-transform (transformation from)
   (iter (for node :initially from :then (transform element node))
-        (for element :in through)
+        (for element :in transformation)
         (finally (return node))))
 
 (defgeneric make-syntax-node-emitting-form (node)
@@ -237,7 +239,7 @@
 
 (export 'setup-emitting-environment)
 
-(def (function e) emit (through from)
+(def (function e) emit (transformation from)
   (iter (for thunk
              :initially (lambda ()
                           (etypecase from
@@ -247,7 +249,7 @@
                           (element element))
                      (lambda ()
                        (setup-emitting-environment element :next-method thunk))))
-        (for element :in (reverse through))
+        (for element :in (reverse transformation))
         (finally (return (funcall thunk)))))
 
 ;;;;;;;;

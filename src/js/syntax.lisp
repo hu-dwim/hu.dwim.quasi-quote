@@ -16,14 +16,14 @@
           (dispatch-character #\#)
           (unquote-character #\,)
           (splice-character #\@)
-          (transform nil))
+          (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     `(transform-js-reader-body ,body ,transform))
+     `(transform-js-reader-body ,body ,transformation))
    (lambda (body spliced?)
      `(transform-js-reader-unquote ,body ,spliced?))
    :nested-quasi-quote-wrapper (lambda (body)
-                                 `(transform-js-reader-body ,body ,transform))
+                                 `(transform-js-reader-body ,body ,transformation))
    :start-character start-character
    :dispatch-character dispatch-character
    :end-character end-character
@@ -31,30 +31,30 @@
    :splice-character splice-character))
 
 (define-syntax quasi-quoted-js-to-js ()
-  (set-quasi-quoted-js-syntax-in-readtable :transform '(js)))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation '(js)))
 
 (define-syntax quasi-quoted-js-to-js-emitting-form ()
-  (set-quasi-quoted-js-syntax-in-readtable :transform '(js-emitting-form)))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation '(js-emitting-form)))
 
 (define-syntax quasi-quoted-js-to-string ()
-  (set-quasi-quoted-js-syntax-in-readtable :transform '(quasi-quoted-string string)))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string string)))
 
 (define-syntax quasi-quoted-js-to-string-emitting-form ()
-  (set-quasi-quoted-js-syntax-in-readtable :transform '(quasi-quoted-string string-emitting-form)))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string string-emitting-form)))
 
 (define-syntax quasi-quoted-js-to-binary ()
-  (set-quasi-quoted-js-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary)))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary)))
 
 (define-syntax quasi-quoted-js-to-binary-emitting-form ()
-  (set-quasi-quoted-js-syntax-in-readtable :transform '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
 
 (define-syntax quasi-quoted-js-to-binary-stream-emitting-form (stream-name)
-  (set-quasi-quoted-js-syntax-in-readtable :transform `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+  (set-quasi-quoted-js-syntax-in-readtable :transformation `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
-(def macro transform-js-reader-body (form transform &environment lexenv)
-  (chain-transform transform (typecase form
-                               (syntax-node form)
-                               (t (make-js-quasi-quote (walk-js form lexenv))))))
+(def macro transform-js-reader-body (form transformation &environment lexenv)
+  (chain-transform transformation (typecase form
+                                    (syntax-node form)
+                                    (t (make-js-quasi-quote (walk-js form lexenv))))))
 
 (def macro transform-js-reader-unquote (body spliced?)
   ;; A macro to handle the quoted parts when the walker is walking the forms. Kinda like a kludge, but it's not that bad...
