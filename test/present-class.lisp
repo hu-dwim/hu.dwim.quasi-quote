@@ -1,4 +1,20 @@
-(in-package :cl-quasi-quote-xml)
+;;;;;;;;;;;
+;;; Package
+
+(defpackage :cl-present-class
+  (:use :common-lisp
+        :metabang-bind
+        :alexandria
+        :iterate
+        :closer-mop
+        :cl-syntax-sugar
+        :cl-quasi-quote
+        :cl-quasi-quote-xml
+        :ucw))
+
+(in-package :cl-present-class)
+
+(enable-sharp-boolean-syntax)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Turn on special syntax
@@ -77,10 +93,9 @@
                <td <i "Type">>
                <td <i "Readers">>
                <td <i "Writers">>>
-        ,@(loop
-             for index :from 0
-             for slot :in slots
-             appending (present-slot slot index))>
+        ,@(iter (for index :from 0)
+                (for slot :in slots)
+                (appending (present-slot slot index)))>
       <span "There are none">))
 
 (defun present-slot (slot index)
@@ -113,7 +128,7 @@
 (defun present-class-to-file (&optional (class (find-class 'standard-object)) file-name)
   (with-open-file (*http-stream* (or file-name (concatenate 'string  "/tmp/" (class-file-name class)))
                                  :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede)
-    (emit (present-class class) *http-stream*)))
+    (emit *transformation* (present-class class))))
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Present on the web
@@ -127,7 +142,7 @@
          (*http-stream* (ucw::network-stream response)))
     (setf (ucw::response-managed-p response) nil)
     (ucw::send-headers response)
-    (emit (present-class class) *http-stream*)))
+    (emit *transformation* (present-class class))))
 
 (defun start-server ()
   (ucw:create-server
