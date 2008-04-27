@@ -54,26 +54,26 @@
                                               (return (read stream t nil t))))
                                           (funcall reader stream char)))))))))
 
-(define-syntax quasi-quoted-xml-to-xml ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(xml)))
-
-(define-syntax quasi-quoted-xml-to-xml-emitting-form ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(xml-emitting-form)))
-
-(define-syntax quasi-quoted-xml-to-string ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string string)))
-
-(define-syntax quasi-quoted-xml-to-string-emitting-form ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string string-emitting-form)))
-
-(define-syntax quasi-quoted-xml-to-binary ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary)))
-
-(define-syntax quasi-quoted-xml-to-binary-emitting-form ()
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
-
-(define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream-name)
-  (set-quasi-quoted-xml-syntax-in-readtable :transformation `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+(macrolet ((x (name transformation &optional args)
+             (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-XML-TO-~A" name)))
+               `(define-syntax ,syntax-name (,@args &key
+                                                    (start-character #\<)
+                                                    (end-character #\>)
+                                                    (unquote-character #\,)
+                                                    (splice-character #\@))
+                  (set-quasi-quoted-xml-syntax-in-readtable :transformation ,transformation
+                                                            :start-character start-character
+                                                            :end-character end-character
+                                                            :unquote-character unquote-character
+                                                            :splice-character splice-character)))))
+  (x xml                         '(xml))
+  (x xml-emitting-form           '(xml-emitting-form))
+  (x string                      '(quasi-quoted-string string))
+  (x string-emitting-form        '(quasi-quoted-string string-emitting-form))
+  (x string-stream-emitting-form `(quasi-quoted-string (string-emitting-form :stream-name ,stream-name)) (stream-name))
+  (x binary                      '(quasi-quoted-string quasi-quoted-binary binary))
+  (x binary-emitting-form        '(quasi-quoted-string quasi-quoted-binary binary-emitting-form))
+  (x binary-stream-emitting-form `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name)) (stream-name)))
 
 (def (function d) parse-xml-reader-body (form)
   (etypecase form
