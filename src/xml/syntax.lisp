@@ -6,6 +6,9 @@
 
 (in-package :cl-quasi-quote-xml)
 
+;; TODO should not construct CLOS instances at read time, but rather read into macro sexps so that the impl's `, works as expected
+;; then the macros should recurse down as deep as they can on the well-known macro-names
+
 (define-syntax (quasi-quoted-xml :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)

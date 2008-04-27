@@ -63,6 +63,8 @@
 ;;;;;;;
 ;;; AST
 
+;; TODO so, is it content or contents? cleanup...
+
 (def ui-ast-node screen (ui-syntax-node)
   ((content)))
 
