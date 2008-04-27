@@ -159,7 +159,6 @@
             ((and (starts-with-subseq "QUASI-QUOTED-" name)
                   (typep from (format-symbol package "~A-SYNTAX-NODE"
                                              (subseq name (length "QUASI-QUITED-")))))
-             
              from)
             ;; call the specific transformation
             (t (call-next-method)))))

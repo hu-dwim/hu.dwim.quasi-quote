@@ -81,7 +81,8 @@
 
 (def xml-test test/xml/element-unquoting ()
   ("<element/>"
-    <,"element">)
+    (bind ((tag-name "element"))
+      <,tag-name>))
   ("<element><nested/></element>"
     <element
       ,(make-xml-element "nested")>)

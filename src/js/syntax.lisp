@@ -64,7 +64,7 @@
   (macroexpand-1 form (cdr env)))
 
 (def function walk-js (form lexenv)
-  (with-walker-configuration (:warn-for-undefined #f ;; TODO should not need to disable it, but we are far from that for now
+  (with-walker-configuration (:warn-for-undefined-references #f ;; TODO should not need to disable it, but we are far from that for now
                               :function-name?     (fdefinition 'js-function-name?)
                               :macro-name?        (fdefinition 'js-macro-name?)
                               :symbol-macro-name? (fdefinition 'js-symbol-macro-name?)
