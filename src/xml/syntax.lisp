@@ -22,11 +22,11 @@
          (original-reader-on-unquote-character (multiple-value-list (get-macro-character unquote-character *readtable*))))
     (set-quasi-quote-syntax-in-readtable
      (lambda (body)
-       (readtime-chain-transform transformation (make-xml-quasi-quote (parse-xml-reader-body nil body))))
+       (readtime-chain-transform transformation (make-xml-quasi-quote (parse-xml-reader-body body))))
      (lambda (body spliced?)
        (make-xml-unquote body spliced?))
      :nested-quasi-quote-wrapper (lambda (body)
-                                   (parse-xml-reader-body nil body))
+                                   (parse-xml-reader-body body))
      :start-character start-character
      :end-character end-character
      :unquote-character unquote-character
@@ -75,7 +75,7 @@
 (define-syntax quasi-quoted-xml-to-binary-stream-emitting-form (stream-name)
   (set-quasi-quoted-xml-syntax-in-readtable :transformation `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
-(def (function d) parse-xml-reader-body (stream form)
+(def (function d) parse-xml-reader-body (form)
   (etypecase form
     (syntax-node form)
     (cons
@@ -87,7 +87,7 @@
      (bind ((name (pop form))
             (attributes (pop form)))
        (unless name
-         (simple-reader-error stream "Syntax error in XML syntax, node name is NIL!?"))
+         (simple-reader-error nil "Syntax error in XML syntax, node name is NIL!?"))
        (macrolet ((unless-unquote (value &body forms)
                     (once-only (value)
                       `(if (typep ,value 'xml-unquote)
@@ -110,7 +110,7 @@
                                                               (unless-unquote name (name-as-string name))
                                                               (unless-unquote value (princ-to-string value))))))))
            form))))
-    (null (simple-reader-error stream "Empty xml tag?"))))
+    (null (simple-reader-error nil "Empty xml tag?"))))
 
 (def function name-as-string (name)
   (etypecase name
