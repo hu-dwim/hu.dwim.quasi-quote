@@ -114,6 +114,16 @@
         <ElemenT>
         <fOOO (baR 42)>))>))
 
+(def test test/xml/nested-throught-macro-using-lisp-quasi-quote ()
+  (enable-quasi-quoted-xml-to-string-emitting-form-syntax)
+  (is (string= "<taggg attribute=\"atttr\"><foo/></taggg>"
+               (emit '(quasi-quoted-xml quasi-quoted-string string-emitting-form)
+                (eval
+                 ;; first comma is for the xml reader, next one is for `
+                 (read-from-string "(macrolet ((nester (tag-name attribute-value &body body)
+                                                 `<,,tag-name (attribute ,,attribute-value) ,,@body>))
+                                      (nester \"taggg\" \"atttr\" <foo>))"))))))
+
 (def test test/xml/errors ()
   (enable-quasi-quoted-xml-syntax)
   (signals reader-error
