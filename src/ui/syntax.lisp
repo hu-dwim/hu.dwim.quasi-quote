@@ -16,9 +16,11 @@
                                      (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body)
-     (readtime-chain-transform transformation (make-ui-quasi-quote (parse-quasi-quoted-ui body))))
+     (readtime-chain-transform transformation (make-ui-quasi-quote (parse-ui-reader-body body))))
    (lambda (form spliced)
      (make-ui-unquote form spliced))
+   :nested-quasi-quote-wrapper (lambda (body)
+                                 (parse-ui-reader-body body))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
@@ -45,12 +47,43 @@
 (def function ui-syntax-node-name (name)
   (format-symbol (find-package :cl-quasi-quote-ui) "UI-~A" name))
 
-(def function parse-quasi-quoted-ui (form)
+(def function parse-ui-reader-body (form)
   (if (typep form 'syntax-node)
       form
-      (parse-quasi-quoted-ui* (ui-syntax-node-name (first form)) form)))
+      (bind ((sexp-parser (gethash (first form) *ui-ast-node-name->sexp-parser*)))
+        (assert sexp-parser)
+        (funcall sexp-parser form))))
 
-(defgeneric parse-quasi-quoted-ui* (first whole))
+;; TODO this is bullshit from here, create some specification language for the ui-ast-node definer that describes how to parse the sexps
+
+(def ui-ast-node-parser screen
+  (make-instance 'ui-screen
+                 :content (second -sexp-)))
+
+(def ui-ast-node-parser content-menu
+    (make-instance 'ui-content-menu
+                   :place (second -sexp-)
+                   :menu-items (cddr -sexp-)))
+
+(def ui-ast-node-parser menu-item
+  (make-instance 'ui-menu-item
+                 :label (second -sexp-)
+                 :action (third -sexp-)))
+
+(def ui-ast-node-parser action
+  (make-instance 'ui-action
+                 :label (second -sexp-)
+                 :action (third -sexp-)))
+
+(def ui-ast-node-parser vertical-list
+  (make-instance 'ui-vertical-list
+                 :elements (rest -sexp-)))
+
+(def ui-ast-node-parser text
+  (make-instance 'ui-text
+                 :contents (rest -sexp-)))
+
+#|
 
 (def method parse-quasi-quoted-ui* ((first (eql 'ui-screen)) whole)
   (make-instance 'ui-screen
@@ -110,3 +143,5 @@
 (def method parse-quasi-quoted-ui* ((first (eql 'ui-cell)) whole)
   (make-instance 'ui-cell
                  :content (parse-quasi-quoted-ui (second whole))))
+
+|#
