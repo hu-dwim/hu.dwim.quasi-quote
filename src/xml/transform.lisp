@@ -25,12 +25,13 @@
       (xml-element
        (bind ((attributes (attributes-of node))
               (name (name-of node))
+              (transformed-name (etypecase name
+                                  (xml-unquote (make-string-unquote (form-of name)))
+                                  (unquote name)
+                                  (string name)))
               (children (children-of node)))
          `(,@indent-level
-           "<" ,(etypecase name
-                           (xml-unquote (make-string-unquote (form-of name)))
-                           (unquote name)
-                           (string name))
+           "<" ,transformed-name
            ,@(when attributes
                    `(" "
                      ,@(typecase attributes
@@ -47,7 +48,7 @@
                                    (bind ((*xml-indent-level* (1+ *xml-indent-level*)))
                                      (apply #'transform-quasi-quoted-xml-to-quasi-quoted-string/element child args)))
                                  children)
-                       (,@indent-level "</" ,(name-of node) ">" ,@indent-new-line))
+                       (,@indent-level "</" ,transformed-name ">" ,@indent-new-line))
                  `("/>" ,@indent-new-line)))))
       (xml-text
        (bind ((content (content-of node)))
