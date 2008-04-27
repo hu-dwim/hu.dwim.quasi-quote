@@ -253,15 +253,16 @@
 ;;;;;;;;
 ;;; Util
 
-(def (function o) vector-extend (extension vector)
+(def (function o) vector-extend (extension vector &key (start 0) (end (length extension)))
+  (declare (type array-index start end))
   (bind ((original-length (length vector))
-         (extension-length (length extension))
+         (extension-length (- end start))
          (new-length (+ original-length extension-length))
          (original-dimension (array-dimension vector 0)))
     (when (< original-dimension new-length)
       (setf vector (adjust-array vector (max (* 2 original-dimension) new-length))))
     (setf (fill-pointer vector) new-length)
-    (replace vector extension :start1 original-length)
+    (replace vector extension :start1 original-length :start2 start :end2 end)
     vector))
 
 (def function reduce-subsequences (sequence predicate reducer)
