@@ -77,24 +77,24 @@
 
   ("<table><tr><td><span>Hello</span></td></tr></table>"
    [vertical-list
-    (text "Hello")])
+    [text "Hello"]])
 
   ("<table><tr><td><span>Hello</span></td></tr><tr><td><span>World</span></td></tr></table>"
    [vertical-list
-    (text "Hello")
-    (text "World")]))
+    [text "Hello"]
+    [text "World"]]))
 
 (def ui-pdf-test test/ui/pdf/hello-world ()
   [screen
-   (text "Hello World")])
+   [text "Hello World"]])
 
 (def ui-pdf-test test/ui/pdf/simple ()
   [screen
-   (vertical-list
-    (text "Hello World")
-    (table
-      (row
-        (cell
-          (text "one"))
-        (cell
-          (text "Two")))))])
+   [vertical-list
+    [text "Hello World"]
+    [table
+      [row
+        [cell
+          [text "one"]]
+        [cell
+          [text "Two"]]]]]])
