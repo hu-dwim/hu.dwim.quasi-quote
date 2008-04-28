@@ -116,6 +116,8 @@
                                 (unless-unquote name (name-as-string name))
                                 (unless-unquote attributes (iter (generate element :in attributes)
                                                                  (for name = (recurse (next element)))
+                                                                 ;; TODO this is bullshit here, clean up attribute syntax
+                                                                 ;; <a (,name ,value) > ,name is interpreted as a full attribute currently
                                                                  (if (typep name 'xml-unquote)
                                                                      (collect name)
                                                                      (bind ((value (recurse (next element))))
