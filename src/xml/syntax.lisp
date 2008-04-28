@@ -110,7 +110,7 @@
                                               ,value
                                               (progn
                                                 ,@forms)))))
-                            (when (typep attributes 'syntax-node)
+                            (when (typep attributes '(or string syntax-node))
                               ;; to make the attribute list of foo optional in <foo <bar>> we only accept
                               ;; unquoted attribute lists in the form of <foo (,@(call-some-lisp)) <bar>>.
                               (push attributes form)
