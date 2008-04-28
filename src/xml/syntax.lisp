@@ -19,10 +19,12 @@
           (unquote-character #\,)
           (splice-character #\@)
           (transformation nil))
-  (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character start-character *readtable*)))
+  (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character* start-character *readtable*)))
          (original-reader-on-end-character     (when end-character
-                                                 (multiple-value-list (get-macro-character end-character *readtable*))))
-         (original-reader-on-unquote-character (multiple-value-list (get-macro-character unquote-character *readtable*))))
+                                                 (multiple-value-list (get-macro-character* end-character *readtable*))))
+         (original-reader-on-unquote-character (multiple-value-list (get-macro-character* unquote-character *readtable*))))
+    (awhen (first original-reader-on-start-character)
+      (simple-style-warning "Installing the XML reader on character ~S while it already has a reader installed: ~S" start-character it))
     (set-quasi-quote-syntax-in-readtable
      (lambda (body)
        (when (< (length body) 1)
@@ -40,7 +42,8 @@
      :splice-character splice-character
      :readtable-case :preserve
      :toplevel-reader-wrapper (lambda (reader)
-                                (lambda (stream char)
+                                (declare (optimize debug))
+                                (named-lambda xml-toplevel-reader-wrapper (stream char)
                                   (block nil
                                     (bind ((next-char (peek-char nil stream nil :eof t)))
                                       (if (and (char= char #\<) ; we are installed on the less-then sign...
@@ -58,7 +61,7 @@
                                               (when end-character
                                                 (apply 'set-macro-character end-character original-reader-on-end-character))
                                               (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
-                                              (return (read stream t nil t))))
+                                              (return (read stream t 'eof t))))
                                           (funcall reader stream char)))))))))
 
 (macrolet ((x (name transformation &optional args)
@@ -136,15 +139,17 @@
                (t form))))
     (chain-transform transformation (make-xml-quasi-quote (recurse `(xml-reader-element ,form))))))
 
-;; these two macros are never actually expanded. they are used as markers for the
-;; xml-reader-toplevel-element macro to convert their bodies into xml syntax node
-;; while descending into its body.
 (progn
+  ;; these two macros are never actually expanded. they are used as markers for the
+  ;; xml-reader-toplevel-element macro to convert their bodies into xml syntax node
+  ;; while descending into its body.
   (def macro xml-reader-element (body)
-    (parse-xml-reader-element-body body))
+    (declare (ignore body))
+    (error "this macro is just a marker and it shouldn't be reached while macroexpanding"))
 
   (def macro xml-reader-unquote (body spliced?)
-    (make-xml-unquote body spliced?)))
+    (declare (ignore body spliced?))
+    (error "this macro is just a marker and it shouldn't be reached while macroexpanding")))
 
 (def function name-as-string (name)
   (etypecase name
