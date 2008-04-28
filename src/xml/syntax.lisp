@@ -89,12 +89,13 @@
 ;; can work fine when mixed with the xml reader. this macro descends into its body as deep as it can, and
 ;; converts the body to an xml AST, so that the transformations can actually collapse them into constant
 ;; strings.
-(def macro xml-reader-toplevel-element (form transformation)
+(def macro xml-reader-toplevel-element (form transformation &environment env)
   (labels ((recurse (form)
              (typecase form
                (cons
                 (case (first form)
-                  (xml-reader-toplevel-element (assert nil () "How on earth did this happen?!"))
+                  (xml-reader-toplevel-element
+                   (macroexpand form env))
                   (xml-reader-element
                    (bind ((form (second form)))
                      (etypecase form
@@ -133,8 +134,10 @@
                                             (recurse el)))
                                       form)))))
                        (null (simple-reader-error nil "Empty xml tag?")))))
-                  (xml-reader-unquote (make-xml-unquote (second form) (third form)))
-                  (t form)))
+                  (xml-reader-unquote (make-xml-unquote (recurse (second form)) (third form)))
+                  (t
+                   (iter (for el :in form)
+                         (collect (recurse el))))))
                (syntax-node form)
                (t form))))
     (chain-transform transformation (make-xml-quasi-quote (recurse `(xml-reader-element ,form))))))
