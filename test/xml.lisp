@@ -81,8 +81,7 @@
 
 (def xml-test test/xml/element-unquoting ()
   ("<element/>"
-    (bind ((tag-name "element"))
-      <,tag-name>))
+   <,"element">)
   ("<element><nested/></element>"
     <element
       ,(make-xml-element "nested")>)
@@ -113,6 +112,10 @@
        (list
         <ElemenT>
         <fOOO (baR 42)>))>))
+
+(def test test/xml/sharp-plus-works ()
+  (enable-quasi-quoted-xml-syntax)
+  (is (eql 42 (read-from-string "#+nil(< 1 2) 42"))))
 
 (def test test/xml/nested-through-macro-using-lisp-quasi-quote ()
   (enable-quasi-quoted-xml-to-string-emitting-form-syntax)
