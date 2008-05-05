@@ -254,9 +254,9 @@
 (export 'setup-emitting-environment)
 
 (def (macro e) emit (transformation ast)
-  `(emit-tunk ,transformation (lambda () ,ast)))
+  `(emit-thunk ,transformation (lambda () ,ast)))
 
-(def function emit-tunk (transformation ast-emitting-thunk)
+(def function emit-thunk (transformation ast-emitting-thunk)
   (iter (for thunk
              :initially (lambda ()
                           (bind ((ast (funcall ast-emitting-thunk)))
