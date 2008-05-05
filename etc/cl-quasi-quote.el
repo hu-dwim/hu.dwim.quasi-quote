@@ -9,16 +9,12 @@
 ;;
 ;; (require 'cl-quasi-quote)
 ;;
-;; (defun wrap-selection-or-sexp-at-point (&optional n)
-;;  (interactive "P")
-;;  (if (or (after-sexp-separator-p)
-;;          (before-sexp-separator-p))
-;;      (cl-quasi-quote-wrap-sexp n)
-;;      (save-excursion
-;;        (backward-sexp)
-;;        (cl-quasi-quote-wrap-sexp n))))
-;;
-;; (define-key slime-mode-map (kbd "C-w") 'wrap-selection-or-sexp-at-point)
+;; (define-key slime-mode-map (kbd "C-w") (lambda (n)
+;;                                          (interactive "P")
+;;                                          (cl-quasi-quote-wrap-selection-or-sexp-at-point nil n)))
+;; (define-key slime-mode-map (kbd "C-S-w") (lambda (n)
+;;                                            (interactive "P")
+;;                                            (cl-quasi-quote-wrap-selection-or-sexp-at-point t n)))
 
 (defvar cl-quasi-quote-paren-pairs
   (mapcar
@@ -57,6 +53,20 @@
               (forward-char)
               (backward-char))))
       (list ?\( ?\)))))
+
+(defun cl-quasi-quote-wrap-selection-or-sexp-at-point (dwim-parens &optional n)
+  "If selection is active, then wrap it with parens. If DWIM-PARENS is T, then chose the wrapping parens by looking around in the context."
+  (interactive "P")
+  (if (or (after-sexp-separator-p)
+          (before-sexp-separator-p))
+      (if dwim-parens
+          (cl-quasi-quote-wrap-sexp n)
+          (paredit-wrap-sexp n))
+      (save-excursion
+        (backward-sexp)
+        (if dwim-parens
+            (cl-quasi-quote-wrap-sexp n)
+            (paredit-wrap-sexp n)))))
 
 (defun cl-quasi-quote-wrap-sexp (&optional n)
   "Wrap the following S-expression in parens dwim-ishly finding out which paren characters to use.
