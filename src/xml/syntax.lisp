@@ -136,8 +136,16 @@
                        (null (simple-reader-error nil "Empty xml tag?")))))
                   (xml-reader-unquote (make-xml-unquote (recurse (second form)) (third form)))
                   (t
-                   (iter (for el :in form)
-                         (collect (recurse el))))))
+                   (iter (for entry :first form :then (cdr entry))
+                         (collect (recurse (car entry)) :into result)
+                         (cond
+                           ((consp (cdr entry))
+                            ;; nop, go on looping
+                            )
+                           ((cdr entry)
+                            (setf (cdr (last result)) (recurse (cdr entry)))
+                            (return result))
+                           (t (return result)))))))
                (syntax-node form)
                (t form))))
     (chain-transform transformation (make-xml-quasi-quote (recurse `(xml-reader-element ,form))))))
