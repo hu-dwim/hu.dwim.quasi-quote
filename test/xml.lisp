@@ -130,7 +130,9 @@
 (def test test/xml/errors ()
   (enable-quasi-quoted-xml-syntax)
   (signals reader-error
-    (read-from-string "<element < >>")))
+    (read-from-string "<element < >>"))
+  (signals end-of-file
+    (read-from-string "<element")))
 
 (def test test/xml/less-then-sign-at-toplevel ()
   (enable-quasi-quoted-xml-syntax)
