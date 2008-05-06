@@ -39,7 +39,8 @@
                :cl-def
                :cl-syntax-sugar
                :babel
-               :flexi-streams)
+               :babel-streams
+               )
   :components
   ((:module "src"
             :components

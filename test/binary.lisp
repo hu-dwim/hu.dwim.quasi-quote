@@ -23,12 +23,11 @@
                                   ast)))
   ;; write to binary stream
   (is (equalp expected
-              (bind ((*binary-stream* (make-in-memory-output-stream)))
+              (with-output-to-sequence (*binary-stream*)
                 (transform-and-emit '((binary-emitting-form :stream-name *binary-stream*)
                                       lambda-form
                                       lambda)
-                                    ast)
-                (get-output-stream-sequence *binary-stream*)))))
+                                    ast)))))
 
 (def binary-test test/binary/simple ()
   (#(1 2)

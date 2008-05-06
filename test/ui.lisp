@@ -49,15 +49,14 @@
                                     ast))))
   ;; write to binary stream
   (is (string= expected
-               (bind ((*ui-stream* (make-in-memory-output-stream)))
+               (with-output-to-sequence (*ui-stream* :return-as 'string)
                  (transform-and-emit '(quasi-quoted-xml
                                        quasi-quoted-string
                                        quasi-quoted-binary
                                        (binary-emitting-form :stream-name *ui-stream*)
                                        lambda-form
                                        lambda)
-                                     ast)
-                 (babel:octets-to-string (get-output-stream-sequence *ui-stream*))))))
+                                     ast)))))
 
 (def function test-ui-pdf-ast (name ast)
   (with-open-file (*pdf-stream* (string-downcase (concatenate 'string "/tmp/" (substitute #\- #\/ (symbol-name name)) ".pdf"))

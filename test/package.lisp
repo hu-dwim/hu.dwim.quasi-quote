@@ -14,7 +14,8 @@
         :alexandria
         :iterate
         :stefil
-        :flexi-streams
+        :babel
+        :babel-streams
         :cl-def
         :cl-walker
         :cl-syntax-sugar

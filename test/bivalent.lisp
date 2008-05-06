@@ -23,13 +23,11 @@
                                   ast)))
   ;; write to bivalent stream
   (is (equalp expected
-              (bind ((binary-stream (make-in-memory-output-stream))
-                     (*bivalent-stream* (make-flexi-stream binary-stream :external-format :utf-8)))
+              (with-output-to-sequence (*bivalent-stream* :external-format :utf-8)
                 (transform-and-emit '((bivalent-emitting-form :stream-name *bivalent-stream*)
                                       lambda-form
                                       lambda)
-                                    ast)
-                (get-output-stream-sequence binary-stream))))
+                                    ast))))
   ;; evaluate to binary
   (is (equalp expected
               (transform-and-emit '(quasi-quoted-binary
@@ -39,13 +37,12 @@
                                   ast)))
   ;; write to binary stream
   (is (equalp expected
-              (bind ((*bivalent-stream* (make-in-memory-output-stream)))
+              (with-output-to-sequence (*bivalent-stream*)
                 (transform-and-emit '(quasi-quoted-binary
                                       (binary-emitting-form :stream-name *bivalent-stream*)
                                       lambda-form
                                       lambda)
-                                    ast)
-                (get-output-stream-sequence *bivalent-stream*)))))
+                                    ast)))))
 
 (def bivalent-test test/bivalent/simple ()
   ;; binary

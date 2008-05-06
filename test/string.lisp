@@ -39,13 +39,12 @@
                                     ast))))
   ;; write to binary stream
   (is (string= expected
-               (bind ((*string-stream* (make-in-memory-output-stream)))
+               (with-output-to-sequence (*string-stream* :return-as 'string)
                  (transform-and-emit '(quasi-quoted-binary
                                        (binary-emitting-form :stream-name *string-stream*)
                                        lambda-form
                                        lambda)
-                                     ast)
-                 (babel:octets-to-string (get-output-stream-sequence *string-stream*))))))
+                                     ast)))))
 
 (def string-test test/string/simple ()
   ("1 2"

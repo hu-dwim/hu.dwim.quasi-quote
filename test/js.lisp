@@ -53,14 +53,13 @@
   ;; write to binary stream
   (is (string=-ignoring-whitespaces
        expected
-       (bind ((*js-stream* (make-in-memory-output-stream)))
+       (with-output-to-sequence (*js-stream* :return-as 'string)
          (transform-and-emit '(quasi-quoted-string
                                quasi-quoted-binary
                                (binary-emitting-form :stream-name *js-stream*)
                                lambda-form
                                lambda)
-                             ast)
-         (babel:octets-to-string (get-output-stream-sequence *js-stream*))))))
+                             ast)))))
 
 (def test test/js/escaping ()
   (let ((str "alma"))

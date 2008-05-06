@@ -41,14 +41,13 @@
                                     ast))))
   ;; write to binary stream
   (is (string= expected
-               (bind ((*xml-stream* (make-in-memory-output-stream)))
+               (with-output-to-sequence (*xml-stream* :return-as 'string)
                  (transform-and-emit '(quasi-quoted-string
                                        quasi-quoted-binary
                                        (binary-emitting-form :stream-name *xml-stream*)
                                        lambda-form
                                        lambda)
-                                     ast)
-                 (babel:octets-to-string (get-output-stream-sequence *xml-stream*))))))
+                                     ast)))))
 
 (def test test/xml/escaping ()
   (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"

@@ -61,11 +61,8 @@
 ;;; Transform
 
 (def (macro e) with-bivalent-stream-to-binary (stream encoding &body forms)
-  (with-unique-names (binary-stream)
-    `(bind ((,binary-stream (make-in-memory-output-stream))
-            (,stream (make-flexi-stream ,binary-stream :external-format (or ,encoding :utf-8))))
-       ,@forms
-       (get-output-stream-sequence ,binary-stream))))
+  `(with-output-to-sequence (,stream :external-format (or ,encoding :utf-8))
+     ,@forms))
 
 (def function write-quasi-quoted-bivalent (node stream)
   (etypecase node

@@ -17,7 +17,9 @@
         :closer-mop
         :cl-def
         :cl-syntax-sugar
-        :flexi-streams)
+        :babel
+        :babel-streams
+        )
 
   (:export))
 

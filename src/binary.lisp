@@ -66,9 +66,8 @@
       (write-sequence el stream))))
 
 (def (macro e) with-binary-stream-to-binary (stream &body forms)
-  `(bind ((,stream (make-in-memory-output-stream :element-type '(unsigned-byte 8))))
-     ,@forms
-     (get-output-stream-sequence ,stream)))
+  `(with-output-to-sequence (,stream :element-type '(unsigned-byte 8))
+     ,@forms))
 
 (def function write-quasi-quoted-binary (node stream)
   (etypecase node
