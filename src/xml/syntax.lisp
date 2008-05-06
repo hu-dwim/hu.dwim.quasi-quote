@@ -31,7 +31,9 @@
          (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
        `(xml-reader-toplevel-element ,body ,transformation))
      (lambda (body spliced?)
-       `(xml-reader-unquote ,body ,spliced?))
+       ;; that progn is for helping on `<foo ,,@body> not turning into (xml-reader-unquote ,@body nil/t).
+       ;; see test test/xml/nested-through-macro-using-lisp-quasi-quote2 for a reproduction of it.
+       `(xml-reader-unquote (progn ,body) ,spliced?))
      :nested-quasi-quote-wrapper (lambda (body)
                                    (when (< (length body) 1)
                                      (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
@@ -97,6 +99,7 @@
                   (xml-reader-toplevel-element
                    (macroexpand form env))
                   (xml-reader-element
+                   (assert (= (length form) 2))
                    (bind ((form (second form)))
                      (etypecase form
                        (syntax-node form)
@@ -134,7 +137,9 @@
                                             (recurse el)))
                                       form)))))
                        (null (simple-reader-error nil "Empty xml tag?")))))
-                  (xml-reader-unquote (make-xml-unquote (recurse (second form)) (third form)))
+                  (xml-reader-unquote
+                   (assert (= (length form) 3))
+                   (make-xml-unquote (recurse (second form)) (third form)))
                   (t
                    (iter (for entry :first form :then (cdr entry))
                          (collect (recurse (car entry)) :into result)
