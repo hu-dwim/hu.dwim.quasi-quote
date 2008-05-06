@@ -126,6 +126,22 @@
                                                  `<,,tag-name (attribute ,,attribute-value) ,,@body>))
                                       (nester \"taggg\" \"atttr\" <foo>))"))))))
 
+(def test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
+  (bind ((transformation `(quasi-quoted-string
+                           (quasi-quoted-binary :encoding :utf-8)
+                           (binary-emitting-form :stream-name *xml-stream* :properly-ordered #t))))
+    (enable-quasi-quoted-xml-syntax :transformation transformation)
+    (is (string= "<html><body><foo/><bar/></body></html>"
+                 (octets-to-string
+                  (with-output-to-sequence (*xml-stream* :external-format :utf-8)
+                    (emit transformation
+                          (eval
+                           ;; first comma is for the xml reader, the second one is for the lisp quasi quote.
+                           (read-from-string "(macrolet ((nester (&body body)
+                                                 `<html <body ,,@body>>))
+                                      (nester <foo> <bar>))"))))
+                  :encoding :utf-8)))))
+
 (def test test/xml/errors ()
   (enable-quasi-quoted-xml-syntax)
   (signals reader-error
