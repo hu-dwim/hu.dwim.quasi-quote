@@ -54,9 +54,8 @@
               (backward-char))))
       (list ?\( ?\)))))
 
-(defun cl-quasi-quote-wrap-selection-or-sexp-at-point (dwim-parens &optional n)
+(defun cl-quasi-quote-wrap-selection-or-sexp (dwim-parens &optional n)
   "If selection is active, then wrap it with parens. If DWIM-PARENS is T, then chose the wrapping parens by looking around in the context."
-  (interactive "P")
   (if (or (after-sexp-separator-p)
           (before-sexp-separator-p))
       (if dwim-parens
@@ -69,8 +68,7 @@
             (paredit-wrap-sexp n)))))
 
 (defun cl-quasi-quote-wrap-sexp (&optional n)
-  "Wrap the following S-expression in parens dwim-ishly finding out which paren characters to use.
-Otherwise behaves just like paredit-wrap-sexp."
+  "Wrap the following S-expression in parens dwim-ishly finding out which paren characters to use. Otherwise behaves just like paredit-wrap-sexp."
   (interactive "P")
   (let ((parens (cl-quasi-quote-paren-characters-for-context)))
     (paredit-handle-sexp-errors
