@@ -61,3 +61,41 @@
                      [string "Hello World"]
                      [display-text]
                      [end-text]]]])
+
+(def pdf-test test/pdf/tagged ()
+  [document
+   [info [dictionary "Author" "levy"]]
+   [root [catalog "Pages" [indirect-object-reference pages]
+                  "StructTreeRoot" [indirect-object-reference structure-tree-root]]]
+   [indirect-object pages
+                    [pages "Count" 1
+                           "Kids" [array [indirect-object-reference page1]]
+                           "MediaBox" [array 0 0 612 792]]]
+   [indirect-object page1
+                    [page "Parent" [indirect-object-reference pages]
+                          "Resources" [dictionary
+                                       "ProcSet" [array [name "PDF"] [name "Text"]]
+                                       "Font" [dictionary
+                                               "F1" [dictionary
+                                                     "Type"     [name "Font"]
+                                                     "Subtype"  [name "Type1"]
+                                                     "Name"     [name "F1"]
+                                                     "BaseFont" [name "Times-Roman"]]]]
+                          "Contents" [indirect-object-reference stream1]]]
+   [indirect-object structure-tree-root
+                    [structure-tree-root "K" [indirect-object-reference structure-element1]]]
+   [indirect-object structure-element1
+                    [dictionary "P" [indirect-object-reference structure-tree-root]
+                                "S" [name "P"]
+                                "K" [dictionary "Type" "MCR"
+                                                "PG" [indirect-object-reference page1]
+                                                "MCID" 0]]]
+   [indirect-object stream1
+                    [stream
+                     [paragraph
+                       [begin-text]
+                       [set-font "F1" 12]
+                       [move-text 72 712]
+                       [string "Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World "]
+                       [display-text]
+                       [end-text]]]]])

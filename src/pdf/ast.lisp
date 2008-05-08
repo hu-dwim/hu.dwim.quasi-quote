@@ -63,6 +63,9 @@
            result))
        (export ',name *package*))))
 
+;;;;;;;;;;;;;;;;;;
+;;; Basic elements
+
 (def pdf-ast-node object-identifier (pdf-syntax-node)
   ;; TODO atomic-incf
   ((node-identity (incf *compile-time-pdf-node-identity-counter*) :type integer)
@@ -75,6 +78,9 @@
 
 (def pdf-ast-node indirect-object-reference (pdf-object-identifier)
   ((name nil :type symbol)))
+
+;;;;;;;;;;;;;;;
+;;; Basic types
 
 (def pdf-ast-node null ()
   ())
@@ -119,6 +125,9 @@
 (def pdf-ast-node stream ()
   ((contents :type list)))
 
+;;;;;;;;;;;;;;;;;
+;;; Text elements
+
 (def pdf-ast-node begin-text ()
   ())
 
@@ -137,6 +146,35 @@
 (def pdf-ast-node display-text ()
   ())
 
+;;;;;;;;;;;;;;;;;;;;;
+;; structured content
+
+(def pdf-ast-node paragraph ()
+  ((contents :type list)))
+
+(def pdf-ast-node heading ()
+  ((level :type integer)))
+
+(def pdf-ast-node table ()
+  ((header)
+   (body)
+   (footer)))
+
+(def pdf-ast-node header ()
+  ())
+
+(def pdf-ast-node footer ()
+  ())
+
+(def pdf-ast-node row ()
+  ())
+
+(def pdf-ast-node cell ()
+  ())
+
+;;;;;;;;;;;;;;;;;;
+;;; Compound types
+
 (def pdf-ast-node dictionary ()
   ((map (make-hash-table) :type hash-table)))
 
@@ -144,6 +182,9 @@
   ())
 
 (def pdf-ast-node catalog (pdf-typed-dictionary)
+  ())
+
+(def pdf-ast-node structure-tree-root (pdf-typed-dictionary)
   ())
 
 (def pdf-ast-node pages (pdf-typed-dictionary)

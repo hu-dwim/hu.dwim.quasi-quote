@@ -153,6 +153,15 @@
     (:method ((node pdf-display-text))
       "Tj")
 
+    (:method ((node pdf-paragraph))
+      (list
+       (format nil "/P <</MCID 0>>~%BDC~%")
+       (iter (for element :in-sequence (contents-of node))
+             (unless (first-iteration-p)
+               (collect #\Space))
+             (collect (recurse element)))
+       (format nil "~%EMC~%")))
+
     (:method :around ((node pdf-dictionary))
              (list (format nil "<<~%")
                    (call-next-method)

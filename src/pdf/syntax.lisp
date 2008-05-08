@@ -50,6 +50,9 @@
         (assert sexp-parser)
         (funcall sexp-parser form))))
 
+(def pdf-ast-node-parser paragraph
+  (make-instance 'pdf-paragraph :contents (mapcar #'parse-into-pdf-syntax-node (rest -sexp-))))
+
 ;;;
 ;;; Override some parsers where the default expansion from the pdf-ast-node definer is not ok
 ;;;
@@ -64,6 +67,9 @@
 
 (def pdf-ast-node-parser catalog
   (parse-dictionary-map (make-instance 'pdf-catalog) (rest -sexp-)))
+
+(def pdf-ast-node-parser structure-tree-root
+  (parse-dictionary-map (make-instance 'pdf-structure-tree-root) (rest -sexp-)))
 
 (def pdf-ast-node-parser pages
   (parse-dictionary-map (make-instance 'pdf-pages) (rest -sexp-)))
