@@ -206,6 +206,9 @@
   (:method ((node string))
     node)
 
+  (:method ((node function))
+    node)
+
   (:method ((node hash-table))
     (with-unique-names (table)
       `(prog1-bind ,table (make-hash-table :test ',(hash-table-test node))
