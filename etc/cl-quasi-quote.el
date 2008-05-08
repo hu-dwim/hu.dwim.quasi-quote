@@ -43,7 +43,7 @@
             (reverse-parens (mapcar (lambda (el)
                                       (list (cadr el) (car el)))
                                     cl-quasi-quote-paren-pairs)))
-        (while (and (< distance 500)
+        (while (and (< distance 1)
                     (not (eobp))
                     (not (bobp)))
           (setq distance (+ distance direction))
