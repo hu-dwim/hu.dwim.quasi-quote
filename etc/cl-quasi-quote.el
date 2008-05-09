@@ -16,6 +16,15 @@
 ;;                                            (interactive "P")
 ;;                                            (cl-quasi-quote-wrap-selection-or-sexp-at-point t n)))
 
+(mapcar (lambda (parens)
+          (let ((open (elt parens 0))
+                (close (elt parens 1)))
+            (modify-syntax-entry open (concat "\(" (string close)) lisp-mode-syntax-table)
+            (modify-syntax-entry close (concat "\)" (string open)) lisp-mode-syntax-table)))
+        ;; tell emacs that these should behave as normal parens
+        ;; adding <> causes headache when < and > are used in their normal meanings, so don't...
+        '("[]" "{}" "｢｣" "「」" "«»"))
+
 (defvar cl-quasi-quote-paren-pairs
   (mapcar
    (lambda (el)
