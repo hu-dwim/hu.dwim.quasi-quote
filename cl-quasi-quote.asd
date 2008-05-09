@@ -6,11 +6,21 @@
 
 (cl:in-package :cl-user)
 
+;;; try to load asdf-system-connections
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (asdf:oos 'asdf:load-op :cl-syntax-sugar))
+  (flet ((try (system)
+           (unless (asdf:find-system system nil)
+             (warn "Trying to install required dependency: ~S" system)
+             (when (find-package :asdf-install)
+               (funcall (read-from-string "asdf-install:install") system))
+             (unless (asdf:find-system system nil)
+               (error "The ~A system requires ~A." (or *compile-file-pathname* *load-pathname*) system)))
+           (asdf:operate 'asdf:load-op system)))
+    (try :asdf-system-connections)
+    (try :cl-syntax-sugar)))
 
 (defpackage #:cl-quasi-quote-system
-  (:use :cl :asdf :cl-syntax-sugar)
+  (:use :cl :asdf :cl-syntax-sugar :asdf-system-connections)
 
   (:export #:*load-as-production-p*))
 
@@ -52,6 +62,12 @@
              (:file "bivalent" :depends-on ("string" "binary"))
              (:file "binary" :depends-on ("syntax"))
              (:file "string" :depends-on ("syntax" "binary"))))))
+
+(defsystem-connection cl-quasi-quote-and-swank
+  :requires (:cl-quasi-quote :swank)
+  :components
+  ((:module "src"
+            :components ((:file "swank-integration")))))
 
 (defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   (operate 'load-op :cl-quasi-quote-test)

@@ -28,7 +28,9 @@
                :cl-quasi-quote-pdf
                :cl-quasi-quote-xml
                :cl-quasi-quote-js
-               :cl-quasi-quote-ui)
+               :cl-quasi-quote-ui
+               :swank
+               )
   :components
   ((:module :test
 	    :components
