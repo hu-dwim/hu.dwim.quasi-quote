@@ -32,7 +32,7 @@
 ;; TODO: +void+ should be replaced by using (values) in user code (somewhat difficult)
 (def (constant e :test (lambda (o1 o2) (eq (type-of o1) (type-of o2)))) +void+ (lambda () (values)))
 
-(def class* syntax-node ()
+(def (class* e) syntax-node ()
   ())
 
 (def (class* e) quasi-quote (syntax-node)
