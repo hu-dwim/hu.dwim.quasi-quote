@@ -197,8 +197,13 @@
         (finally (return node))))
 
 (defgeneric make-syntax-node-emitting-form (node)
+  (:method ((node null))
+    nil)
+
   (:method ((node symbol))
-    (list 'quote node))
+    (if (keywordp node)
+        node
+        (list 'quote node)))
 
   (:method ((node number))
     node)
