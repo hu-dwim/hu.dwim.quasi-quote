@@ -6,11 +6,9 @@
 
 (in-package :cl-quasi-quote-test)
 
-(enable-quasi-quoted-xml-syntax)
-
 (defsuite* (test/xml :in test))
 
-(def test-definer xml)
+(def syntax-test-definer xml quasi-quoted-xml)
 
 (def special-variable *xml-stream*)
 
@@ -57,60 +55,58 @@
 
 (def xml-test test/xml/escaping-element-value ()
   ("<element attribute=\"&lt;1&gt;\"/>"
-     <element (,@(list (make-xml-attribute "attribute" "<1>"))) >)
+   ｢<element (,@(list (make-xml-attribute "attribute" "<1>")))>｣)
   ("<element attribute=\"&lt;1&gt;\"/>"
-     <element (attribute "<1>")>))
+   ｢<element (attribute "<1>")>｣))
 
 (def xml-test test/xml/simple ()
   ("<element/>"
-     <element>)
+   ｢<element>｣)
   ("<element attribute=\"1\"/>"
-     <element (:attribute 1)>)
+   ｢<element (:attribute 1)>｣)
   ("<element attribute1=\"1\" attribute2=\"2\"/>"
-     <element (:attribute1 "1" :attribute2 "2")> )
+   ｢<element (:attribute1 "1" :attribute2 "2")>｣)
   ("<element>Hello</element>"
-     <element "Hello">)
+   ｢<element "Hello">｣)
   ;; test that attribute list is optional
   ("<element><child/></element>"
-     <element
-       <child>>)
+   ｢<element <child>>｣)
   ("<element><child/></element>"
-     <element ()
-       <child>>))
+   ｢<element () <child>>｣))
 
 (def xml-test test/xml/element-unquoting ()
   ("<element/>"
-   <,"element">)
+   ｢<,"element">｣)
   ("<element><nested/></element>"
-    <element
-      ,(make-xml-element "nested")>)
+   ｢<element
+     ,(make-xml-element "nested")>｣)
   ("<element><child1/><child2/><child3/><child4 attribute1=\"1\"/><child5/></element>"
-    <element
-      <child1>
-      ,(make-xml-element "child2")
-      ,@(list (make-xml-element "child3")
-              (make-xml-element "child4" (list (make-xml-attribute "attribute1" "1"))))
-      <child5>>))
+   ｢<element
+     <child1>
+     ,(make-xml-element "child2")
+     ,@(list (make-xml-element "child3")
+             (make-xml-element "child4" (list (make-xml-attribute "attribute1" "1"))))
+     <child5>>｣))
 
 (def xml-test test/xml/attribute-unquoting ()
   ("<element attribute=\"1\"/>"
-    <element (,@(list (make-xml-attribute "attribute" "1"))) >)
+   ｢<element (,@(list (make-xml-attribute "attribute" "1")))>｣)
   ("<element attribute1=\"1\" attribute2=\"2\" attribute3=\"3\" attribute4=\"4\" aTTriUte5=\"5\" attribute6=\"6\"/>"
-    <element (attribute1 1
+   ｢<element (attribute1 1
               ,(make-xml-attribute "attribute2" "2")
               ,@(list (make-xml-attribute "attribute3" "3")
                       (make-xml-attribute "attribute4" "4"))
               "aTTriUte5" "5"
-              ,(make-xml-attribute "attribute6" "6"))>))
+              ,(make-xml-attribute "attribute6" "6"))>｣))
 
 (def xml-test test/xml/case-sensitivity ()
    ;; the xml reader is case sensitive, but unquoted regions are returning to the toplevel readtable's readtable-case
   ("<eLement AttributE1=\"1\"><ElemenT/><fOOO baR=\"42\"/></eLement>"
-    <eLement (AttributE1 1)
+   ｢<eLement (AttributE1 1)
     ,@(progn
        (list
         <ElemenT>
-        <fOOO (baR 42)>))>))
+        <fOOO (baR 42)>))>｣))
 
 (def test test/xml/sharp-plus-works ()
   (enable-quasi-quoted-xml-syntax)
@@ -122,9 +118,9 @@
                (emit '(quasi-quoted-xml quasi-quoted-string string-emitting-form)
                 (eval
                  ;; first comma is for the xml reader, the second one is for the lisp quasi quote.
-                 (read-from-string "(macrolet ((nester (tag-name attribute-value &body body)
+                 (read-from-string ｢(macrolet ((nester (tag-name attribute-value &body body)
                                                  `<,,tag-name (attribute ,,attribute-value) ,,@body>))
-                                      (nester \"taggg\" \"atttr\" <foo>))"))))))
+                                      (nester "taggg" "atttr" <foo>))｣))))))
 
 (def test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
   (bind ((transformation `(quasi-quoted-string
@@ -137,9 +133,9 @@
                     (emit transformation
                           (eval
                            ;; first comma is for the xml reader, the second one is for the lisp quasi quote.
-                           (read-from-string "(macrolet ((nester (&body body)
+                           (read-from-string ｢(macrolet ((nester (&body body)
                                                  `<html <body ,,@body>>))
-                                      (nester <foo> <bar>))"))))
+                                                (nester <foo> <bar>))｣))))
                   :encoding :utf-8)))))
 
 (def test test/xml/errors ()
@@ -157,18 +153,18 @@
 
 (def xml-test test/xml/less-then-sign-in-unquote ()
   ("<element ok=\"1\"/>"
-    <element (,@(when (< 3 4) (list (make-xml-attribute "ok" "1")))) >))
+   ｢<element (,@(when (< 3 4) (list (make-xml-attribute "ok" "1"))))>｣))
 
 (def xml-test test/xml/nested-unquoting ()
   ("<a><b><c><d/></c></b></a>"
-   <a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>))
+   ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣))
 
 (def xml-test test/xml/mixed ()
   ("<element>HelloWorld</element>"
-   <element {with-quasi-quoted-string-syntax ["Hello" ,(list "World")]}>))
+   ｢<element {with-quasi-quoted-string-syntax ["Hello" ,(list "World")]}>｣))
 
 (def xml-test test/xml/reverse ()
   ("<element><child2/><child1/></element>"
-   <element ,@(let ((c1 <child1>)
+   ｢<element ,@(let ((c1 <child1>)
                     (c2 <child2>))
-                   (list c2 c1))>))
+                   (list c2 c1))>｣))

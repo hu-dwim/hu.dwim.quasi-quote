@@ -18,7 +18,7 @@
   :description "Tests for cl-quasi-quote."
   :default-component-class cl-source-file-with-readtable
   :class system-with-readtable
-  :setup-readtable-function "cl-quasi-quote::setup-readtable"
+  :setup-readtable-function "cl-quasi-quote-test::setup-readtable"
   :depends-on (:metabang-bind
                :iterate
                :stefil

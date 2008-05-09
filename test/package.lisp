@@ -29,6 +29,15 @@
    #:body-of
    #:parent-of
    #:form)
-  
+
   (:export
    #:test))
+
+(in-package :cl-quasi-quote-test)
+
+(defun setup-readtable ()
+  (cl-quasi-quote::setup-readtable)
+  (enable-string-quote-syntax #\｢ #\｣))
+
+(register-readtable-for-swank
+ '("CL-QUASI-QUOTE-TEST") 'setup-readtable)
