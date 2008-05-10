@@ -18,7 +18,8 @@
           (end-character #\>)
           (unquote-character #\,)
           (splice-character #\@)
-          (transformation nil))
+          (transformation nil)
+          (dispatched-quasi-quote-name "xml"))
   (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character* start-character *readtable*)))
          (original-reader-on-end-character     (when end-character
                                                  (multiple-value-list (get-macro-character* end-character *readtable*))))
@@ -26,23 +27,24 @@
     (awhen (first original-reader-on-start-character)
       (simple-style-warning "Installing the XML reader on character ~S while it already has a reader installed: ~S" start-character it))
     (set-quasi-quote-syntax-in-readtable
-     (lambda (body)
+     (lambda (body dispatched?)
        (when (< (length body) 1)
          (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
-       `(xml-reader-toplevel-element ,body ,transformation))
+       `(xml-reader-toplevel-element ,dispatched? ,body ,transformation))
      (lambda (body spliced?)
        ;; that progn is for helping on `<foo ,,@body> not turning into (xml-reader-unquote ,@body nil/t).
        ;; see test test/xml/nested-through-macro-using-lisp-quasi-quote2 for a reproduction of it.
        `(xml-reader-unquote (progn ,body) ,spliced?))
-     :nested-quasi-quote-wrapper (lambda (body)
+     :nested-quasi-quote-wrapper (lambda (body dispatched?)
                                    (when (< (length body) 1)
                                      (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
-                                   `(xml-reader-element ,body))
+                                   `(xml-reader-element ,dispatched? ,body))
      :start-character start-character
      :end-character end-character
      :unquote-character unquote-character
      :splice-character splice-character
      :readtable-case :preserve
+     :dispatched-quasi-quote-name dispatched-quasi-quote-name
      :toplevel-reader-wrapper (lambda (reader)
                                 (declare (optimize debug))
                                 (named-lambda xml-toplevel-reader-wrapper (stream char)
@@ -91,29 +93,71 @@
 ;; can work fine when mixed with the xml reader. this macro descends into its body as deep as it can, and
 ;; converts the body to an xml AST, so that the transformations can actually collapse them into constant
 ;; strings.
-(def macro xml-reader-toplevel-element (form transformation &environment env)
-  (labels ((recurse (form)
-             (typecase form
-               (cons
-                (case (first form)
-                  (xml-reader-toplevel-element
-                   (macroexpand form env))
-                  (xml-reader-element
-                   (assert (= (length form) 2))
-                   (bind ((form (second form)))
-                     (etypecase form
-                       (syntax-node form)
-                       (cons
-                        (bind ((name (recurse (pop form)))
-                               (attributes (recurse (pop form))))
-                          (unless name
-                            (simple-reader-error nil "Syntax error in XML syntax, node name is NIL!?"))
-                          (macrolet ((unless-unquote (value &body forms)
-                                       (once-only (value)
-                                         `(if (typep ,value 'xml-unquote)
-                                              ,value
-                                              (progn
-                                                ,@forms)))))
+(def macro xml-reader-toplevel-element (dispatched? form transformation &environment env)
+  (macrolet ((unless-unquote (value &body forms)
+               (once-only (value)
+                 `(if (typep ,value 'xml-unquote)
+                      ,value
+                      (progn
+                        ,@forms)))))
+    (if dispatched?
+        ;; dispatched `xml(element) xml
+        (labels
+            ((expand (form)
+               (typecase form
+                 (cons
+                  (case (first form)
+                    (xml-reader-unquote
+                     (assert (= (length form) 3))
+                     (make-xml-unquote (second form) (third form)))
+                    ((or xml-reader-element xml-reader-toplevel-element) (error "How did this happen? Send a unit test, please!"))
+                    (t form)))
+                 (t form)))
+             (recurse (form)
+               (typecase form
+                 (string (make-xml-text form))
+                 (null (error "Null as an xml element?! For a better error message send a unit test or a patch, please!"))
+                 (symbol (make-xml-element (name-as-string form)))
+                 (cons
+                  (setf form (expand form))
+                  (unless-unquote form
+                    (bind ((name (aif (pop form)
+                                      (expand it)
+                                      (simple-reader-error nil "No xml element name?")))
+                           (attributes (expand (pop form)))
+                           (children form))
+                      (assert (or (listp attributes) (typep attributes 'syntax-node)))
+                      (make-xml-element
+                          (unless-unquote name
+                            (name-as-string name))
+                          (unless-unquote attributes
+                            (iter (for (name value) :on attributes :by #'cddr)
+                                  ;; TODO cleanup attribute syntax, see below
+                                  (collect (make-xml-attribute
+                                            (unless-unquote name (name-as-string name))
+                                            (unless-unquote value (princ-to-string value))))))
+                        (mapcar #'recurse children)))))
+                 (t form))))
+          (chain-transform transformation (make-xml-quasi-quote (recurse form))))
+        ;; normal <>-based xml
+        (labels
+            ((recurse (form)
+               (typecase form
+                 (cons
+                  (case (first form)
+                    (xml-reader-toplevel-element
+                     (macroexpand form env))
+                    (xml-reader-element
+                     (assert (= (length form) 3))
+                     (assert (eql dispatched? (second form)))
+                     (bind ((form (third form)))
+                       (etypecase form
+                         (syntax-node form)
+                         (cons
+                          (bind ((name (recurse (pop form)))
+                                 (attributes (recurse (pop form))))
+                            (unless name
+                              (simple-reader-error nil "Syntax error in XML syntax, node name is NIL!?"))
                             (when (typep attributes '(or string syntax-node))
                               ;; to make the attribute list of foo optional in <foo <bar>> we only accept
                               ;; unquoted attribute lists in the form of <foo (,@(call-some-lisp)) <bar>>.
@@ -135,32 +179,32 @@
                                         (if (stringp el)
                                             (make-xml-text el)
                                             (recurse el)))
-                                      form)))))
-                       (null (simple-reader-error nil "Empty xml tag?")))))
-                  (xml-reader-unquote
-                   (assert (= (length form) 3))
-                   (make-xml-unquote (recurse (second form)) (third form)))
-                  (t
-                   (iter (for entry :first form :then (cdr entry))
-                         (collect (recurse (car entry)) :into result)
-                         (cond
-                           ((consp (cdr entry))
-                            ;; nop, go on looping
-                            )
-                           ((cdr entry)
-                            (setf (cdr (last result)) (recurse (cdr entry)))
-                            (return result))
-                           (t (return result)))))))
-               (syntax-node form)
-               (t form))))
-    (chain-transform transformation (make-xml-quasi-quote (recurse `(xml-reader-element ,form))))))
+                                      form))))
+                         (null (simple-reader-error nil "Empty xml tag?")))))
+                    (xml-reader-unquote
+                     (assert (= (length form) 3))
+                     (make-xml-unquote (recurse (second form)) (third form)))
+                    (t
+                     (iter (for entry :first form :then (cdr entry))
+                           (collect (recurse (car entry)) :into result)
+                           (cond
+                             ((consp (cdr entry))
+                              ;; nop, go on looping
+                              )
+                             ((cdr entry)
+                              (setf (cdr (last result)) (recurse (cdr entry)))
+                              (return result))
+                             (t (return result)))))))
+                 (syntax-node form)
+                 (t form))))
+          (chain-transform transformation (make-xml-quasi-quote (recurse `(xml-reader-element #f ,form))))))))
 
 (progn
   ;; these two macros are never actually expanded. they are used as markers for the
   ;; xml-reader-toplevel-element macro to convert their bodies into xml syntax node
   ;; while descending into its body.
-  (def macro xml-reader-element (body)
-    (declare (ignore body))
+  (def macro xml-reader-element (dispatched? body)
+    (declare (ignore dispatched? body))
     (error "this macro is just a marker and it shouldn't be reached while macroexpanding"))
 
   (def macro xml-reader-unquote (body spliced?)

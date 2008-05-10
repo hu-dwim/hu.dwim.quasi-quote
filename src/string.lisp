@@ -15,7 +15,8 @@
                                          (splice-character #\@)
                                          (transformation nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
+   (lambda (body dispatched?)
+     (declare (ignore dispatched?))
      (readtime-chain-transform transformation (make-string-quasi-quote body)))
    (lambda (form spliced)
      (make-string-unquote form spliced))

@@ -16,11 +16,13 @@
                                       (splice-character #\@)
                                       (transformation nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
+   (lambda (body dispatched?)
+     (declare (ignore dispatched?))
      (readtime-chain-transform transformation (make-pdf-quasi-quote (parse-pdf-reader-body body))))
    (lambda (body spliced?)
      (make-pdf-unquote body spliced?))
-   :nested-quasi-quote-wrapper (lambda (body)
+   :nested-quasi-quote-wrapper (lambda (body dispatched?)
+                                 (declare (ignore dispatched?))
                                  (parse-pdf-reader-body body))
    :start-character start-character
    :end-character end-character

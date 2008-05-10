@@ -18,11 +18,13 @@
           (splice-character #\@)
           (transformation nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
+   (lambda (body dispatched?)
+     (declare (ignore dispatched?))
      `(transform-js-reader-body ,body ,transformation))
    (lambda (body spliced?)
      `(transform-js-reader-unquote ,body ,spliced?))
-   :nested-quasi-quote-wrapper (lambda (body)
+   :nested-quasi-quote-wrapper (lambda (body dispatched?)
+                                 (declare (ignore dispatched?))
                                  `(transform-js-reader-body ,body ,transformation))
    :start-character start-character
    :dispatch-character dispatch-character

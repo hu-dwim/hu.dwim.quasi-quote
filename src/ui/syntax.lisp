@@ -15,11 +15,13 @@
                                      (splice-character #\@)
                                      (transformation nil))
   (set-quasi-quote-syntax-in-readtable
-   (lambda (body)
+   (lambda (body dispatched?)
+     (declare (ignore dispatched?))
      (readtime-chain-transform transformation (make-ui-quasi-quote (parse-ui-reader-body body))))
    (lambda (form spliced)
      (make-ui-unquote form spliced))
-   :nested-quasi-quote-wrapper (lambda (body)
+   :nested-quasi-quote-wrapper (lambda (body dispatched?)
+                                 (declare (ignore dispatched?))
                                  (parse-ui-reader-body body))
    :start-character start-character
    :end-character end-character
