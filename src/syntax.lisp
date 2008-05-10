@@ -6,6 +6,11 @@
 
 (in-package :cl-quasi-quote)
 
+(def (macro e) with-local-readtable (&body body)
+  "Rebind a copy of *readtable*, mostly for REPL use."
+  `(bind ((*readtable* (copy-readtable *readtable*)))
+     ,@body))
+
 ;;;;;;;;;
 ;;; Parse
 
