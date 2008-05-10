@@ -246,13 +246,18 @@
   (:method ((node syntax-node))
     (bind ((class (class-of node)))
       `(make-instance ',(class-name class)
-                      ,@(iter (for slot :in (class-slots class))
-                              (when (and (not (eq 'parent (slot-definition-name slot)))
-                                         (slot-boundp-using-class class node slot))
+                      ,@(iter (for slot :in (collect-slots-for-syntax-node-emitting-form node))
+                              (when (slot-boundp-using-class class node slot)
                                 (appending (list (first (slot-definition-initargs slot))
                                                  (make-syntax-node-emitting-form (slot-value-using-class class node slot))))))))))
 
 (export 'make-syntax-node-emitting-form)
+
+(defgeneric collect-slots-for-syntax-node-emitting-form (node)
+  (:method ((node syntax-node))
+    (remove 'parent (class-slots (class-of node)) :key #'slot-definition-name)))
+
+(export 'collect-slots-for-syntax-node-emitting-form)
 
 ;;;;;;;;
 ;;; Emit
