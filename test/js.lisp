@@ -8,7 +8,10 @@
 
 (enable-quasi-quoted-js-syntax)
 
-(defsuite* (test/js :in test))
+(defsuite* (test/js :in test) ()
+  ;; TODO it's just a proof of concept for now...
+  (with-expected-failures
+    (run-child-tests)))
 
 (def test-definer js)
 

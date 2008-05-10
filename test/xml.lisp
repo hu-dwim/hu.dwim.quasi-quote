@@ -74,6 +74,35 @@
   ("<element><child/></element>"
    ｢<element () <child>>｣))
 
+(def xml-test test/xml/simple-dispatched ()
+  ("<element/>"
+   ｢`xml(element)｣)
+  ("<element attribute=\"1\"/>"
+   ｢`xml(element (:attribute 1))｣)
+  ("<element attribute1=\"1\" attribute2=\"2\"/>"
+   ｢`xml(element (:attribute1 "1" :attribute2 "2"))｣)
+  ("<element>Hello</element>"
+   ｢`xml(element () "Hello")｣)
+  ("<element><child/></element>"
+   ｢`xml(element () (child))｣)
+  ("<element><child/></element>"
+   ｢`xml(element () child)｣)
+  ("&lt;escaped&gt;"
+   ｢`xml "<escaped>"｣))
+
+(def xml-test test/xml/element-unquoting-dispatched ()
+  ("<element/>"
+   ｢`xml(,"element")｣)
+  ("<element><nested/></element>"
+   ｢`xml(element () ,(make-xml-element "nested"))｣)
+  ("<element><child1/><child2/><child3/><child4 attribute1=\"1\"/><child5/></element>"
+   ｢`xml(element ()
+          (child1)
+          ,(make-xml-element "child2")
+          ,@(list (make-xml-element "child3")
+                  (make-xml-element "child4" (list (make-xml-attribute "attribute1" "1"))))
+          (child5))｣))
+
 (def xml-test test/xml/element-unquoting ()
   ("<element/>"
    ｢<,"element">｣)
