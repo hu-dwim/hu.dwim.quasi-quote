@@ -22,11 +22,17 @@
 (defpackage #:cl-quasi-quote-system
   (:use :cl :asdf :cl-syntax-sugar :asdf-system-connections)
 
-  (:export #:*load-as-production-p*))
+  (:export
+   #:*load-as-production-p*
+   #:project-relative-pathname
+   ))
 
 (in-package #:cl-quasi-quote-system)
 
 (defvar *load-as-production-p* t)
+
+(defun project-relative-pathname (path)
+  (merge-pathnames path (component-pathname (find-system :cl-quasi-quote))))
 
 (defsystem :cl-quasi-quote
   :version "0.1"
