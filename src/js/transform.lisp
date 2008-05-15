@@ -43,7 +43,7 @@
 (def macro transform-incf-like (node plus-plus plus-equal)
   `(bind ((arguments (arguments-of ,node)))
      (ecase (length arguments)
-       (1 `(,(recurse (first arguments)) ,',plus-plus))
+       (1 `(,',plus-plus ,(recurse (first arguments))))
        (2 `(,(recurse (first arguments)) " " ,',plus-equal " " ,(recurse (second arguments)))))))
 
 (macrolet ((frob (&body entries)
@@ -52,17 +52,18 @@
                         (collect `(def js-special-form ,name
                                     ,@body))))))
   (frob
-   (incf (transform-incf-like -node- "++" "+="))
-   (decf (transform-incf-like -node- "--" "-="))
+   (|incf| (transform-incf-like -node- "++" "+="))
+   (|decf| (transform-incf-like -node- "--" "-="))
    (not
      (assert (length= 1 (arguments-of -node-)))
      `("!(" ,(recurse (first (arguments-of -node-))) ")"))))
 
-(def function transform-progn (node)
-  (bind ((body (cl-walker:body-of node))
-         (wrap? (if (rest body)
-                    #t
-                    #f)))
+(def function transform-progn (node &key (wrap? #t wrap-provided?))
+  (bind ((body (cl-walker:body-of node)))
+    (unless wrap-provided?
+      (setf wrap? (if (rest body)
+                      #t
+                      #f)))
     `(,@(when wrap? (list #\{))
       ,@(with-increased-indent* (wrap?)
          (iter (for statement :in body)
@@ -93,12 +94,27 @@
         ((js-special-form? operator)
          (bind ((handler (gethash operator *js-special-forms*)))
            (funcall handler -node-)))
+        ((js-operator-name? operator)
+         `("("
+           ,@(iter (for el :in (arguments-of -node-))
+                   (unless (first-time-p)
+                     (collect " ")
+                     (collect operator-name)
+                     (collect " "))
+                   (collect (recurse el)))
+           ")"))
         (t
          `(,operator-name #\(
                           ,@(mapcar #'recurse (arguments-of -node-))
                           #\) )))))
    (constant-form
-    (lisp-constant-to-js-constant (value-of -node-)))))
+    (lisp-constant-to-js-constant (value-of -node-)))
+   (variable-binding-form
+    `("{"
+      ,@(iter (for (name . value) :in (bindings-of -node-))
+              (collect `(,(symbol-name name) " = " ,(recurse value) ";" #\Newline)))
+      ,@(transform-progn -node- :wrap? #f)
+      "}"))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (etypecase node

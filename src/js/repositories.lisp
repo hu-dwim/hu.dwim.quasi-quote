@@ -11,7 +11,7 @@
 (def special-variable *js-special-forms*        (make-hash-table :test 'eq))
 (def special-variable *js-literals*             (make-hash-table :test 'eq))
 (def special-variable *js-special-forms*        (make-hash-table :test 'eq))
-(def special-variable *js-operator-name->arity* (make-hash-table :test 'eq))
+;;(def special-variable *js-operator-name->arity* (make-hash-table :test 'eq))
 
 (def (function io) js-special-form? (name)
   (nth-value 1 (gethash name *js-special-forms*)))
@@ -30,8 +30,25 @@
        (nth-value 1 (macroexpand-1 name env))))
 
 (def function js-macroexpand-1 (form &optional env)
-  ;; TODO
-  (values nil #f))
+  (declare (ignore env)) ; TODO check the env for macrolets?
+  (bind ((name (first form))
+         (args (rest form))
+         (expander (gethash name *js-macros*)))
+    (if expander
+        (values (funcall expander args) #t)
+        (values form #f))))
+
+(def (definer e) js-macro (name args &rest body)
+  "Define a javascript macro, and store it in the toplevel macro environment."
+  ;; TODO (undefine-js-compiler-macro name)
+  (with-unique-names (arg-values)
+    `(progn
+       (when (gethash ',name *js-macros*)
+         (simple-style-warning "Redefining js macro ~S" ',name))
+       (setf (gethash ',name *js-macros*)
+             (lambda (,arg-values)
+               (destructuring-bind ,args ,arg-values ,@body)))
+       ',name)))
 
 (def definer js-literal (name string)
   `(progn
@@ -87,6 +104,5 @@
 (def function operator-precedence (op)
   (gethash op *js-operator-name->precedence*))
 
-#+nil
 (def function js-operator-name? (name)
   (not (null (operator-precedence name))))

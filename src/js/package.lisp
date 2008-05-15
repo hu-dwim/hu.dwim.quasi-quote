@@ -28,6 +28,12 @@
 (cl-quasi-quote::import-duplicate-symbols)
 (cl-quasi-quote::import-semi-external-quasi-quote-symbols)
 
+(enable-readtime-wrapper-syntax)
+
+(export {(with-readtable-case :preserve)
+         '(let let* incf decf)}
+        :cl-quasi-quote-js)
+
 (defun transform-function-definer-options (options)
   (cl-quasi-quote::transform-function-definer-options options))
 

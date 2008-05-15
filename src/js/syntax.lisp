@@ -11,9 +11,9 @@
                                    (if (rest result)
                                        (make-js-quasi-quote (mapcar 'body-of result))
                                        (first result))))
-    (&key (start-character #\J)
+    (&key start-character
           end-character
-          (dispatch-character #\#)
+          dispatch-character
           (unquote-character #\,)
           (splice-character #\@)
           (transformation nil))
@@ -23,52 +23,83 @@
      `(transform-js-reader-body ,body ,transformation))
    (lambda (body spliced?)
      `(transform-js-reader-unquote ,body ,spliced?))
-   :nested-quasi-quote-wrapper (lambda (body dispatched?)
-                                 (declare (ignore dispatched?))
-                                 `(transform-js-reader-body ,body ,transformation))
    :start-character start-character
    :dispatch-character dispatch-character
    :end-character end-character
    :unquote-character unquote-character
-   :splice-character splice-character))
+   :splice-character splice-character
+   :readtable-case :preserve
+   :dispatched-quasi-quote-name "js"))
 
-(define-syntax quasi-quoted-js-to-js ()
-  (set-quasi-quoted-js-syntax-in-readtable :transformation '(js)))
-
-(define-syntax quasi-quoted-js-to-js-emitting-form ()
-  (set-quasi-quoted-js-syntax-in-readtable :transformation '(js-emitting-form)))
-
-(define-syntax quasi-quoted-js-to-string ()
-  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string string)))
-
-(define-syntax quasi-quoted-js-to-string-emitting-form ()
-  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string string-emitting-form)))
-
-(define-syntax quasi-quoted-js-to-binary ()
-  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary)))
-
-(define-syntax quasi-quoted-js-to-binary-emitting-form ()
-  (set-quasi-quoted-js-syntax-in-readtable :transformation '(quasi-quoted-string quasi-quoted-binary binary-emitting-form)))
-
-(define-syntax quasi-quoted-js-to-binary-stream-emitting-form (stream-name)
-  (set-quasi-quoted-js-syntax-in-readtable :transformation `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
+(macrolet ((x (name transformation &optional args)
+             (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-JS-TO-~A" name)))
+               `(define-syntax ,syntax-name (,@args &key
+                                                    start-character
+                                                    end-character
+                                                    (unquote-character #\,)
+                                                    (splice-character #\@))
+                  (set-quasi-quoted-js-syntax-in-readtable :transformation ,transformation
+                                                           :start-character start-character
+                                                           :end-character end-character
+                                                           :unquote-character unquote-character
+                                                           :splice-character splice-character)))))
+  (x js                          '(js))
+  (x js-emitting-form            '(js-emitting-form))
+  (x string                      '(quasi-quoted-string string))
+  (x string-emitting-form        '(quasi-quoted-string string-emitting-form))
+  (x string-stream-emitting-form `(quasi-quoted-string (string-emitting-form :stream-name ,stream-name)) (stream-name))
+  (x binary                      '(quasi-quoted-string quasi-quoted-binary binary))
+  (x binary-emitting-form        '(quasi-quoted-string quasi-quoted-binary binary-emitting-form))
+  (x binary-stream-emitting-form `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name)) (stream-name)))
 
 (def macro transform-js-reader-body (form transformation &environment lexenv)
   (chain-transform transformation (typecase form
                                     (syntax-node form)
                                     (t (make-js-quasi-quote (walk-js form lexenv))))))
 
-(def macro transform-js-reader-unquote (body spliced?)
+(def macro transform-js-reader-unquote (body spliced? &environment env)
+  (declare (ignore env))
   ;; A macro to handle the quoted parts when the walker is walking the forms. Kinda like a kludge, but it's not that bad...
   (make-js-unquote body spliced?))
 
-(defwalker-handler transform-js-reader-unquote (form parent env)
+(def special-variable *js-walker-handlers* (copy-walker-handlers))
+
+(def definer js-walker-handler (name (form parent lexenv) &body body)
+  `(with-walker-configuration (:handlers *js-walker-handlers*)
+     (defwalker-handler ,name (,form ,parent ,lexenv)
+       ,@body)))
+
+(def js-walker-handler transform-js-reader-unquote (form parent env)
+  ;; so that the lexenv is propagated to the unquoted parts
   (macroexpand-1 form (cdr env)))
 
-(def function walk-js (form lexenv)
-  (with-walker-configuration (:warn-for-undefined-references #f ;; TODO should not need to disable it, but we are far from that for now
-                              :function-name?     (fdefinition 'js-function-name?)
-                              :macro-name?        (fdefinition 'js-macro-name?)
-                              :symbol-macro-name? (fdefinition 'js-symbol-macro-name?)
-                              :macroexpand-1      (fdefinition 'js-macroexpand-1))
+#+nil
+(defun undefined-js-reference-handler (type name)
+  (unless (member name '())
+    (cl-walker::undefined-reference-handler type name)))
+
+(defun js-constant-name? (form &optional env)
+  (declare (ignore env))
+  (or (gethash form *js-literals*)
+      (and (not (symbolp form))
+           (not (consp form)))))
+
+(def function walk-js (form &optional lexenv)
+  (with-walker-configuration (;;:undefined-reference-handler 'undefined-js-reference-handler
+                              :function-name?     'js-function-name?
+                              :macro-name?        'js-macro-name?
+                              :symbol-macro-name? 'js-symbol-macro-name?
+                              :constant-name?     'js-constant-name?
+                              :macroexpand-1      'js-macroexpand-1
+                              :handlers           *js-walker-handlers*)
     (walk-form form nil (make-walk-environment lexenv))))
+
+;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
+;; because `js is case sensitive...
+(dolist (symbol {(with-readtable-case :preserve)
+                 '(let let*)})
+  (export symbol :cl-quasi-quote-js)
+  (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
+    (assert cl-symbol)
+    (awhen (gethash cl-symbol *js-walker-handlers*)
+      (setf (gethash symbol *js-walker-handlers*) it))))
