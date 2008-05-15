@@ -20,10 +20,12 @@
         :cl-walker
         :cl-syntax-sugar
         :cl-quasi-quote
+        :cl-quasi-quote-system
         :cl-quasi-quote-xml
         :cl-quasi-quote-pdf
         :cl-quasi-quote-ui
-        :cl-quasi-quote-js)
+        :cl-quasi-quote-js
+        )
 
   (:shadowing-import-from :cl-quasi-quote
    #:body-of

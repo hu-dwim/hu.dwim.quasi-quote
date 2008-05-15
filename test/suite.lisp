@@ -18,7 +18,7 @@
                        ,@(mapcar #'process-entry (rest entry)))
                     (bind (((expected ast) entry))
                       `(,',(format-symbol *package* "TEST-~A-AST" name) ,expected (macroexpand (read-from-string ,ast)))))))
-       `(def test ,name ,args
+       `(def (test d) ,name ,args
           (setup-readtable)
           (,',(format-symbol *package* "ENABLE-~A-SYNTAX" syntax))
           ,@(mapcar #'process-entry forms)))))

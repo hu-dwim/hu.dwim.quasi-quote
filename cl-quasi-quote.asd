@@ -81,8 +81,11 @@
   (declaim (optimize (debug 3)))
   (pushnew :debug *features*)
   (warn "Pushed :debug in *features* and (declaim (optimize (debug 3))) was issued to help later C-c C-c'ing")
-  (eval (read-from-string "(progn
-                             (stefil:funcall-test-with-feedback-message 'test))"))
+  ;; need a thread to avoid deadlock on The Big Compiler Lock when 'test-op-ing
+  (eval (read-from-string "(bordeaux-threads:make-thread
+                             (lambda ()
+                               (stefil:funcall-test-with-feedback-message 'test))
+                             :name \"cl-quasi-quote test thread\")"))
   (values))
 
 (defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote))))

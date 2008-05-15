@@ -25,6 +25,9 @@
                :cl-def
                :cl-syntax-sugar
                :cl-quasi-quote
+               :parse-number
+               :bordeaux-threads
+               :trivial-shell
                :cl-quasi-quote-pdf
                :cl-quasi-quote-xml
                :cl-quasi-quote-js

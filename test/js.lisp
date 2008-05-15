@@ -8,12 +8,21 @@
 
 (enable-quasi-quoted-js-syntax)
 
+(def (function d) eval-js (string)
+  (bind (((:values stdout nil return-code) (trivial-shell:shell-command "js" :input string)))
+    (is (= 0 return-code))
+    (with-input-from-string (input stdout)
+      (bind ((result (read-line input #f)))
+        (or (ignore-errors
+              (parse-number:parse-number result))
+            result)))))
+
 (defsuite* (test/js :in test) ()
   ;; TODO it's just a proof of concept for now...
   (with-expected-failures
     (run-child-tests)))
 
-(def test-definer js)
+(def syntax-test-definer js quasi-quoted-js)
 
 (def special-variable *js-stream*)
 
@@ -27,57 +36,56 @@
 ;; TODO this is almost the same as test-xml-ast
 (def function test-js-ast (expected ast)
   ;; evaluate to string
-  (is (string=-ignoring-whitespaces
-       expected
-       (transform-and-emit '(quasi-quoted-string
-                             string-emitting-form
-                             lambda-form
-                             lambda)
-                           ast)))
+  (is (equal expected
+             (eval-js
+              (transform-and-emit '(quasi-quoted-string
+                                    string-emitting-form
+                                    lambda-form
+                                    lambda)
+                                  ast))))
   ;; write to string stream
-  (is (string=-ignoring-whitespaces
-       expected
-       (with-output-to-string (*js-stream*)
-         (transform-and-emit '(quasi-quoted-string
-                               (string-emitting-form :stream-name *js-stream*)
-                               lambda-form
-                               lambda)
-                             ast))))
+  (is (equal expected
+             (eval-js
+              (with-output-to-string (*js-stream*)
+                (transform-and-emit '(quasi-quoted-string
+                                      (string-emitting-form :stream-name *js-stream*)
+                                      lambda-form
+                                      lambda)
+                                    ast)))))
   ;; evaluate to binary
-  (is (string=-ignoring-whitespaces
-       expected
-       (babel:octets-to-string
-        (transform-and-emit '(quasi-quoted-string
-                              quasi-quoted-binary
-                              binary-emitting-form
-                              lambda-form
-                              lambda)
-                            ast))))
+  (is (equal expected
+             (eval-js
+              (babel:octets-to-string
+               (transform-and-emit '(quasi-quoted-string
+                                     quasi-quoted-binary
+                                     binary-emitting-form
+                                     lambda-form
+                                     lambda)
+                                   ast)))))
   ;; write to binary stream
-  (is (string=-ignoring-whitespaces
-       expected
-       (with-output-to-sequence (*js-stream* :return-as 'string)
-         (transform-and-emit '(quasi-quoted-string
-                               quasi-quoted-binary
-                               (binary-emitting-form :stream-name *js-stream*)
-                               lambda-form
-                               lambda)
-                             ast)))))
+  (is (equal expected
+             (eval-js
+              (with-output-to-sequence (*js-stream* :return-as 'string)
+                (transform-and-emit '(quasi-quoted-string
+                                      quasi-quoted-binary
+                                      (binary-emitting-form :stream-name *js-stream*)
+                                      lambda-form
+                                      lambda)
+                                    ast))))))
 
 (def test test/js/escaping ()
   (let ((str "alma"))
     (is (eq str (escape-as-js str)))))
 
 (def js-test test/js/simple ()
-  ("a + b;"
-   #J(+ a b))
-  ("{ !(a--); b++; }"
-   #J(progn
-       (not (decf a))
-       (incf b))))
+  (42
+   ｢`js(print (+ 40 2))｣)
+  (42
+   ｢`js(let ((a 42))
+         (decf a)
+         (print (incf a)))｣))
 
 (def js-test test/js/unquote ()
-  ("x + 42"
-   (bind ((a 2))
-     #J(progn
-         (+ x ,(+ 40 a))))))
+  (42
+   ｢`js(let ((a 20))
+         (print (+ a ,(+ 20 2))))｣))
