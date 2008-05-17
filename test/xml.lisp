@@ -12,52 +12,65 @@
 
 (def special-variable *xml-stream*)
 
-(def function test-xml-ast (expected ast)
-  ;; evaluate to string
-  (is (string= expected
-               (transform-and-emit '(quasi-quoted-string
-                                     string-emitting-form
-                                     lambda-form
-                                     lambda)
-                                   ast)))
-  ;; write to string stream
-  (is (string= expected
-               (with-output-to-string (*xml-stream*)
-                 (transform-and-emit '(quasi-quoted-string
-                                       (string-emitting-form :stream-name *xml-stream*)
-                                       lambda-form
-                                       lambda)
-                                     ast))))
-  ;; evaluate to binary
-  (is (string= expected
-               (babel:octets-to-string
-                (transform-and-emit '(quasi-quoted-string
-                                      quasi-quoted-binary
-                                      binary-emitting-form
-                                      lambda-form
-                                      lambda)
-                                    ast))))
-  ;; write to binary stream
-  (is (string= expected
-               (with-output-to-sequence (*xml-stream* :return-as 'string)
-                 (transform-and-emit '(quasi-quoted-string
-                                       quasi-quoted-binary
-                                       (binary-emitting-form :stream-name *xml-stream*)
-                                       lambda-form
-                                       lambda)
-                                     ast)))))
+(def function read-from-string-with-xml-syntax (string)
+  (with-local-readtable
+    (enable-quasi-quoted-xml-to-string-emitting-form-syntax)
+    (read-from-string string)))
 
-(def test test/xml/escaping ()
+(def function pprint-xml (string &key (indent 2))
+  (bind ((*xml-indent* indent))
+    (pprint (macroexpand (read-from-string-with-xml-syntax string)))))
+
+(def function test-xml-ast (expected ast)
+  (bind ((*xml-indent* 0)
+         (*xml-text-escape-method* :per-character))
+    ;; evaluate to string
+    (is (string= expected
+                 (transform-and-emit '(quasi-quoted-string
+                                       string-emitting-form
+                                       lambda-form
+                                       lambda)
+                                     ast)))
+    ;; write to string stream
+    (is (string= expected
+                 (with-output-to-string (*xml-stream*)
+                   (transform-and-emit '(quasi-quoted-string
+                                         (string-emitting-form :stream-name *xml-stream*)
+                                         lambda-form
+                                         lambda)
+                                       ast))))
+    ;; evaluate to binary
+    (is (string= expected
+                 (babel:octets-to-string
+                  (transform-and-emit '(quasi-quoted-string
+                                        quasi-quoted-binary
+                                        binary-emitting-form
+                                        lambda-form
+                                        lambda)
+                                      ast))))
+    ;; write to binary stream
+    (is (string= expected
+                 (with-output-to-sequence (*xml-stream* :return-as 'string)
+                   (transform-and-emit '(quasi-quoted-string
+                                         quasi-quoted-binary
+                                         (binary-emitting-form :stream-name *xml-stream*)
+                                         lambda-form
+                                         lambda)
+                                       ast))))))
+
+(def test test/xml/escaping/1 ()
   (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"
                (escape-as-xml "<1\"2>3<&4>")))
   (let ((str "alma"))
     (is (eq str (escape-as-xml str)))))
 
-(def xml-test test/xml/escaping-element-value ()
+(def xml-test test/xml/escaping/2 ()
   ("<element attribute=\"&lt;1&gt;\"/>"
    ｢<element (,@(list (make-xml-attribute "attribute" "<1>")))>｣)
   ("<element attribute=\"&lt;1&gt;\"/>"
-   ｢<element (attribute "<1>")>｣))
+   ｢<element (attribute "<1>")>｣)
+  ("<element>&lt;tunneled&gt;42&lt;/tunneled&gt;</element>"
+   ｢<element () ,(make-xml-text "<tunneled>42</tunneled>")>｣))
 
 (def xml-test test/xml/simple ()
   ("<element/>"
@@ -180,7 +193,7 @@
   (is (equal '<= (read-from-string "<=")))
   (is (equal '(< a b) (read-from-string "(< a b)"))))
 
-(def xml-test test/xml/less-then-sign-in-unquote ()
+(def xml-test test/xml/spliced-attribute-list ()
   ("<element ok=\"1\"/>"
    ｢<element (,@(when (< 3 4) (list (make-xml-attribute "ok" "1"))))>｣))
 
