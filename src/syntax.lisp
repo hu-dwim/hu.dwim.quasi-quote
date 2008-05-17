@@ -343,5 +343,17 @@
                   (funcall map-function form)
                   form))))
 
-(def (function io) make-spaces (count)
-  (make-string count :initial-element #\Space))
+(def constant +string-with-spaces-cache-size+ 40)
+
+(def (constant :test 'equalp) +indent-length->string-with-spaces+
+  (bind ((result (make-array +string-with-spaces-cache-size+)))
+    (iter (for index :from 0 :below +string-with-spaces-cache-size+)
+          (setf (aref result index) (make-string index :initial-element #\Space)))
+    result))
+
+(def (function io) make-string-of-spaces (count)
+  (if (< count +string-with-spaces-cache-size+)
+      (aref +indent-length->string-with-spaces+ count)
+      (progn
+        (warn "MAKE-STRING-OF-SPACES ran out of width, consing now...")
+        (make-string count :initial-element #\Space))))

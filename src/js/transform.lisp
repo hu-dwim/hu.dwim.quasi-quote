@@ -14,7 +14,7 @@
 
 (def function make-js-indent ()
   (when *js-indent*
-    (list (make-spaces (* *js-indent* *js-indent-level*)))))
+    (list (make-string-of-spaces (* *js-indent* *js-indent-level*)))))
 
 (def macro with-increased-indent (&body body)
   `(bind ((*js-indent-level* (1+ *js-indent-level*)))

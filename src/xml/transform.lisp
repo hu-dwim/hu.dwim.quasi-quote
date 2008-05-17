@@ -14,7 +14,7 @@
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node &rest args &key (indent #f) &allow-other-keys)
   (bind ((indent-level
           (when indent
-            (list (make-spaces (* indent *xml-indent-level*)))))
+            (list (make-string-of-spaces (* indent *xml-indent-level*)))))
          (indent-new-line
           (when indent
             (list #\NewLine))))
