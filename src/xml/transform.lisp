@@ -9,19 +9,33 @@
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'xml-quasi-quote fn))
 
+(def (special-variable e) *xml-text-escape-method* :cdata
+  "Either :cdata or :per-character")
+
+(def (special-variable e) *xml-indent* 0)
 (def special-variable *xml-indent-level* 0)
 
-(def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node &rest args &key (indent #f) &allow-other-keys)
-  (bind ((indent-level
-          (when indent
-            (list (make-string-of-spaces (* indent *xml-indent-level*)))))
-         (indent-new-line
-          (when indent
-            (list #\NewLine))))
+(def macro with-increased-xml-indent-level (&body body)
+  `(bind ((*xml-indent-level* (1+ *xml-indent-level*)))
+     ,@body))
+
+(def macro with-runtime-xml-indent-level (&body body)
+  `(wrap-forms-with-bindings
+    (when *xml-indent* `((*xml-indent* ,*xml-indent*)
+                         (*xml-indent-level* (+ *xml-indent-level* ,*xml-indent-level*))))
+    ,@body))
+
+(def (function o) wrap-with-xml-quote (string)
+  (declare (type string string))
+  (list "<![CDATA[" string "]]>"))
+
+(def function transform-quasi-quoted-xml-to-quasi-quoted-string/element (node)
+  (bind ((indent-level (unless (zerop *xml-indent*)
+                         (list (make-string-of-spaces (* *xml-indent* *xml-indent-level*)))))
+         (indent-new-line (unless (zerop *xml-indent*)
+                            '(#\NewLine))))
     (etypecase node
       (function node)
-      ;; TODO indent for strings, too?
-      (string `(,@indent-level ,(escape-as-xml node) ,@indent-new-line))
       (xml-element
        (bind ((attributes (attributes-of node))
               (name (name-of node))
@@ -45,39 +59,38 @@
            ,@(if children
                  `(">" ,@indent-new-line
                        ,@(mapcar (lambda (child)
-                                   (bind ((*xml-indent-level* (1+ *xml-indent-level*)))
-                                     (apply #'transform-quasi-quoted-xml-to-quasi-quoted-string/element child args)))
+                                   (with-increased-xml-indent-level
+                                     (transform-quasi-quoted-xml-to-quasi-quoted-string/element child)))
                                  children)
                        (,@indent-level "</" ,transformed-name ">" ,@indent-new-line))
                  `("/>" ,@indent-new-line)))))
       (xml-text
        (bind ((content (content-of node)))
-         ;; TODO indent for xml-text, too?
-         `(,@indent-level
-           ,(etypecase content
-                       (xml-unquote (make-string-quasi-quote (form-of node)))
-                       (string (escape-as-xml content)))
-           ,@indent-new-line)))
+         (etypecase content
+           (xml-unquote (make-string-unquote `(ecase *xml-text-escape-method*
+                                                (:cdata (wrap-with-xml-quote ,(form-of node)))
+                                                (:per-character (escape-as-xml ,(form-of node))))))
+           (string (ecase *xml-text-escape-method*
+                     (:cdata (wrap-with-xml-quote content))
+                     (:per-character (escape-as-xml content)))))))
       (xml-quasi-quote
-       (make-string-quasi-quote (apply #'transform-quasi-quoted-xml-to-quasi-quoted-string/element (body-of node) args)))
+       (make-string-quasi-quote (transform-quasi-quoted-xml-to-quasi-quoted-string/element (body-of node))))
       (xml-unquote
        (bind ((spliced? (spliced-p node)))
          (make-string-unquote
           (if spliced?
               `(map 'list (lambda (node)
-                            ,(wrap-forms-with-bindings
-                              (when indent `((*xml-indent-level* ,*xml-indent-level*)))
-                              `(transform-quasi-quoted-xml-to-quasi-quoted-string/element node ,@args)))
+                            ,(with-runtime-xml-indent-level
+                              ;; TODO this is not enough, unquoted parts are not indented just because of this
+                              `(transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))
                     ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                       node (lambda (node)
-                             (apply #'transform-quasi-quoted-xml-to-quasi-quoted-string/element node args))))
-              (wrap-forms-with-bindings
-               (when indent `((*xml-indent-level* ,*xml-indent-level*)))
+                             (transform-quasi-quoted-xml-to-quasi-quoted-string/element node))))
+              (with-runtime-xml-indent-level
                `(transform-quasi-quoted-xml-to-quasi-quoted-string/element
                  ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                    node (lambda (node)
-                          (apply #'transform-quasi-quoted-xml-to-quasi-quoted-string/element node args)))
-                 ,@args)))
+                          (transform-quasi-quoted-xml-to-quasi-quoted-string/element node))))))
           spliced?)))
       (quasi-quote
        (if (typep node 'string-quasi-quote)
@@ -127,5 +140,6 @@
          node))
     (unquote (transform 'quasi-quoted-string node))))
 
-(def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform-quasi-quoted-xml-to-quasi-quoted-string/element input args))
+(def method transform ((to (eql 'quasi-quoted-string)) (input xml-syntax-node) &key indent &allow-other-keys)
+  (bind ((*xml-indent* (or indent *xml-indent*)))
+    (transform-quasi-quoted-xml-to-quasi-quoted-string/element input)))
