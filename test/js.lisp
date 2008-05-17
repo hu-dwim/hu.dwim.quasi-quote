@@ -23,6 +23,15 @@
               (parse-number:parse-number result))
             result)))))
 
+(def function read-from-string-with-js-syntax (string)
+  (with-local-readtable
+    (enable-quasi-quoted-js-to-string-emitting-form-syntax)
+    (read-from-string string)))
+
+(def function pprint-js (string &key (indent 2))
+  (bind ((*js-indent* indent))
+    (pprint (macroexpand (read-from-string-with-js-syntax string)))))
+
 (defsuite* (test/js :in test) ()
   ;; TODO it's just a proof of concept for now...
   (with-expected-failures
@@ -99,7 +108,16 @@
 (def js-test test/js/unquote ()
   (42
    ｢`js(let ((a 20))
-         (print (+ a ,(+ 20 2))))｣))
+         (print (+ a ,(+ 20 2))))｣)
+  (42
+   ｢`js(let ((a ,(+ 20 2)))
+         (print (+ a 20)))｣)
+  (14
+   ｢`js(let ((x 10))
+         (defun ,'alma ()
+           (setf x 4)
+           (return 3))
+         (print (setf x (+ 2 (,'alma) x 5))))｣))
 
 (def js-test test/js/expressions ()
   ("beforexafter"
@@ -108,7 +126,7 @@
          (print x))｣)
   (14
    ｢`js(let ((x 10))
-         (defun side-effect()
+         (defun side-effect ()
            (setf x 4)
            (return 3))
          (print (setf x (+ 2 (side-effect) x 5))))｣))
