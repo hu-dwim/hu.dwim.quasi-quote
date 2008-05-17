@@ -9,39 +9,42 @@
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))
 
-(def special-variable *js-indent* 0)
+(def (special-variable e) *js-indent* 0) ; indenting is off by default
 (def special-variable *js-indent-level* 0)
 
 (def function make-js-indent ()
   (when *js-indent*
     (list (make-string-of-spaces (* *js-indent* *js-indent-level*)))))
 
-(def macro with-increased-indent (&body body)
-  `(bind ((*js-indent-level* (1+ *js-indent-level*)))
-     ,@body))
+(def with-macro with-increased-indent* (really?)
+  (if really?
+      (bind ((*js-indent-level* (1+ *js-indent-level*)))
+        (-body-))
+      (-body-)))
 
-(def macro with-increased-indent* ((really?) &body body)
-  `(if ,really?
-       (bind ((*js-indent-level* (1+ *js-indent-level*)))
-         ,@body)
-       (progn
-         ,@body)))
+(def with-macro with-increased-indent ()
+  (with-increased-indent* ((not (in-toplevel-js-block?)))
+    (-body-)))
 
-(def (function io) symbol-to-js (symbol)
-  (bind ((name (symbol-name symbol))
-         (pieces (cl-ppcre:split "-" name)))
-    (if (rest pieces)
-        (bind ((*print-pretty* #f))
-          (with-output-to-string (str)
-            (iter (for piece :in pieces)
-                  (write-string (if (first-time-p)
-                                    piece
-                                    (capitalize-first-letter! piece))
-                                str)
-                  (collect piece))))
-        name)))
+(def (function io) lisp-name-to-js-name (symbol)
+  (etypecase symbol
+    (js-unquote
+     (make-string-unquote `(lisp-name-to-js-name ,(form-of symbol))))
+    (symbol
+     (bind ((name (symbol-name symbol))
+            (pieces (cl-ppcre:split "-" name)))
+       (if (rest pieces)
+           (bind ((*print-pretty* #f))
+             (with-output-to-string (str)
+               (iter (for piece :in pieces)
+                     (write-string (if (first-time-p)
+                                       piece
+                                       (capitalize-first-letter! piece))
+                                   str)
+                     (collect piece))))
+           name)))))
 
-(def (function o) convert-js-operator-name (op)
+(def (function o) lisp-operator-name-to-js-operator-name (op)
   (case op
     (and '\&\&)
     (or '\|\|)
@@ -78,29 +81,34 @@
 
 (def special-variable *js-block-nesting-level* 0)
 
-(def function in-toplevel-js-block? ()
+(def (function i) in-toplevel-js-block? ()
   (<= *js-block-nesting-level* 1))
 
-(def macro within-nested-js-block (&body body)
-  `(bind ((*js-block-nesting-level* (1+ *js-block-nesting-level*)))
-     ,@body))
+(def with-macro within-nested-js-block* (really?)
+  (if really?
+      (bind ((*js-block-nesting-level* (1+ *js-block-nesting-level*)))
+        (-body-))
+      (-body-)))
 
-(def function transform-progn (node &key (wrap? nil wrap-provided?))
-  (within-nested-js-block
+(def with-macro within-nested-js-block ()
+  (within-nested-js-block* (#t)
+    (-body-)))
+
+(def function transform-progn (node &key (wrap? nil wrap-provided?) (nest? #t) (increase-indent? #f))
+  (within-nested-js-block* (nest?)
     (bind ((body (cl-walker:body-of node)))
       (unless wrap-provided?
         (setf wrap? (and (rest body)
                          (not (in-toplevel-js-block?)))))
-      `(,@(when wrap? (list #\{ #\Newline))
-          ,@(with-increased-indent* (wrap?)
-                                    (iter (for statement :in body)
-                                          (unless (first-time-p)
-                                            (collect #\Newline))
-                                          (awhen (make-js-indent)
-                                            (collect it))
-                                          (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
-                                          (collect #\;)))
-          ,@(when wrap? (list #\Newline #\}))))))
+      `(,@(when wrap? (list #\{))
+        ,@(with-increased-indent* (increase-indent?)
+            (iter (for statement :in body)
+                  (collect #\Newline)
+                  (awhen (make-js-indent)
+                    (collect it))
+                  (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
+                  (collect #\;)))
+        ,@(when wrap? `(#\Newline ,@(make-js-indent) #\}))))))
 
 (macrolet ((frob (&rest entries)
              `(flet ((recurse (form)
@@ -111,10 +119,12 @@
                                       ,@body)))))))
   (frob
    (variable-reference-form
-    (symbol-to-js (name-of -node-)))
+    (lisp-name-to-js-name (name-of -node-)))
+   (progn-form
+    (transform-progn -node-))
    (application-form
     (bind ((operator (operator-of -node-))
-           (operator-name (symbol-to-js (convert-js-operator-name operator))))
+           (operator-name (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name operator))))
       (cond
         ((js-special-form? operator)
          (bind ((handler (gethash operator *js-special-forms*)))
@@ -135,21 +145,22 @@
    (constant-form
     (lisp-literal-to-js-literal (value-of -node-)))
    (variable-binding-form
-    `(,@(unless (in-toplevel-js-block?) (list "{"))
-      ,@(iter (for (name . value) :in (bindings-of -node-))
-              (collect `(#\Newline ,(symbol-to-js name) " = " ,(recurse value) ";")))
-      #\Newline
-      ,@(transform-progn -node- :wrap? #f)
-      #\Newline
-      ,@(unless (in-toplevel-js-block?) (list "}"))))
+    (bind ((indent (make-js-indent)))
+      (within-nested-js-block
+        (with-increased-indent
+          `(,@(unless (in-toplevel-js-block?) (list "{"))
+            ,@(iter (for (name . value) :in (bindings-of -node-))
+                    (collect `(#\Newline ,@(make-js-indent) ,(lisp-name-to-js-name name) " = " ,(recurse value) ";")))
+            ,@(transform-progn -node- :wrap? #f :nest? #f :increase-indent? #f)
+            ,@(unless (in-toplevel-js-block?) `(#\Newline ,@indent "}")))))))
    (setq-form
     `(,(recurse (variable-of -node-)) " = " ,(recurse (value-of -node-))))
    (function-definition-form
-    `("function " ,(symbol-to-js (name-of -node-))
+    `("function " ,(lisp-name-to-js-name (name-of -node-))
                   "("
                   ,@(iter (for argument :in (arguments-of -node-))
                           (collect (recurse (name-of argument))))
-                  ") {" #\Newline
+                  ") {"
                   ,@(transform-progn -node- :wrap? #f)
                   #\Newline
                   "}"))
