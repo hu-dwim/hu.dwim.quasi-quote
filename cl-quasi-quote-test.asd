@@ -31,7 +31,6 @@
                :cl-quasi-quote-pdf
                :cl-quasi-quote-xml
                :cl-quasi-quote-js
-               :cl-quasi-quote-ui
                :swank
                )
   :components
@@ -45,8 +44,7 @@
              (:file "bivalent" :depends-on ("suite"))
              (:file "xml" :depends-on ("suite" "string"))
              (:file "js" :depends-on ("suite" "string"))
-             (:file "pdf" :depends-on ("suite"))
-             (:file "ui" :depends-on ("suite" "pdf" "xml"))))))
+             (:file "pdf" :depends-on ("suite"))))))
 
 (defmethod perform :after ((o load-op) (c (eql (find-system :cl-quasi-quote-test))))
   (in-package :cl-quasi-quote-test)

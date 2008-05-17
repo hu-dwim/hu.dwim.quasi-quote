@@ -23,7 +23,6 @@
         :cl-quasi-quote-system
         :cl-quasi-quote-xml
         :cl-quasi-quote-pdf
-        :cl-quasi-quote-ui
         :cl-quasi-quote-js
         )
 
