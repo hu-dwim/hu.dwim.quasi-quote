@@ -171,7 +171,6 @@
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (etypecase node
     (function       node)
-    (string         node)
     ((or integer float ratio) (lisp-literal-to-js-literal node))
     (form           (transform-quasi-quoted-js-to-quasi-quoted-string* node))
     (js-quasi-quote (make-string-quasi-quote (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))))

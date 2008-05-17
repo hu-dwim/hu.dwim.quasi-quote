@@ -111,13 +111,18 @@
          (print (+ a ,(+ 20 2))))｣)
   (42
    ｢`js(let ((a ,(+ 20 2)))
-         (print (+ a 20)))｣)
+         (print (+ a 10 ,10)))｣)
   (14
    ｢`js(let ((x 10))
          (defun ,'alma ()
-           (setf x 4)
+           (setf x ,(+ 2 2))
            (return 3))
-         (print (setf x (+ 2 (,'alma) x 5))))｣))
+         (print (setf x (+ 2 (,'alma) x 5))))｣)
+  (42
+   ｢`js(progn
+         ;; inject text without being transformed
+         ,(make-string-quasi-quote "a = 22")
+         (print (+ ,(make-string-quasi-quote "a") 10 ,10)))｣))
 
 (def js-test test/js/expressions ()
   ("beforexafter"
