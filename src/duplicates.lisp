@@ -10,10 +10,10 @@
 
 (defun import-duplicate-symbols (&optional (package *package*))
   (import
-   '(shrink-vector if-bind aif when-bind awhen prog1-bind aprog1 it)
+   '(shrink-vector if-bind aif when-bind awhen prog1-bind aprog1 it capitalize-first-letter capitalize-first-letter!)
    package))
 
-(defun shrink-vector (str size)
+(def (function io) shrink-vector (str &optional (size (length str)))
   "Only callable on local vectors with fill pointer"
   #+allegro
   (excl::.primcall 'sys::shrink-svector str size)
@@ -54,3 +54,14 @@
 
 (defmacro aprog1 (ret &body body)
   `(prog1-bind it ,ret ,@body))
+
+;; cl-l10n
+(defun capitalize-first-letter (str)
+  (if (and (> (length str) 0)
+           (not (upper-case-p (elt str 0))))
+      (capitalize-first-letter! (copy-seq str))
+      str))
+
+(defun capitalize-first-letter! (str)
+  (setf (aref str 0) (char-upcase (aref str 0)))
+  str)
