@@ -132,7 +132,11 @@
     (with-form-object (result function-definition-form
                               :parent parent
                               :source form)
-      (walk-lambda-like result args body env)
+      (walk-lambda-like result
+                        (nsubstitute '&optional '|&optional|
+                                     (nsubstitute '&allow-other-keys '|&allow-other-keys|
+                                                  (substitute '&key '|&key| args)))
+                        body env)
       (setf (name-of result) name))))
 
 (def js-walker-handler return (form parent env)

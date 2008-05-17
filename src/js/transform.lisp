@@ -110,6 +110,10 @@
                   (collect #\;)))
         ,@(when wrap? `(#\Newline ,@(make-js-indent) #\}))))))
 
+(def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
+  (:method ((node required-function-argument-form))
+    (lisp-name-to-js-name (name-of node))))
+
 (macrolet ((frob (&rest entries)
              `(flet ((recurse (form)
                        (transform-quasi-quoted-js-to-quasi-quoted-string form)))
@@ -159,7 +163,7 @@
     `("function " ,(lisp-name-to-js-name (name-of -node-))
                   "("
                   ,@(iter (for argument :in (arguments-of -node-))
-                          (collect (recurse (name-of argument))))
+                          (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
                   ") {"
                   ,@(transform-progn -node- :wrap? #f)
                   #\Newline

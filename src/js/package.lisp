@@ -31,7 +31,7 @@
 (enable-readtime-wrapper-syntax)
 
 (export {(with-readtable-case :preserve)
-         '(let let* incf decf)}
+         '(let let* incf decf &optional &key &allow-other-keys &rest)}
         :cl-quasi-quote-js)
 
 (defun transform-function-definer-options (options)
