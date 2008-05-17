@@ -27,6 +27,20 @@
        (progn
          ,@body)))
 
+(def (function io) symbol-to-js (symbol)
+  (bind ((name (symbol-name symbol))
+         (pieces (cl-ppcre:split "-" name)))
+    (if (rest pieces)
+        (bind ((*print-pretty* #f))
+          (with-output-to-string (str)
+            (iter (for piece :in pieces)
+                  (write-string (if (first-time-p)
+                                    piece
+                                    (capitalize-first-letter! piece))
+                                str)
+                  (collect piece))))
+        name)))
+
 (def (function o) convert-js-operator-name (op)
   (case op
     (and '\&\&)
@@ -36,9 +50,13 @@
     (=   '\=\=)
     (t op)))
 
-(def (function o) lisp-constant-to-js-constant (value)
-  ;; TODO
-  (princ-to-string value))
+(def (function oi) lisp-literal-to-js-literal (value)
+  (etypecase value
+    (string (concatenate 'string "'" (escape-as-js-string value) "'"))
+    (integer (princ-to-string value))
+    (float (format nil "~F" value))
+    (ratio (concatenate 'string "(" (princ-to-string (numerator value)) " / " (princ-to-string (denominator value)) ")"))
+    (character (lisp-literal-to-js-literal (string value)))))
 
 (def macro transform-incf-like (node plus-plus plus-equal)
   `(bind ((arguments (arguments-of ,node)))
@@ -58,22 +76,31 @@
      (assert (length= 1 (arguments-of -node-)))
      `("!(" ,(recurse (first (arguments-of -node-))) ")"))))
 
-(def function transform-progn (node &key (wrap? #t wrap-provided?))
-  (bind ((body (cl-walker:body-of node)))
-    (unless wrap-provided?
-      (setf wrap? (if (rest body)
-                      #t
-                      #f)))
-    `(,@(when wrap? (list #\{))
-      ,@(with-increased-indent* (wrap?)
-         (iter (for statement :in body)
-               (when wrap?
-                 (collect #\Newline))
-               (awhen (make-js-indent)
-                 (collect it))
-               (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
-               (collect #\;)))
-      ,@(when wrap? (list #\Newline #\})))))
+(def special-variable *js-block-nesting-level* 0)
+
+(def function in-toplevel-js-block? ()
+  (<= *js-block-nesting-level* 1))
+
+(def macro within-nested-js-block (&body body)
+  `(bind ((*js-block-nesting-level* (1+ *js-block-nesting-level*)))
+     ,@body))
+
+(def function transform-progn (node &key (wrap? nil wrap-provided?))
+  (within-nested-js-block
+    (bind ((body (cl-walker:body-of node)))
+      (unless wrap-provided?
+        (setf wrap? (and (rest body)
+                         (not (in-toplevel-js-block?)))))
+      `(,@(when wrap? (list #\{ #\Newline))
+          ,@(with-increased-indent* (wrap?)
+                                    (iter (for statement :in body)
+                                          (unless (first-time-p)
+                                            (collect #\Newline))
+                                          (awhen (make-js-indent)
+                                            (collect it))
+                                          (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
+                                          (collect #\;)))
+          ,@(when wrap? (list #\Newline #\}))))))
 
 (macrolet ((frob (&rest entries)
              `(flet ((recurse (form)
@@ -84,12 +111,10 @@
                                       ,@body)))))))
   (frob
    (variable-reference-form
-    (symbol-name (name-of -node-)))
-   (implicit-progn-mixin
-    (transform-progn -node-))
+    (symbol-to-js (name-of -node-)))
    (application-form
     (bind ((operator (operator-of -node-))
-           (operator-name (symbol-name (convert-js-operator-name operator))))
+           (operator-name (symbol-to-js (convert-js-operator-name operator))))
       (cond
         ((js-special-form? operator)
          (bind ((handler (gethash operator *js-special-forms*)))
@@ -108,21 +133,35 @@
                           ,@(mapcar #'recurse (arguments-of -node-))
                           #\) )))))
    (constant-form
-    (lisp-constant-to-js-constant (value-of -node-)))
+    (lisp-literal-to-js-literal (value-of -node-)))
    (variable-binding-form
-    `("{"
+    `(,@(unless (in-toplevel-js-block?) (list "{"))
       ,@(iter (for (name . value) :in (bindings-of -node-))
-              (collect `(,(symbol-name name) " = " ,(recurse value) ";" #\Newline)))
+              (collect `(#\Newline ,(symbol-to-js name) " = " ,(recurse value) ";")))
+      #\Newline
       ,@(transform-progn -node- :wrap? #f)
-      "}"))))
+      #\Newline
+      ,@(unless (in-toplevel-js-block?) (list "}"))))
+   (setq-form
+    `(,(recurse (variable-of -node-)) " = " ,(recurse (value-of -node-))))
+   (function-definition-form
+    `("function " ,(symbol-to-js (name-of -node-))
+                  "("
+                  ,@(iter (for argument :in (arguments-of -node-))
+                          (collect (recurse (name-of argument))))
+                  ") {" #\Newline
+                  ,@(transform-progn -node- :wrap? #f)
+                  #\Newline
+                  "}"))
+   (return-from-form
+    `("return" ,@(awhen (result-of -node-)
+                        (list #\space (recurse it)))))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (etypecase node
     (function       node)
-    (string         (bind ((indent (when *js-indent*
-                                     (list (make-spaces (* *js-indent* *js-indent-level*))))))
-                      `(,@indent ,(escape-as-js node) #\NewLine)))
-    (integer        (princ-to-string node))
+    (string         node)
+    ((or integer float ratio) (lisp-literal-to-js-literal node))
     (form           (transform-quasi-quoted-js-to-quasi-quoted-string* node))
     (js-quasi-quote (make-string-quasi-quote (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))))
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
@@ -147,7 +186,9 @@
                  node (lambda (node)
                         (transform-quasi-quoted-js-to-quasi-quoted-string node))))
          (wrap-forms-with-bindings
-          (when *js-indent* `((*js-indent-level* ,*js-indent-level*)))
+          (when *js-indent*
+            `((*js-indent* (+ *js-indent* ,*js-indent*))
+              (*js-indent-level* ,*js-indent-level*)))
           `(transform-quasi-quoted-js-to-quasi-quoted-string
             ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
               node (lambda (node)

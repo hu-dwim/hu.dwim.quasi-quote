@@ -69,14 +69,15 @@
      (defwalker-handler ,name (,form ,parent ,lexenv)
        ,@body)))
 
+(def definer js-walker-handler-alias (from-name to-name)
+  `(with-walker-configuration (:handlers *js-walker-handlers*)
+     (defwalker-handler-alias ,from-name ,to-name)))
+
+(def js-walker-handler-alias setq setf)
+
 (def js-walker-handler transform-js-reader-unquote (form parent env)
   ;; so that the lexenv is propagated to the unquoted parts
   (macroexpand-1 form (cdr env)))
-
-#+nil
-(defun undefined-js-reference-handler (type name)
-  (unless (member name '())
-    (cl-walker::undefined-reference-handler type name)))
 
 (defun js-constant-name? (form &optional env)
   (declare (ignore env))
@@ -94,10 +95,38 @@
                               :handlers           *js-walker-handlers*)
     (walk-form form nil (make-walk-environment lexenv))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; some js specific handlers
+
+(def class* function-definition-form (lambda-function-form)
+  ((name)))
+
+(def js-walker-handler defun (form parent env)
+  (bind (((name args &rest body) (rest form)))
+    (with-form-object (result function-definition-form
+                              :parent parent
+                              :source form)
+      (walk-lambda-like result args body env)
+      (setf (name-of result) name))))
+
+(def js-walker-handler return (form parent env)
+  (unless (<= 1 (length form) 2)
+    (simple-walker-error "Illegal return form: ~S" form))
+  (let ((value (second form)))
+    (with-form-object (return-from-node return-from-form :parent parent :source form)
+      (setf (result-of return-from-node) (when value
+                                           (walk-form value return-from-node env))))))
+
+#+nil
+(defun undefined-js-reference-handler (type name)
+  (unless (member name '())
+    (cl-walker::undefined-reference-handler type name)))
+
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
 (dolist (symbol {(with-readtable-case :preserve)
-                 '(let let*)})
+                 '(let let* setf setq defun return)})
   (export symbol :cl-quasi-quote-js)
   (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
     (assert cl-symbol)
