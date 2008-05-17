@@ -22,7 +22,7 @@
      (declare (ignore dispatched?))
      `(transform-js-reader-body ,body ,transformation))
    (lambda (body spliced?)
-     `(transform-js-reader-unquote ,body ,spliced?))
+     `(js-reader-unquote ,body ,spliced?))
    :start-character start-character
    :dispatch-character dispatch-character
    :end-character end-character
@@ -53,14 +53,43 @@
   (x binary-stream-emitting-form `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name)) (stream-name)))
 
 (def macro transform-js-reader-body (form transformation &environment lexenv)
-  (chain-transform transformation (typecase form
-                                    (syntax-node form)
-                                    (t (make-js-quasi-quote (walk-js form lexenv))))))
+  (labels ((expand (form)
+             (typecase form
+               (cons
+                (case (first form)
+                  (js-reader-unquote
+                   (assert (= (length form) 3))
+                   (make-js-unquote (second form) (third form)))
+                  (transform-js-reader-body (error "How did this happen? Send a unit test, please!"))
+                  (t form)))
+               (t form)))
+           (recurse (form)
+             (typecase form
+               ;;(string (make-xml-text form)) ;; TODO do this and when found on toplevel insert the text as is?
+               (cons
+                (setf form (expand form))
+                (if (typep form 'js-unquote)
+                    form
+                    (iter (for entry :first form :then (cdr entry))
+                          (collect (recurse (car entry)) :into result)
+                          (cond
+                            ((consp (cdr entry))
+                             ;; nop, go on looping
+                             )
+                            ((cdr entry)
+                             (setf (cdr (last result)) (recurse (cdr entry)))
+                             (return result))
+                            (t (return result))))))
+               (t form))))
+    (chain-transform transformation (make-js-quasi-quote (walk-js (recurse form) lexenv)))))
 
-(def macro transform-js-reader-unquote (body spliced? &environment env)
+(def macro js-reader-unquote (body spliced? &environment env)
   (declare (ignore env))
   ;; A macro to handle the quoted parts when the walker is walking the forms. Kinda like a kludge, but it's not that bad...
   (make-js-unquote body spliced?))
+
+(def method find-walker-handler ((ast-node js-syntax-node))
+  (constantly ast-node))
 
 (def special-variable *js-walker-handlers* (copy-walker-handlers))
 
@@ -74,10 +103,6 @@
      (defwalker-handler-alias ,from-name ,to-name)))
 
 (def js-walker-handler-alias setq setf)
-
-(def js-walker-handler transform-js-reader-unquote (form parent env)
-  ;; so that the lexenv is propagated to the unquoted parts
-  (macroexpand-1 form (cdr env)))
 
 (defun js-constant-name? (form &optional env)
   (declare (ignore env))
@@ -126,7 +151,7 @@
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
 (dolist (symbol {(with-readtable-case :preserve)
-                 '(let let* setf setq defun return)})
+                 '(progn let let* setf setq defun return)})
   (export symbol :cl-quasi-quote-js)
   (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
     (assert cl-symbol)
