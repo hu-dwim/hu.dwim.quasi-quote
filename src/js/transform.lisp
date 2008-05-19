@@ -268,7 +268,7 @@
   (etypecase node
     (function       node)
     ((or integer float ratio) (lisp-literal-to-js-literal node))
-    (form           (transform-quasi-quoted-js-to-quasi-quoted-string* node))
+    (walked-form    (transform-quasi-quoted-js-to-quasi-quoted-string* node))
     (js-quasi-quote (make-string-quasi-quote (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))))
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
     ;; TODO ?
