@@ -33,9 +33,11 @@
 (export {(with-readtable-case :preserve)
          '(and or not
            if when unless cond
-           let let*
+           progn let let*
            vector list aref elt
-           incf decf
+           setf setq incf decf
+           defun lambda
+           block return
            &optional &key &allow-other-keys &rest)}
         :cl-quasi-quote-js)
 

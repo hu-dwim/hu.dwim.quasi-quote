@@ -167,6 +167,22 @@
     (lisp-name-to-js-name (name-of -node-)))
    (progn-form
     (transform-progn -node-))
+   (lambda-application-form
+    (bind ((operator (operator-of -node-))
+           (arguments (arguments-of -node-)))
+      (assert (typep operator 'lambda-function-form))
+      `(,(recurse operator)
+         #\(
+         ,@(mapcar #'recurse arguments)
+         #\) )))
+   (lambda-function-form
+    `("function ("
+      ,@(iter (for argument :in (arguments-of -node-))
+              (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
+      ") {"
+      ,@(transform-progn -node- :wrap? #f)
+      #\Newline
+      "}"))
    (application-form
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-))

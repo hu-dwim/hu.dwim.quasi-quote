@@ -91,33 +91,39 @@
 (def method find-walker-handler ((ast-node js-syntax-node))
   (constantly ast-node))
 
-(def special-variable *js-walker-handlers* (copy-walker-handlers))
+(def special-variable *js-walker-handlers* (make-hash-table :test #'eq))
+
+(defun find-js-walker-handler (name)
+  (or (and (consp name)
+           (gethash (first name) *js-walker-handlers*))
+      (find-walker-handler name)))
 
 (def definer js-walker-handler (name (form parent lexenv) &body body)
-  `(with-walker-configuration (:handlers *js-walker-handlers*)
+  `(bind ((cl-walker::*walker-handlers* *js-walker-handlers*))
      (defwalker-handler ,name (,form ,parent ,lexenv)
        ,@body)))
 
-(def definer js-walker-handler-alias (from-name to-name)
-  `(with-walker-configuration (:handlers *js-walker-handlers*)
-     (defwalker-handler-alias ,from-name ,to-name)))
-
-(def js-walker-handler-alias setq setf)
-
-(defun js-constant-name? (form &optional env)
+(def function js-constant-name? (form &optional env)
   (declare (ignore env))
   (or (gethash form *js-literals*)
       (and (not (symbolp form))
            (not (consp form)))))
 
+(def function js-lambda-form? (form &optional env)
+  (declare (ignore env))
+  (and (consp form)
+       (member (car form) '(cl:lambda |lambda|))
+       #t))
+
 (def function walk-js (form &optional lexenv)
   (with-walker-configuration (;;:undefined-reference-handler 'undefined-js-reference-handler
-                              :function-name?     'js-function-name?
-                              :macro-name?        'js-macro-name?
-                              :symbol-macro-name? 'js-symbol-macro-name?
-                              :constant-name?     'js-constant-name?
-                              :macroexpand-1      'js-macroexpand-1
-                              :handlers           *js-walker-handlers*)
+                              :function-name?      'js-function-name?
+                              :macro-name?         'js-macro-name?
+                              :symbol-macro-name?  'js-symbol-macro-name?
+                              :constant-name?      'js-constant-name?
+                              :lambda-form?        'js-lambda-form?
+                              :macroexpand-1       'js-macroexpand-1
+                              :find-walker-handler 'find-js-walker-handler)
     (walk-form form nil (make-walk-environment lexenv))))
 
 
@@ -127,7 +133,7 @@
 (def class* function-definition-form (lambda-function-form)
   ((name)))
 
-(def js-walker-handler defun (form parent env)
+(def js-walker-handler |defun| (form parent env)
   (bind (((name args &rest body) (rest form)))
     (with-form-object (result function-definition-form
                               :parent parent
@@ -139,7 +145,7 @@
                         body env)
       (setf (name-of result) name))))
 
-(def js-walker-handler return (form parent env)
+(def js-walker-handler |return| (form parent env)
   (unless (<= 1 (length form) 2)
     (simple-walker-error "Illegal return form: ~S" form))
   (let ((value (second form)))
@@ -154,10 +160,13 @@
 
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
-(dolist (symbol {(with-readtable-case :preserve)
-                 '(progn let let* setf setq defun return)})
-  (export symbol :cl-quasi-quote-js)
-  (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
-    (assert cl-symbol)
-    (awhen (gethash cl-symbol *js-walker-handlers*)
-      (setf (gethash symbol *js-walker-handlers*) it))))
+(progn
+  (dolist (symbol {(with-readtable-case :preserve)
+                   '(progn let let* setf setq defun lambda block return)})
+    (export symbol :cl-quasi-quote-js)
+    (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
+      (assert cl-symbol)
+      (awhen (gethash cl-symbol cl-walker::*walker-handlers*)
+        (setf (gethash symbol *js-walker-handlers*) it))))
+
+  (setf (gethash '|setf| *js-walker-handlers*) (gethash 'setq cl-walker::*walker-handlers*)))
