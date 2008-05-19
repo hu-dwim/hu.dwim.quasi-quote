@@ -32,7 +32,7 @@
       (-body-)))
 
 (def with-macro with-increased-indent ()
-  (with-increased-indent* ((not (in-toplevel-js-block?)))
+  (with-increased-indent* (#t)
     (-body-)))
 
 (def (function io) lisp-name-to-js-name (symbol)
@@ -234,7 +234,35 @@
                   "}"))
    (return-from-form
     `("return" ,@(awhen (result-of -node-)
-                        (list #\space (recurse it)))))))
+                        (list #\space (recurse it)))))
+   (create-form
+    (bind ((elements (elements-of -node-)))
+      `("({ "
+        ,@(with-increased-indent
+           (iter (with indent = `(#\, #\Newline ,@(make-indent)))
+                 (for (name . value) :in elements)
+                 (unless (first-time-p)
+                   (collect indent))
+                 (collect (typecase name
+                            (string name)
+                            (keyword (lisp-name-to-js-name name))
+                            (integer (princ-to-string name))
+                            (t (simple-js-compile-error "Don't know how to deal with ~S as a name in create form ~S"
+                                                        name (source-of -node-)))))
+                 (collect ": ")
+                 (collect (recurse value))))
+        "})")))
+   (slot-value-form
+    (bind ((object (object-of -node-))
+           (slot-name (slot-name-of -node-)))
+      (if (symbolp slot-name)
+          `(,(recurse object)
+             #\.
+             ,(lisp-name-to-js-name slot-name))
+          `(,(recurse object)
+             #\[
+             ,(recurse slot-name)
+             #\]))))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (etypecase node

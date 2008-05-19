@@ -153,6 +153,32 @@
       (setf (result-of return-from-node) (when value
                                            (walk-form value return-from-node env))))))
 
+(def class* create-form (walked-form)
+  ((elements)))
+
+(def js-walker-handler |create| (form parent env)
+  (unless (evenp (length (rest form)))
+    (simple-js-compile-error "Odd elements in create form ~S" form))
+  (let ((elements (rest form)))
+    (with-form-object (create-node create-form :parent parent :source form)
+      (setf (elements-of create-node)
+            (iter (for (name value) :on elements :by #'cddr)
+                  (collect (cons name (walk-form value create-node env))))))))
+
+(def class* slot-value-form (walked-form)
+  ((object)
+   (slot-name)))
+
+(def js-walker-handler |slot-value| (form parent env)
+  (unless (length= 2 (rest form))
+    (simple-js-compile-error "Invalid slot-value form" form))
+  (with-form-object (node slot-value-form :parent parent :source form)
+    (setf (object-of node) (walk-form (second form) node env))
+    (setf (slot-name-of node) (bind ((slot-name (third form)))
+                                (if (quoted-symbol? slot-name)
+                                    (second slot-name)
+                                    (walk-form slot-name node env))))))
+
 #+nil
 (defun undefined-js-reference-handler (type name)
   (unless (member name '())

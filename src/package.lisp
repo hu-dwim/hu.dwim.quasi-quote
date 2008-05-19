@@ -31,5 +31,7 @@
    '(form-of parent-of spliced-p body-of
      syntax-node make-string-of-spaces
      find-ancestor binary-position readtime-chain-transform
-     vector-extend wrap-forms-with-bindings)
+     vector-extend wrap-forms-with-bindings
+     quoted-symbol?
+     )
    package))

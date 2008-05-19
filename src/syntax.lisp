@@ -357,3 +357,10 @@
       (progn
         (warn "MAKE-STRING-OF-SPACES ran out of width, consing now...")
         (make-string count :initial-element #\Space))))
+
+(def function quoted-symbol? (thing)
+  (and (consp thing)
+       (eq 'quote (first thing))
+       (length= 2 thing)
+       (not (null (second thing)))
+       (symbolp (second thing))))

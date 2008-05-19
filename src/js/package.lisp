@@ -34,10 +34,11 @@
          '(and or not
            if when unless cond
            progn let let*
-           vector list aref elt
+           vector list aref elt slot-value
            setf setq incf decf
            defun lambda
            block return
+           create
            &optional &key &allow-other-keys &rest)}
         :cl-quasi-quote-js)
 
