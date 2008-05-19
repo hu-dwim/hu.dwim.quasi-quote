@@ -6,6 +6,15 @@
 
 (in-package :cl-quasi-quote-js)
 
+(def (condition* e) js-compile-error (error)
+  ((walked-form nil)))
+
+(def condition* simple-js-compile-error (js-compile-error simple-error)
+  ())
+
+(def function simple-js-compile-error (walked-form message &rest args)
+  (error 'simple-js-compile-error :walked-form walked-form :format-control message :format-arguments args))
+
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))
 
@@ -61,11 +70,26 @@
     (ratio (concatenate 'string "(" (princ-to-string (numerator value)) " / " (princ-to-string (denominator value)) ")"))
     (character (lisp-literal-to-js-literal (string value)))))
 
-(def macro transform-incf-like (node plus-plus plus-equal)
-  `(bind ((arguments (arguments-of ,node)))
-     (ecase (length arguments)
-       (1 `(,',plus-plus ,(recurse (first arguments))))
-       (2 `(,(recurse (first arguments)) " " ,',plus-equal " " ,(recurse (second arguments)))))))
+(def definer transform-function (name args &body body)
+  `(def function ,name ,args
+     (flet ((recurse (form)
+              (transform-quasi-quoted-js-to-quasi-quoted-string form)))
+       (declare (ignorable #'recurse))
+       ,@body)))
+
+(def transform-function transform-incf-like (node plus-plus plus-equal)
+  (bind ((arguments (arguments-of node)))
+    (ecase (length arguments)
+      (1 `(,plus-plus ,(recurse (first arguments))))
+      (2 `(,(recurse (first arguments)) " " ,plus-equal " " ,(recurse (second arguments)))))))
+
+(def transform-function transform-vector-like (node)
+  `(#\[
+    ,@(iter (for argument :in (arguments-of node))
+            (unless (first-time-p)
+              (collect ", "))
+            (collect (recurse argument)))
+    #\]))
 
 (macrolet ((frob (&body entries)
              `(progn
@@ -73,11 +97,28 @@
                         (collect `(def js-special-form ,name
                                     ,@body))))))
   (frob
-   (|incf| (transform-incf-like -node- "++" "+="))
-   (|decf| (transform-incf-like -node- "--" "-="))
-   (not
-     (assert (length= 1 (arguments-of -node-)))
-     `("!(" ,(recurse (first (arguments-of -node-))) ")"))))
+   (|incf|   (transform-incf-like -node- "++" "+="))
+   (|decf|   (transform-incf-like -node- "--" "-="))
+   (|vector| (transform-vector-like -node-))
+   (|list|   (transform-vector-like -node-))
+   (|not|    (unless (length= 1 (arguments-of -node-))
+               (simple-js-compile-error -node- "The not operator expects exactly one argument!"))
+             `("!(" ,(recurse (first (arguments-of -node-))) ")"))
+   (|aref|   (bind ((arguments (arguments-of -node-)))
+               (unless (rest arguments)
+                 (simple-js-compile-error -node- "The aref operator needs at least two arguments!"))
+               `(,(recurse (first arguments))
+                  ,@(iter (for argument :in (rest arguments))
+                          (collect `(#\[
+                                     ,(recurse argument)
+                                     #\]))))))
+   (|elt|    (bind ((arguments (arguments-of -node-)))
+               (unless (length= 2 arguments)
+                 (simple-js-compile-error -node- "An elt operator with ~A arguments?" (length arguments)))
+               `(,(recurse (first arguments))
+                  #\[
+                  ,(recurse (second arguments))
+                  #\])))))
 
 (def special-variable *js-block-nesting-level* 0)
 
@@ -94,7 +135,7 @@
   (within-nested-js-block* (#t)
     (-body-)))
 
-(def function transform-progn (node &key (wrap? nil wrap-provided?) (nest? #t) (increase-indent? #f))
+(def transform-function transform-progn (node &key (wrap? nil wrap-provided?) (nest? #t) (increase-indent? #f))
   (within-nested-js-block* (nest?)
     (bind ((body (cl-walker:body-of node)))
       (unless wrap-provided?
@@ -106,7 +147,7 @@
                   (collect #\Newline)
                   (awhen (make-js-indent)
                     (collect it))
-                  (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
+                  (collect (recurse statement))
                   (collect #\;)))
         ,@(when wrap? `(#\Newline ,@(make-js-indent) #\}))))))
 
@@ -128,6 +169,7 @@
     (transform-progn -node-))
    (application-form
     (bind ((operator (operator-of -node-))
+           (arguments (arguments-of -node-))
            (operator-name (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name operator))))
       (cond
         ((js-special-form? operator)
@@ -135,7 +177,7 @@
            (funcall handler -node-)))
         ((js-operator-name? operator)
          `("("
-           ,@(iter (for el :in (arguments-of -node-))
+           ,@(iter (for el :in arguments)
                    (unless (first-time-p)
                      (collect " ")
                      (collect operator-name)
@@ -143,9 +185,15 @@
                    (collect (recurse el)))
            ")"))
         (t
-         `(,operator-name #\(
-                          ,@(mapcar #'recurse (arguments-of -node-))
-                          #\) )))))
+         (bind ((dotted? (starts-with #\. operator-name)))
+           (if dotted?
+               `(,(recurse (first arguments))
+                  ,operator-name #\(
+                  ,@(mapcar #'recurse (rest arguments))
+                  #\) )
+               `(,operator-name #\(
+                                ,@(mapcar #'recurse arguments)
+                                #\) )))))))
    (constant-form
     (lisp-literal-to-js-literal (value-of -node-)))
    (variable-binding-form
