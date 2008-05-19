@@ -21,7 +21,7 @@
 (def (special-variable e) *js-indent* 0) ; indenting is off by default
 (def special-variable *js-indent-level* 0)
 
-(def function make-js-indent ()
+(def function make-indent ()
   (when *js-indent*
     (list (make-string-of-spaces (* *js-indent* *js-indent-level*)))))
 
@@ -145,11 +145,11 @@
         ,@(with-increased-indent* (increase-indent?)
             (iter (for statement :in body)
                   (collect #\Newline)
-                  (awhen (make-js-indent)
+                  (awhen (make-indent)
                     (collect it))
                   (collect (recurse statement))
                   (collect #\;)))
-        ,@(when wrap? `(#\Newline ,@(make-js-indent) #\}))))))
+        ,@(when wrap? `(#\Newline ,@(make-indent) #\}))))))
 
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
   (:method ((node required-function-argument-form))
@@ -213,12 +213,12 @@
    (constant-form
     (lisp-literal-to-js-literal (value-of -node-)))
    (variable-binding-form
-    (bind ((indent (make-js-indent)))
+    (bind ((indent (make-indent)))
       (within-nested-js-block
         (with-increased-indent
           `(,@(unless (in-toplevel-js-block?) (list "{"))
             ,@(iter (for (name . value) :in (bindings-of -node-))
-                    (collect `(#\Newline ,@(make-js-indent) ,(lisp-name-to-js-name name) " = " ,(recurse value) ";")))
+                    (collect `(#\Newline ,@(make-indent) ,(lisp-name-to-js-name name) " = " ,(recurse value) ";")))
             ,@(transform-progn -node- :wrap? #f :nest? #f :increase-indent? #f)
             ,@(unless (in-toplevel-js-block?) `(#\Newline ,@indent "}")))))))
    (setq-form
