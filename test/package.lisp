@@ -36,6 +36,9 @@
 
 (in-package :cl-quasi-quote-test)
 
+(cl-quasi-quote::import-semi-external-quasi-quote-symbols)
+(cl-quasi-quote::import-duplicate-symbols)
+
 (defun setup-readtable ()
   (cl-quasi-quote::setup-readtable)
   (enable-string-quote-syntax #\｢ #\｣))

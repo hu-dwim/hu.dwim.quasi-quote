@@ -18,24 +18,31 @@
     (is (= 0 return-code))
     (with-input-from-string (input stdout)
       (bind ((result (read-line input #f)))
-        ;; KLUDGE parse-number::invalid-number is not a serious-condition...
-        (or (ignore-some-conditions (parse-number::invalid-number serious-condition)
-              (parse-number:parse-number result))
-            result)))))
+        (block nil
+          ;; KLUDGE parse-number::invalid-number is not a serious-condition...
+          (awhen (ignore-some-conditions (parse-number::invalid-number serious-condition)
+                   (parse-number:parse-number result))
+            (return it))
+          (switch (result :test #'string=)
+            ("true" (return #t))
+            ("false" (return #f))
+            ("undefined" (return #f)))
+          result)))))
 
 (def function read-from-string-with-js-syntax (string)
   (with-local-readtable
     (enable-quasi-quoted-js-to-string-emitting-form-syntax)
     (read-from-string string)))
 
+(def function walk-ast-from-string-with-js-syntax (string)
+  (macroexpand (read-from-string-with-js-syntax string)))
+
 (def function pprint-js (string &key (indent 2))
   (bind ((*js-indent* indent))
     (pprint (macroexpand (read-from-string-with-js-syntax string)))))
 
 (defsuite* (test/js :in test) ()
-  ;; TODO it's just a proof of concept for now...
-  (with-expected-failures
-    (run-child-tests)))
+  (run-child-tests))
 
 (def syntax-test-definer js quasi-quoted-js)
 
@@ -134,7 +141,45 @@
          (defun side-effect ()
            (setf x 4)
            (return 3))
-         (print (setf x (+ 2 (side-effect) x 5))))｣))
+         (print (setf x (+ 2 (side-effect) x 5))))｣)
+  ("foo"
+   ｢`js(print (.to-string ((lambda (x) (return x)) "foo")))｣))
+
+(def js-test test/js/dotted-call ()
+  (#t
+   ｢`js(let ((x "-"))
+         (.to-string (+ "" x))
+         (print (not (not (.match (+ "foo" x "bar") "o-b")))))｣))
+
+(def js-test test/js/arrays ()
+  ("10,20"
+   ｢`js(print (.to-string (vector 10 20)))｣)
+  (10
+   ｢`js(print (aref (list 10 20) 0))｣)
+  (20
+   ｢`js(print (elt (vector 10 20) 1))｣))
+
+(def test test/js/array-errors ()
+  (flet ((transform (string)
+           (transform '(quasi-quoted-string) (walk-ast-from-string-with-js-syntax string))))
+    (signals js-compile-error
+      (transform ｢`js(elt (vector 10 20) 1 2 3 4 5)｣))
+    (signals js-compile-error
+      (transform ｢`js(aref (vector 10 20))｣))))
+
+(def js-test test/js/slot-value ()
+  (1
+   ｢`js(print (slot-value (create :a 1 :b 2) 'a))｣)
+  (2
+   ｢`js(let ((a "b"))
+         (print (slot-value (create :a 1 :b 2) a)))｣))
+
+(def js-test test/js/defun ()
+  (3
+   ｢`js(progn
+         (defun x (a &key (b 42) &allow-other-keys)
+           (return (+ a b)))
+         (print (x 1 :b 2)))｣))
 
 (def test test/js/escaping ()
   (let ((str "alma"))
