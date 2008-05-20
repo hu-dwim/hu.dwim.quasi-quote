@@ -199,7 +199,9 @@
 
 (def xml-test test/xml/nested-unquoting ()
   ("<a><b><c><d/></c></b></a>"
-   ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣))
+   ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣)
+  ("<a>foo</a>"
+   ｢<a ,"foo" >｣))
 
 (def xml-test test/xml/mixed ()
   ("<element>HelloWorld</element>"

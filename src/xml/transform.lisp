@@ -36,6 +36,7 @@
                             '(#\NewLine))))
     (etypecase node
       (function node)
+      (string (escape-as-xml node))
       (xml-element
        (bind ((attributes (attributes-of node))
               (name (name-of node))
