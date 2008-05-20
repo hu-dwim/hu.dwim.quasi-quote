@@ -68,7 +68,7 @@
     (integer (princ-to-string value))
     (float (format nil "~F" value))
     (ratio (concatenate 'string "(" (princ-to-string (numerator value)) " / " (princ-to-string (denominator value)) ")"))
-    (character (lisp-literal-to-js-literal (string value)))))
+    (character (concatenate 'string "'" (escape-as-js-string (string value)) "'"))))
 
 (def definer transform-function (name args &body body)
   `(def function ,name ,args
