@@ -63,11 +63,13 @@
             ((:file "package")
              (:file "duplicates" :depends-on ("package"))
              (:file "configuration" :depends-on ("duplicates"))
-             (:file "syntax" :depends-on ("configuration"))
+             (:file "utils" :depends-on ("configuration"))
+             (:file "syntax" :depends-on ("utils"))
+             (:file "transformation" :depends-on ("utils"))
              (:file "lisp" :depends-on ("syntax"))
-             (:file "bivalent" :depends-on ("string" "binary"))
-             (:file "binary" :depends-on ("syntax"))
-             (:file "string" :depends-on ("syntax" "binary"))))))
+             (:file "bivalent" :depends-on ("transformation" "syntax" "string" "binary" "utils"))
+             (:file "binary" :depends-on ("transformation" "syntax" "utils"))
+             (:file "string" :depends-on ("transformation" "syntax" "binary" "utils" ))))))
 
 (defsystem-connection cl-quasi-quote-and-swank
   :requires (:cl-quasi-quote :swank)

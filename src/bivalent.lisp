@@ -62,7 +62,7 @@
 ;;; Transform
 
 (def (macro e) with-bivalent-stream-to-binary (stream encoding &body forms)
-  `(with-output-to-sequence (,stream :external-format (or ,encoding :utf-8))
+  `(with-output-to-sequence (,stream :external-format (or ,encoding *default-character-encoding*))
      ,@forms))
 
 (def function write-quasi-quoted-bivalent (node stream)
@@ -87,10 +87,10 @@
        ,(apply #'transform-quasi-quoted-bivalent-to-bivalent-emitting-form node args) *quasi-quote-stream*))
     (side-effect (form-of node))))
 
-(def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input &rest args &key (properly-ordered #f) &allow-other-keys)
+(def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input &rest args &key (with-inline-emitting #f) &allow-other-keys)
   (etypecase input
     (bivalent-quasi-quote
-     (wrap-emitting-forms properly-ordered
+     (wrap-emitting-forms with-inline-emitting
                           (mapcar (lambda (node)
                                     (make-quasi-quoted-bivalent-emitting-form node args))
                                   (reduce-binary-subsequences (reduce-string-subsequences (flatten (body-of input)))))))
@@ -109,7 +109,7 @@
       (with-bivalent-stream-to-binary *quasi-quote-stream* encoding
         (funcall next-method))))
 
-(def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node &rest args &key (encoding :utf-8) &allow-other-keys)
+(def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node &rest args &key (encoding *default-character-encoding*) &allow-other-keys)
   (etypecase node
     (function node)
     (list

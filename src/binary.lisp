@@ -6,36 +6,110 @@
 
 (in-package :cl-quasi-quote)
 
+(def (type e) ub8-vector ()
+  '(vector (unsigned-byte 8)))
+
 ;;;;;;;;;
 ;;; Parse
 
-(define-syntax quasi-quoted-binary (&key (start-character #\[)
-                                         (end-character #\])
+(define-syntax quasi-quoted-binary (&key start-character
+                                         end-character
                                          (unquote-character #\,)
                                          (splice-character #\@)
-                                         (transformation nil))
+                                         (dispatched-quasi-quote-name "bin")
+                                         (transformation-pipeline nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     (readtime-chain-transform transformation (make-binary-quasi-quote body)))
-   (lambda (form spliced)
-     (make-binary-unquote form spliced))
+     `(binary-quasi-quote ,(= 1 *quasi-quote-nesting-level*) ,body ,transformation-pipeline))
+   (lambda (form spliced?)
+     (make-binary-unquote form spliced?))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
-   :splice-character splice-character))
+   :splice-character splice-character
+   :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
-(define-syntax quasi-quoted-binary-to-binary ()
-  (set-quasi-quoted-binary-syntax-in-readtable :transformation '(binary)))
+(macrolet ((x (name transformation-pipeline &optional args)
+             (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-BINARY-TO-~A" name)))
+               `(define-syntax ,syntax-name (,@args &key
+                                                    (with-inline-emitting #f)
+                                                    (declarations '())
+                                                    start-character
+                                                    end-character
+                                                    (unquote-character #\,)
+                                                    (splice-character #\@)
+                                                    (dispatched-quasi-quote-name "bin"))
+                  (set-quasi-quoted-binary-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
+                                                               :dispatched-quasi-quote-name dispatched-quasi-quote-name
+                                                               :start-character start-character
+                                                               :end-character end-character
+                                                               :unquote-character unquote-character
+                                                               :splice-character splice-character)))))
+  (x binary-emitting-form        (list (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                                                      :stream-variable-name stream-variable-name
+                                                      :with-inline-emitting with-inline-emitting
+                                                      :declarations declarations))
+     (stream-variable-name)))
 
-(define-syntax quasi-quoted-binary-to-binary-emitting-form ()
-  (set-quasi-quoted-binary-syntax-in-readtable :transformation '(binary-emitting-form)))
+(def (function o) decimal-number-to-hexadecimal-number (number)
+  (declare (type fixnum number))
+  (iter (with result = 0)
+        (with remainder)
+        (for multiplier :first 1 :then (* multiplier 16))
+        (setf (values number remainder) (truncate number 10))
+        (incf result (* multiplier remainder))
+        (until (zerop number))
+        (finally (return result))))
+
+(def (function o) hexadecimal-number-string-to-hexadecimal-number (string)
+  (declare (type string string))
+  (iter (with result = 0)
+        (for el :in-sequence (reverse string))
+        (for multiplier :first 1 :then (* multiplier 16))
+        (for value = (position el #.(coerce "0123456789abcdef" 'simple-base-string)
+                               :test #'char-equal))
+        (incf result (* multiplier value))
+        (finally (return result))))
+
+(def (function o) process-binary-reader-body (form)
+  (etypecase form
+    (cons
+     (iter (with buffer = (make-adjustable-vector 8 :element-type '(unsigned-byte 8)))
+           (for el :in form)
+           (for value = (process-binary-reader-body el))
+           (if (integerp value)
+               (vector-push-extend value buffer)
+               (progn
+                 (unless (zerop (length buffer))
+                   (collect (shrink-vector buffer) :into result)
+                   (setf buffer (make-adjustable-vector 8 :element-type '(unsigned-byte 8))))
+                 (collect value :into result)))
+           (finally (return (if (zerop (length buffer))
+                                result
+                                (if (null result)
+                                    (shrink-vector buffer)
+                                    (nconc result (list (shrink-vector buffer)))))))))
+    (fixnum (bind ((result (decimal-number-to-hexadecimal-number form)))
+              (unless (<= 0 result 255)
+                (simple-reader-error nil "~A is out of the 0-255 range" result))
+              result))
+    (symbol (bind ((result (hexadecimal-number-string-to-hexadecimal-number (symbol-name form))))
+              (unless (<= 0 result 255)
+                (simple-reader-error nil "~A is out of the 0-255 range" result))
+              result))
+    (syntax-node form)))
+
+(def macro binary-quasi-quote (toplevel? body transformation-pipeline)
+  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body)))
+         (quasi-quote-node (make-binary-quasi-quote transformation-pipeline expanded-body)))
+    (if toplevel?
+        (run-transformation-pipeline quasi-quote-node)
+        quasi-quote-node)))
+
 
 ;;;;;;;
 ;;; AST
-
-(def (type e) binary ()
-  '(vector (unsigned-byte 8)))
 
 (def ast binary)
 
@@ -45,9 +119,9 @@
 (def (class* e) binary-quasi-quote (quasi-quote binary-syntax-node)
   ())
 
-(def (function e) make-binary-quasi-quote (body)
+(def (function e) make-binary-quasi-quote (transformation-pipeline body)
   (assert (not (typep body 'quasi-quote)))
-  (make-instance 'binary-quasi-quote :body body))
+  (make-instance 'binary-quasi-quote :body body :transformation-pipeline transformation-pipeline))
 
 (def (class* e) binary-unquote (unquote binary-syntax-node)
   ())
@@ -55,56 +129,93 @@
 (def (function e) make-binary-unquote (form &optional (spliced? #f))
   (make-instance 'binary-unquote :form form :spliced spliced?))
 
+
 ;;;;;;;;;;;;;
 ;;; Transform
 
+(def (class* e) quasi-quoted-binary-to-binary-emitting-form (emitting-form-transformation)
+  ()
+  (:default-initargs :handler 'transform-quasi-quoted-binary-to-binary-emitting-form/toplevel))
+
+#+nil ; TODO
 (def function binary-position ()
   (file-position *quasi-quote-stream*))
 
 (def function binary-concatenate (elements)
-  (with-output-to-sequence (stream)
+  (with-output-to-sequence (stream :element-type '(unsigned-byte 8))
     (dolist (el elements)
       (write-sequence el stream))))
 
+(def (function io) write-quasi-quoted-binary (node stream)
+  (declare (notinline write-quasi-quoted-binary))
+  (etypecase node
+    (vector (write-sequence node stream))
+    (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
+    (delayed-emitting (funcall node)))
+  (values))
+
+(def function reduce-binary-subsequences (sequence)
+  (reduce-subsequences sequence
+                       (lambda (el) (typep el 'ub8-vector))
+                       #'binary-concatenate))
+
+(def function transform-quasi-quoted-binary-to-binary-emitting-form/toplevel (input)
+  (bind ((transformation *transformation*))
+    (etypecase input
+      (binary-quasi-quote
+       (bind ((stream-variable-name (stream-variable-name-of transformation))
+              (result (mapcar (lambda (node)
+                                (etypecase node
+                                  (ub8-vector `(write-sequence ,node ,stream-variable-name))
+                                  (binary-unquote
+                                   ;; TODO rebind *transformation* at runtime?
+                                   `(write-quasi-quoted-binary
+                                      ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote transformation node)
+                                      ,stream-variable-name))
+                                  ;; a quasi-quoted-binary here means that it's a nested non-compatible
+                                  (binary-quasi-quote `(emit ,(run-transformation-pipeline node)))
+                                  (side-effect (form-of node))))
+                              (reduce-binary-subsequences
+                               (transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body input)))))
+         (wrap-emitting-forms (with-inline-emitting? *transformation*) result (declarations-of *transformation*))))
+      #+nil(binary-unquote
+       (transform-quasi-quoted-binary-to-binary-emitting-form/unquote transformation input)))))
+
+(defun transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body (node)
+  (let (result)
+    (labels ((traverse (subtree)
+               (when subtree
+                 (typecase subtree
+                   (cons
+                    (traverse (car subtree))
+                    (traverse (cdr subtree)))
+                   (binary-quasi-quote (bind ((nested-node subtree))
+                                         (if (compatible-transformation-pipelines?
+                                              (transformation-pipeline-of node)
+                                              (transformation-pipeline-of nested-node))
+                                             ;; if the pipelines are compatible, then just skip over the qq node
+                                             ;; and descend into its body as if it never was there...
+                                             (traverse (body-of nested-node))
+                                             (push nested-node result))))
+                   (t (push subtree result))))))
+      (traverse (body-of node)))
+    (nreverse result)))
+
+(def function transform-quasi-quoted-binary-to-binary-emitting-form/unquote (transformation input)
+  (map-filtered-tree (form-of input) 'binary-quasi-quote
+                     (lambda (node)
+                       (transform-quasi-quoted-binary-to-binary-emitting-form/toplevel node))))
+
+
+
+
+#+nil
 (def (macro e) with-binary-stream-to-binary (stream &body forms)
   `(with-output-to-sequence (,stream :element-type '(unsigned-byte 8))
      ,@forms))
 
-(def function write-quasi-quoted-binary (node stream)
-  (etypecase node
-    (vector (write-sequence node stream))
-    (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
-    (function (funcall node)))
-  (values))
 
-(def function make-quasi-quoted-binary-emitting-form (node args)
-  (etypecase node
-    (binary `(write-sequence ,node *quasi-quote-stream*))
-    (binary-unquote
-     `(write-quasi-quoted-binary
-       ,(apply #'transform-quasi-quoted-binary-to-binary-emitting-form node args) *quasi-quote-stream*))
-    (side-effect (form-of node))))
-
-(def function reduce-binary-subsequences (sequence)
-  (reduce-subsequences sequence
-                       (lambda (el) (typep el '(or (vector (not string)) binary)))
-                       #'binary-concatenate))
-
-(def function transform-quasi-quoted-binary-to-binary-emitting-form (input &rest args &key (properly-ordered #f) &allow-other-keys)
-  (etypecase input
-    (binary-quasi-quote
-     (wrap-emitting-forms properly-ordered
-                          (mapcar (lambda (node)
-                                    (make-quasi-quoted-binary-emitting-form node args))
-                                  (reduce-binary-subsequences (flatten (body-of input))))))
-    (binary-unquote
-     (map-filtered-tree (form-of input) 'binary-quasi-quote
-                        (lambda (node)
-                          (apply #'transform-quasi-quoted-binary-to-binary-emitting-form node args))))))
-
-(def method transform ((to (eql 'binary-emitting-form)) (input binary-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform-quasi-quoted-binary-to-binary-emitting-form input args))
-
+#+nil ; TODO delme
 (def method setup-emitting-environment ((to (eql 'binary-emitting-form)) &key stream-name next-method &allow-other-keys)
   (if stream-name
       (bind ((*quasi-quote-stream* (symbol-value stream-name)))

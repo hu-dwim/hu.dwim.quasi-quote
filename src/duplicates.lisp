@@ -13,6 +13,10 @@
    '(shrink-vector if-bind aif when-bind awhen prog1-bind aprog1 it capitalize-first-letter capitalize-first-letter!)
    package))
 
+(def (function io) make-adjustable-vector (initial-length &key (element-type t))
+  (declare (type array-index initial-length))
+  (make-array initial-length :adjustable t :fill-pointer 0 :element-type element-type))
+
 (def (function io) shrink-vector (str &optional (size (length str)))
   "Only callable on local vectors with fill pointer"
   #+allegro
