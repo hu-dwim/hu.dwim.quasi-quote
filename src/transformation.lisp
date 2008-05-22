@@ -11,7 +11,7 @@
 
 (def special-variable *transformation*)
 
-(def function wrap-transformation-form-delayed-to-runtime (form)
+(def function wrap-runtime-delayed-transformation-form (form)
   `(bind ((*transformation* ,*transformation*))
      ,form))
 

@@ -32,8 +32,8 @@
      syntax-node make-string-of-spaces
      find-ancestor binary-position
      vector-extend wrap-forms-with-bindings
-     quoted-symbol?
-     wrap-transformation-form-delayed-to-runtime
+     quoted-symbol? delayed-emitting
+     wrap-runtime-delayed-transformation-form
      transform transformation-pipeline transformation-pipeline-of *transformation*
      compatible-transformation-pipelines? compatible-transformations? run-transformation-pipeline
      recursively-macroexpand-reader-stubs

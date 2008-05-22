@@ -47,7 +47,7 @@
               (name (name-of node))
               (transformed-name (etypecase name
                                   (xml-unquote (make-string-unquote
-                                                (wrap-transformation-form-delayed-to-runtime
+                                                (wrap-runtime-delayed-transformation-form
                                                  (form-of name))))
                                   (unquote name)
                                   (string name)))
@@ -57,10 +57,10 @@
            ,@(when attributes
                    `(" "
                      ,@(typecase attributes
-                                 (xml-unquote (list (make-string-unquote
-                                                     (wrap-transformation-form-delayed-to-runtime
-                                                      `(mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
-                                                               ,(form-of attributes))))))
+                                 (xml-unquote (make-string-unquote
+                                               (wrap-runtime-delayed-transformation-form
+                                                `(mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
+                                                         ,(form-of attributes)))))
                                  (unquote attributes)
                                  (t (iter (for attribute :in attributes)
                                           (unless (first-iteration-p)
@@ -78,7 +78,7 @@
        (bind ((content (content-of node)))
          (etypecase content
            (xml-unquote (make-string-unquote
-                         (wrap-transformation-form-delayed-to-runtime
+                         (wrap-runtime-delayed-transformation-form
                           `(ecase (text-node-escaping-method-of *transformation*)
                              (:cdata (wrap-with-xml-quote ,(form-of node)))
                              (:per-character (escape-as-xml ,(form-of node)))))))
@@ -91,7 +91,7 @@
       (xml-unquote
        (bind ((spliced? (spliced-p node)))
          (make-string-unquote
-          (wrap-transformation-form-delayed-to-runtime
+          (wrap-runtime-delayed-transformation-form
            (if spliced?
                `(map 'list (lambda (node)
                              ,(with-runtime-xml-indent-level
@@ -123,7 +123,7 @@
           "=\""
           ,(etypecase value
                       (xml-unquote (make-string-unquote
-                                    (wrap-transformation-form-delayed-to-runtime
+                                    (wrap-runtime-delayed-transformation-form
                                      `(escape-as-xml
                                        (princ-to-string
                                         ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
@@ -137,7 +137,7 @@
     (xml-unquote
      (bind ((spliced? (spliced-p node)))
        (make-string-unquote
-        (wrap-transformation-form-delayed-to-runtime
+        (wrap-runtime-delayed-transformation-form
          (if spliced?
              `(iter (for attribute :in-sequence ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                                                   node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))

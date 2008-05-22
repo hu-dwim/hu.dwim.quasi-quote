@@ -198,7 +198,7 @@
                                 (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))
       (string-unquote
        (make-binary-unquote
-        (wrap-transformation-form-delayed-to-runtime
+        (wrap-runtime-delayed-transformation-form
          `(transform-quasi-quoted-string-to-quasi-quoted-binary
            ,(map-filtered-tree (form-of node) 'string-quasi-quote
                                (lambda (child)

@@ -166,7 +166,7 @@
                               (transform-quasi-quoted-bivalent-to-quasi-quoted-binary (body-of node))))
     (bivalent-unquote
      (make-binary-unquote
-      (wrap-transformation-form-delayed-to-runtime
+      (wrap-runtime-delayed-transformation-form
        `(transform-quasi-quoted-bivalent-to-quasi-quoted-binary
          ,(map-filtered-tree (form-of node) 'bivalent-quasi-quote
                              'transform-quasi-quoted-bivalent-to-quasi-quoted-binary)))))
