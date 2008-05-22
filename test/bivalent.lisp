@@ -23,7 +23,7 @@
                                   ast)))
   ;; write to bivalent stream
   (is (equalp expected
-              (with-output-to-sequence (*bivalent-stream* :external-format :utf-8)
+              (with-output-to-sequence (*bivalent-stream* :external-format *default-character-encoding*)
                 (transform-and-emit '((bivalent-emitting-form :stream-name *bivalent-stream*)
                                       lambda-form
                                       lambda)

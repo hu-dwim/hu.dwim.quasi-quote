@@ -10,18 +10,25 @@
 
 (defsuite* test)
 
-(def (definer e) syntax-test-definer (name syntax)
-  `(def definer ,(format-symbol *package* "~A-TEST" name) (name args &body forms)
-     (labels ((process-entry (entry)
+(def (definer e) syntax-test-definer (test-definer-name &body setup-forms)
+  `(def definer ,test-definer-name (name args &body forms)
+     (labels ((process-test-entry (test-function entry)
                 (if (eq (first entry) 'with-expected-failures)
                     `(with-expected-failures
-                       ,@(mapcar #'process-entry (rest entry)))
+                       ,@(mapcar (lambda (form)
+                                   (process-test-entry test-function form))
+                                 (rest entry)))
                     (bind (((expected ast) entry))
-                      `(,',(format-symbol *package* "TEST-~A-AST" name) ,expected (macroexpand (read-from-string ,ast)))))))
+                      `(,test-function ,expected (macroexpand (read-from-string ,ast)))))))
        `(def (test d) ,name ,args
           (setup-readtable)
-          (,',(format-symbol *package* "ENABLE-~A-SYNTAX" syntax))
-          ,@(mapcar #'process-entry forms)))))
+          ,@(iter (for el :in ',setup-forms)
+                  (bind (((&key test-function readtable-setup) el))
+                    (collect `(bind ((*readtable* (copy-readtable *readtable*)))
+                                ,readtable-setup
+                                ,@(mapcar (lambda (form)
+                                            (process-test-entry test-function form))
+                                          forms)))))))))
 
 ;; TODO delme, convert usages to syntax-test-definer. see xml tests...
 (def (definer e) test-definer (name)

@@ -22,7 +22,7 @@
 (defvar *transformation*
   '(quasi-quoted-string ;; may (quasi-quoted-string :indent 2)
     (quasi-quoted-binary :encoding :utf-8)
-    (binary-emitting-form :stream-name *http-stream* :properly-ordered #t)))
+    (binary-emitting-form :stream-name *http-stream* :with-inline-emitting #t)))
 
 (enable-quasi-quoted-xml-syntax :transformation *transformation*)
 

@@ -6,95 +6,98 @@
 
 (in-package :cl-quasi-quote-test)
 
-(enable-quasi-quoted-string-syntax)
-
 (defsuite* (test/string :in test))
 
-(def test-definer string)
+(def special-variable *test-string-stream*)
 
-(def special-variable *string-stream*)
+(def syntax-test-definer string-test
+  (:test-function   test-string-emitting-forms
+   :readtable-setup (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream*
+                                                                               :with-inline-emitting #f))
+  (:test-function   test-string-emitting-forms/binary
+   :readtable-setup (enable-quasi-quoted-string-to-binary-emitting-form-syntax '*test-string-stream*
+                                                                               :encoding :utf-8
+                                                                               :with-inline-emitting #f)))
 
-(def function test-string-ast (expected ast)
-  ;; evaluate to string
-  (is (string= expected
-               (transform-and-emit '(string-emitting-form
-                                     lambda-form
-                                     lambda)
-                                   ast)))
-  ;; write to string stream
-  (is (string= expected
-               (bind ((*string-stream* (make-string-output-stream)))
-                 (transform-and-emit '((string-emitting-form :stream-name *string-stream*)
-                                       lambda-form
-                                       lambda)
-                                     ast)
-                 (get-output-stream-string *string-stream*))))
-  ;; evaluate to binary
-  (is (string= expected
-               (babel:octets-to-string
-                (transform-and-emit '(quasi-quoted-binary
-                                      binary-emitting-form
-                                      lambda-form
-                                      lambda)
-                                    ast))))
-  ;; write to binary stream
-  (is (string= expected
-               (with-output-to-sequence (*string-stream* :return-as 'string)
-                 (transform-and-emit '(quasi-quoted-binary
-                                       (binary-emitting-form :stream-name *string-stream*)
-                                       lambda-form
-                                       lambda)
-                                     ast)))))
+(def syntax-test-definer string-test/inline
+  (:test-function   evaluate-and-compare-string-emitting-forms
+   :readtable-setup (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream*
+                                                                               :with-inline-emitting #f))
+  (:test-function   evaluate-and-compare-string-emitting-forms
+   :readtable-setup (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream*
+                                                                               :with-inline-emitting #t)))
+
+(def function read-from-string-with-string-syntax (string &optional (with-inline-emitting #f))
+  (with-local-readtable
+    (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream* :with-inline-emitting with-inline-emitting)
+    (read-from-string string)))
+
+(def function pprint-string (string &optional (with-inline-emitting #f))
+  (pprint (macroexpand (read-from-string-with-string-syntax string with-inline-emitting))))
+
+(def function test-string-emitting-forms (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-string (*test-string-stream*)
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (equalp expected
+                (funcall (compile nil lambda-form))))))
+
+(def function test-string-emitting-forms/binary (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-sequence (*test-string-stream* :element-type '(unsigned-byte 8))
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (equalp expected
+                (octets-to-string (funcall (compile nil lambda-form))
+                                  :encoding :utf-8)))))
 
 (def string-test test/string/simple ()
   ("1 2"
-   ["1 2"])
+   ｢`str("1 2")｣)
 
   ("1 2 3 4"
-   ["1 2"
-    " 3 4"])
+   ｢`str("1 2"
+         " 3 4")｣)
 
   ("1 2 3 4 5 6 7 8"
-   ["1 2"
-    (" 3 4"
-     " 5 6")
-    " 7 8"]))
+   ｢`str("1 2"
+         (" 3 4"
+          " 5 6")
+         " 7 8")｣))
 
 (def string-test test/string/unquote ()
   ("1 2 3 4 5 6"
-   ["1 2"
-    ," 3 4 "
-    "5 6"])
+   ｢`str("1 2"
+         ," 3 4 "
+         "5 6")｣)
 
   ("1 2 3 4 5 6 7 8 9 10 11 12"
-   ["1 2"
-    ,(list
-      " 3 4"
-      [" 5 6" " 7 8"]
-      " 9 10")
-    " 11 12"])
+   ｢`str("1 2"
+         ,(list " 3 4"
+                `str(" 5 6" " 7 8")
+                " 9 10")
+         " 11 12")｣)
 
   ("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
-   ["1 2"
-    ,(list
-      " 3 4"
-      [" 5 6"
-       ,(list " 7 8" " 9 10")
-       " 11 12"]
-      " 13 14")
-    " 15 16"]))
+   ｢`str("1 2"
+         ,(list " 3 4"
+                `str(" 5 6"
+                     ,(list " 7 8" " 9 10")
+                     " 11 12")
+                " 13 14")
+         " 15 16")｣))
 
 (def string-test test/string/spliced-unquote ()
   ("1 2 3 4 5 6 7"
-   ["1 "
-    ,(make-string 1 :initial-element #\2)
-    ,@(list " 3 " "4 " "5 ")
-    ,(make-string 1 :initial-element #\6)
-    " 7"]))
+   ｢`str("1 "
+         ,(make-string 1 :initial-element #\2)
+         ,@(list " 3 " "4 " "5 ")
+         ,(make-string 1 :initial-element #\6)
+         " 7")｣))
 
 (def string-test test/string/reverse ()
   ("1 2 3 4 5 6 7 8"
-   ["1 2"
-    ,(reverse
-      (list [" 5 6"] [" 3 4"]))
-    " 7 8"]))
+   ｢`str("1 2"
+         ,(reverse (list `str(" 5 6") `str(" 3 4")))
+         " 7 8")｣))
