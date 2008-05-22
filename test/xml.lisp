@@ -12,17 +12,26 @@
 
 (def function setup-readtable-for-xml-test (inline? &key (binary? #t) indentation-width)
   (if binary?
-      (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
-       '*xml-stream*
-       :encoding :utf-8
-       :text-node-escaping-method :per-character
-       :indentation-width indentation-width
-       :with-inline-emitting inline?)
-      (enable-quasi-quoted-xml-to-string-emitting-form-syntax
-       '*xml-stream*
-       :text-node-escaping-method :per-character
-       :indentation-width indentation-width
-       :with-inline-emitting inline?)))
+      (progn
+        (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
+         '*xml-stream*
+         :encoding :utf-8
+         :text-node-escaping-method :per-character
+         :indentation-width indentation-width
+         :with-inline-emitting inline?)
+        (enable-quasi-quoted-string-to-binary-emitting-form-syntax
+         '*xml-stream*
+         :encoding :utf-8
+         :with-inline-emitting inline?))
+      (progn
+        (enable-quasi-quoted-xml-to-string-emitting-form-syntax
+         '*xml-stream*
+         :text-node-escaping-method :per-character
+         :indentation-width indentation-width
+         :with-inline-emitting inline?)
+        (enable-quasi-quoted-string-to-string-emitting-form-syntax
+         '*xml-stream*
+         :with-inline-emitting inline?))))
 
 (def syntax-test-definer xml-test
   (:test-function   test-xml-emitting-forms
@@ -189,8 +198,8 @@
    ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣))
 
 (def xml-test test/xml/mixed ()
-  ("<element>HelloWorld</element>"
-   ｢<element {with-quasi-quoted-string-syntax `str("Hello" ,(list "World"))}>｣))
+  ("<element>Hello UN<>QUOTED World</element>"
+   ｢<element `str("Hello" ,(list " UN<>QUOTED " "World"))>｣))
 
 (def xml-test/normal test/xml/reverse ()
   ("<element><child2/><child1/></element>"

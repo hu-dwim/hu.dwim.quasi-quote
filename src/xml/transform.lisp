@@ -106,11 +106,7 @@
                      node (lambda (node)
                             (transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))))))
           spliced?)))
-      #+nil ;; TODO
-      (quasi-quote
-       (if (typep node 'string-quasi-quote)
-           (body-of node)
-           node))
+      (string-quasi-quote node)
       ;; TODO ? (unquote (transform 'quasi-quoted-string node))
       (side-effect node))))
 
