@@ -148,9 +148,6 @@
                ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                  node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))))
         spliced?)))
-    (quasi-quote
-     (if (typep node 'string-quasi-quote)
-         (body-of node)
-         node))
-    (unquote (transform 'quasi-quoted-string node))))
+    (string-quasi-quote node)
+    (quasi-quote (transform node))))
 
