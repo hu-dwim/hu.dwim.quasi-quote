@@ -8,55 +8,52 @@
 
 (defsuite* (test/xml :in test))
 
-(def syntax-test-definer xml quasi-quoted-xml)
-
 (def special-variable *xml-stream*)
 
-(def function read-from-string-with-xml-syntax (string)
+(def function setup-readtable-for-xml-test (inline? &key (binary? #t) indentation-width)
+  (if binary?
+      (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
+       '*xml-stream*
+       :encoding :utf-8
+       :text-node-escaping-method :per-character
+       :indentation-width indentation-width
+       :with-inline-emitting inline?)
+      (enable-quasi-quoted-xml-to-string-emitting-form-syntax
+       '*xml-stream*
+       :text-node-escaping-method :per-character
+       :indentation-width indentation-width
+       :with-inline-emitting inline?)))
+
+(def syntax-test-definer xml-test
+  (:test-function   test-xml-emitting-forms
+   :readtable-setup (setup-readtable-for-xml-test #f))
+  (:test-function   test-xml-emitting-forms
+   :readtable-setup (setup-readtable-for-xml-test #t)))
+
+(def syntax-test-definer xml-test/inline
+  (:test-function   test-xml-emitting-forms
+   :readtable-setup (setup-readtable-for-xml-test #t)))
+
+(def syntax-test-definer xml-test/normal
+  (:test-function   test-xml-emitting-forms
+   :readtable-setup (setup-readtable-for-xml-test #f)))
+
+(def function read-from-string-with-xml-syntax (string &key indentation-width)
   (with-local-readtable
-    (enable-quasi-quoted-xml-to-string-emitting-form-syntax)
+    (setup-readtable-for-xml-test #t :binary? #f :indentation-width indentation-width)
     (read-from-string string)))
 
-(def function pprint-xml (string &key (indent 2))
-  (bind ((*xml-indent* indent))
-    (pprint (macroexpand (read-from-string-with-xml-syntax string)))))
+(def function pprint-xml (string &key (indentation-width 2))
+  (pprint (macroexpand (read-from-string-with-xml-syntax string :indentation-width indentation-width))))
 
-(def function test-xml-ast (expected ast)
-  (bind ((*xml-indent* 0)
-         (*xml-text-escape-method* :per-character))
-    ;; evaluate to string
-    (is (string= expected
-                 (transform-and-emit '(quasi-quoted-string
-                                       string-emitting-form
-                                       lambda-form
-                                       lambda)
-                                     ast)))
-    ;; write to string stream
-    (is (string= expected
-                 (with-output-to-string (*xml-stream*)
-                   (transform-and-emit '(quasi-quoted-string
-                                         (string-emitting-form :stream-name *xml-stream*)
-                                         lambda-form
-                                         lambda)
-                                       ast))))
-    ;; evaluate to binary
-    (is (string= expected
-                 (babel:octets-to-string
-                  (transform-and-emit '(quasi-quoted-string
-                                        quasi-quoted-binary
-                                        binary-emitting-form
-                                        lambda-form
-                                        lambda)
-                                      ast))))
-    ;; write to binary stream
-    (is (string= expected
-                 (with-output-to-sequence (*xml-stream* :return-as 'string)
-                   (transform-and-emit '(quasi-quoted-string
-                                         quasi-quoted-binary
-                                         (binary-emitting-form :stream-name *xml-stream*)
-                                         lambda-form
-                                         lambda)
-                                       ast))))))
+(def function test-xml-emitting-forms (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-sequence (*xml-stream* :element-type '(unsigned-byte 8))
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (equalp expected
+                (octets-to-string (funcall (compile nil lambda-form))
+                                  :encoding :utf-8)))))
 
 (def test test/xml/escaping/1 ()
   (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"
@@ -128,7 +125,9 @@
      ,(make-xml-element "child2")
      ,@(list (make-xml-element "child3")
              (make-xml-element "child4" (list (make-xml-attribute "attribute1" "1"))))
-     <child5>>｣))
+     <child5>>｣)
+  ("<a>foobar</a>"
+   ｢<a "foo" ,"bar">｣))
 
 (def xml-test test/xml/attribute-unquoting ()
   ("<element attribute=\"1\"/>"
@@ -150,35 +149,22 @@
         <ElemenT>
         <fOOO (baR 42)>))>｣))
 
+(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote1 ()
+  ("<taggg attribute=\"atttr\"><foo/></taggg>"
+   ｢(macrolet ((nester (tag-name attribute-value &body body)
+                 `<,,tag-name (attribute ,,attribute-value) ,,@body>))
+      (nester "taggg" "atttr" <foo>))｣))
+
+(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
+  ("<html><body><foo/><bar/></body></html>"
+   ｢(macrolet ((nester (&body body)
+                 ;; first ,@ is for xml, the ,@body is for the lisp quasi-quote
+                 `<html <body ,@(list ,@body)>>))
+      (nester <foo> <bar>))｣))
+
 (def test test/xml/sharp-plus-works ()
   (enable-quasi-quoted-xml-syntax)
   (is (eql 42 (read-from-string "#+nil(< 1 2) 42"))))
-
-(def test test/xml/nested-through-macro-using-lisp-quasi-quote ()
-  (enable-quasi-quoted-xml-to-string-emitting-form-syntax)
-  (is (string= "<taggg attribute=\"atttr\"><foo/></taggg>"
-               (emit '(quasi-quoted-xml quasi-quoted-string string-emitting-form)
-                (eval
-                 ;; first comma is for the xml reader, the second one is for the lisp quasi quote.
-                 (read-from-string ｢(macrolet ((nester (tag-name attribute-value &body body)
-                                                 `<,,tag-name (attribute ,,attribute-value) ,,@body>))
-                                      (nester "taggg" "atttr" <foo>))｣))))))
-
-(def test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
-  (bind ((transformation `(quasi-quoted-string
-                           (quasi-quoted-binary :encoding :utf-8)
-                           (binary-emitting-form :stream-name *xml-stream* :properly-ordered #t))))
-    (enable-quasi-quoted-xml-syntax :transformation transformation)
-    (is (string= "<html><body><foo/><bar/></body></html>"
-                 (octets-to-string
-                  (with-output-to-sequence (*xml-stream* :external-format :utf-8)
-                    (emit transformation
-                          (eval
-                           ;; first comma is for the xml reader, the second one is for the lisp quasi quote.
-                           (read-from-string ｢(macrolet ((nester (&body body)
-                                                 `<html <body ,,@body>>))
-                                                (nester <foo> <bar>))｣))))
-                  :encoding :utf-8)))))
 
 (def test test/xml/errors ()
   (enable-quasi-quoted-xml-syntax)
@@ -189,6 +175,7 @@
 
 (def test test/xml/less-then-sign-at-toplevel ()
   (enable-quasi-quoted-xml-syntax)
+  (is (not (equal '<a> (read-from-string "<a>"))))
   (is (equal '< (read-from-string "<")))
   (is (equal '<= (read-from-string "<=")))
   (is (equal '(< a b) (read-from-string "(< a b)"))))
@@ -197,17 +184,15 @@
   ("<element ok=\"1\"/>"
    ｢<element (,@(when (< 3 4) (list (make-xml-attribute "ok" "1"))))>｣))
 
-(def xml-test test/xml/nested-unquoting ()
+(def xml-test/normal test/xml/nested-unquoting ()
   ("<a><b><c><d/></c></b></a>"
-   ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣)
-  ("<a>foo</a>"
-   ｢<a ,"foo" >｣))
+   ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣))
 
 (def xml-test test/xml/mixed ()
   ("<element>HelloWorld</element>"
-   ｢<element {with-quasi-quoted-string-syntax ["Hello" ,(list "World")]}>｣))
+   ｢<element {with-quasi-quoted-string-syntax `str("Hello" ,(list "World"))}>｣))
 
-(def xml-test test/xml/reverse ()
+(def xml-test/normal test/xml/reverse ()
   ("<element><child2/><child1/></element>"
    ｢<element ,@(let ((c1 <child1>)
                     (c2 <child2>))

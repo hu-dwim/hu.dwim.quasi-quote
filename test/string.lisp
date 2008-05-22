@@ -10,22 +10,21 @@
 
 (def special-variable *test-string-stream*)
 
+(def function setup-readtable-for-string-test (inline? &optional (binary? #f))
+  (if binary?
+      (enable-quasi-quoted-string-to-binary-emitting-form-syntax
+       '*test-string-stream*
+       :encoding :utf-8
+       :with-inline-emitting inline?)
+      (enable-quasi-quoted-string-to-string-emitting-form-syntax
+       '*test-string-stream*
+       :with-inline-emitting inline?)))
+
 (def syntax-test-definer string-test
   (:test-function   test-string-emitting-forms
-   :readtable-setup (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream*
-                                                                               :with-inline-emitting #f))
+   :readtable-setup (setup-readtable-for-string-test #f))
   (:test-function   test-string-emitting-forms/binary
-   :readtable-setup (enable-quasi-quoted-string-to-binary-emitting-form-syntax '*test-string-stream*
-                                                                               :encoding :utf-8
-                                                                               :with-inline-emitting #f)))
-
-(def syntax-test-definer string-test/inline
-  (:test-function   evaluate-and-compare-string-emitting-forms
-   :readtable-setup (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream*
-                                                                               :with-inline-emitting #f))
-  (:test-function   evaluate-and-compare-string-emitting-forms
-   :readtable-setup (enable-quasi-quoted-string-to-string-emitting-form-syntax '*test-string-stream*
-                                                                               :with-inline-emitting #t)))
+   :readtable-setup (setup-readtable-for-string-test #f #t)))
 
 (def function read-from-string-with-string-syntax (string &optional (with-inline-emitting #f))
   (with-local-readtable

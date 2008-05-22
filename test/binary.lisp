@@ -18,21 +18,21 @@
 
 (def special-variable *test-binary-stream*)
 
+(def function setup-readtable-for-binary-test (inline?)
+  (enable-quasi-quoted-binary-to-binary-emitting-form-syntax
+   '*test-binary-stream*
+   :with-inline-emitting inline?)
+  (set-ub8-reader-in-readtable))
+
 (def syntax-test-definer binary-test
   (:test-function evaluate-and-compare-binary-emitting-forms
-   :readtable-setup (progn
-                      (enable-quasi-quoted-binary-to-binary-emitting-form-syntax '*test-binary-stream* :with-inline-emitting #f)
-                      (set-ub8-reader-in-readtable))))
+   :readtable-setup (setup-readtable-for-binary-test #f)))
 
 (def syntax-test-definer binary-test/inline
   (:test-function   evaluate-and-compare-binary-emitting-forms
-   :readtable-setup (progn
-                      (enable-quasi-quoted-binary-to-binary-emitting-form-syntax '*test-binary-stream* :with-inline-emitting #f)
-                      (set-ub8-reader-in-readtable)))
+   :readtable-setup (setup-readtable-for-binary-test #f))
   (:test-function   evaluate-and-compare-binary-emitting-forms
-   :readtable-setup (progn
-                      (enable-quasi-quoted-binary-to-binary-emitting-form-syntax '*test-binary-stream* :with-inline-emitting #t)
-                      (set-ub8-reader-in-readtable))))
+   :readtable-setup (setup-readtable-for-binary-test #t)))
 
 (def function read-from-string-with-binary-syntax (string)
   (with-local-readtable
@@ -134,7 +134,7 @@
 
 (def special-variable *test-binary-stream-2*)
 
-(def function setup-readtable-for-mixed-test (inline1? inline2?)
+(def function setup-readtable-for-mixed-binary-test (inline1? inline2?)
   (enable-quasi-quoted-binary-to-binary-emitting-form-syntax '*test-binary-stream*
                                                              :with-inline-emitting inline1?
                                                              :dispatched-quasi-quote-name 'bin1)
@@ -145,13 +145,13 @@
 
 (def syntax-test-definer binary-test/mixed
   (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
-   :readtable-setup (setup-readtable-for-mixed-test #f #f))
+   :readtable-setup (setup-readtable-for-mixed-binary-test #f #f))
   (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
-   :readtable-setup (setup-readtable-for-mixed-test #t #t))
+   :readtable-setup (setup-readtable-for-mixed-binary-test #t #t))
   (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
-   :readtable-setup (setup-readtable-for-mixed-test #t #f))
+   :readtable-setup (setup-readtable-for-mixed-binary-test #t #f))
   (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
-   :readtable-setup (setup-readtable-for-mixed-test #f #t)))
+   :readtable-setup (setup-readtable-for-mixed-binary-test #f #t)))
 
 (def function evaluate-and-compare-binary-emitting-forms/mixed (expected ast)
   (bind ((lambda-form `(lambda ()
@@ -161,7 +161,7 @@
                                            (emit ,ast))
                                          result))
                                  result)
-                           (values-list (nreverse result))))))
+                           (values-list result)))))
     ;;(print (macroexpand-all lambda-form))
     (is (equalp expected
                 (multiple-value-list (funcall (compile nil lambda-form)))))))

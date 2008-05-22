@@ -42,6 +42,4 @@
        `(def test ,name ,args
           ,@(mapcar #'process-entry forms)))))
 
-(def (function e) transform-and-emit (transformation ast)
-  (emit transformation (funcall (chain-transform transformation ast))))
 
