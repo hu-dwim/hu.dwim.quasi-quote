@@ -93,9 +93,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to binary-emitting-form
 
-(def (class* e) quasi-quoted-string-to-string-emitting-form (emitting-form-transformation)
+(def (class* e) quasi-quoted-string-to-string-emitting-form (lisp-form-emitting-transformation)
   ()
-  (:default-initargs :handler 'transform-quasi-quoted-string-to-string-emitting-form/toplevel))
+  (:metaclass funcallable-standard-class))
+
+(def constructor quasi-quoted-string-to-string-emitting-form
+  (set-funcallable-instance-function self (lambda (node)
+                                            (transform-quasi-quoted-string-to-string-emitting-form node))))
 
 (def function string-concatenate (elements)
   (bind ((*print-pretty* #f)
@@ -124,7 +128,7 @@
            `(write-string ,node ,stream)))
       (string-unquote
        `(write-quasi-quoted-string
-         ,(transform-quasi-quoted-string-to-string-emitting-form/toplevel node) ,stream))
+         ,(transform-quasi-quoted-string-to-string-emitting-form node) ,stream))
       (side-effect (form-of node)))))
 
 (def function reduce-string-subsequences (sequence)
@@ -132,18 +136,38 @@
                        (lambda (el) (or (stringp el) (characterp el)))
                        #'string-concatenate))
 
-(def function transform-quasi-quoted-string-to-string-emitting-form/toplevel (input)
+(def function transform-quasi-quoted-string-to-string-emitting-form (input)
   (etypecase input
     (string-quasi-quote
      (wrap-emitting-forms (with-inline-emitting? *transformation*)
-                          (mapcar (lambda (node)
-                                    (make-quasi-quoted-string-emitting-form node))
-                                  (reduce-string-subsequences (flatten (body-of input))))))
-    ;; TODO mimic transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body?
+                          (mapcar 'make-quasi-quoted-string-emitting-form
+                                  (reduce-string-subsequences
+                                   (transform-quasi-quoted-string-to-string-emitting-form/flatten-body input)))
+                          (declarations-of *transformation*)))
     (string-unquote
      (map-filtered-tree (form-of input) 'string-quasi-quote
                         (lambda (node)
-                          (transform-quasi-quoted-string-to-string-emitting-form/toplevel node))))))
+                          (transform-quasi-quoted-string-to-string-emitting-form node))))))
+
+(defun transform-quasi-quoted-string-to-string-emitting-form/flatten-body (node)
+  (let (result)
+    (labels ((traverse (subtree)
+               (when subtree
+                 (typecase subtree
+                   (cons
+                    (traverse (car subtree))
+                    (traverse (cdr subtree)))
+                   (string-quasi-quote (bind ((nested-node subtree))
+                                         (if (compatible-transformation-pipelines?
+                                              (transformation-pipeline-of node)
+                                              (transformation-pipeline-of nested-node))
+                                             ;; if the pipelines are compatible, then just skip over the qq node
+                                             ;; and descend into its body as if it never was there...
+                                             (traverse (body-of nested-node))
+                                             (push nested-node result))))
+                   (t (push subtree result))))))
+      (traverse (body-of node)))
+    (nreverse result)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -151,12 +175,15 @@
 
 (def (class* e) quasi-quoted-string-to-quasi-quoted-binary (transformation)
   ((encoding *default-character-encoding*))
-  (:default-initargs :handler 'transform-quasi-quoted-string-to-quasi-quoted-binary))
+  (:metaclass funcallable-standard-class))
+
+(def constructor quasi-quoted-string-to-quasi-quoted-binary
+  (set-funcallable-instance-function self (lambda (node)
+                                            (transform-quasi-quoted-string-to-quasi-quoted-binary node))))
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node)
   (bind ((encoding (encoding-of *transformation*)))
     (etypecase node
-      (function node)
       (list
        (mapcar (lambda (child)
                  (transform-quasi-quoted-string-to-quasi-quoted-binary child))
@@ -168,49 +195,10 @@
                                 (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))
       (string-unquote
        (make-binary-unquote
-        `(bind ((*transformation* ,*transformation*))
-           (transform-quasi-quoted-string-to-quasi-quoted-binary
-            ,(map-filtered-tree (form-of node) 'string-quasi-quote
-                                (lambda (child)
-                                  (transform-quasi-quoted-string-to-quasi-quoted-binary child)))))))
-      (quasi-quote
-       (if (typep node 'binary-quasi-quote)
-           (body-of node)
-           node))
-      (unquote (transform 'quasi-quoted-binary node))
+        (wrap-transformation-form-delayed-to-runtime
+         `(transform-quasi-quoted-string-to-quasi-quoted-binary
+           ,(map-filtered-tree (form-of node) 'string-quasi-quote
+                               (lambda (child)
+                                 (transform-quasi-quoted-string-to-quasi-quoted-binary child)))))))
+      (delayed-emitting node)
       (side-effect node))))
-
-
-
-
-
-#+nil ; TODO delme
-((def macro with-string-stream-to-string (stream &body forms)
-   `(bind ((,stream (make-string-output-stream)))
-      ,@forms
-      (get-output-stream-string ,stream)))
-
-(def method transform ((to (eql 'quasi-quoted-binary)) (input string-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform-quasi-quoted-string-to-quasi-quoted-binary input args))
-
-(def method transform ((to (eql 'string-emitting-form)) (input string-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform-quasi-quoted-string-to-string-emitting-form input args))
-
-(def method setup-emitting-environment ((to (eql 'string-emitting-form)) &key stream-name next-method &allow-other-keys)
-  (if stream-name
-      (bind ((*quasi-quote-stream* (symbol-value stream-name)))
-        (funcall next-method))
-      (with-string-stream-to-string *quasi-quote-stream*
-        (funcall next-method))))
-
- ((define-syntax quasi-quoted-string-to-string ()
-                 (set-quasi-quoted-string-syntax-in-readtable :transformation '(string)))
-
-  (define-syntax quasi-quoted-string-to-string-emitting-form ()
-                 (set-quasi-quoted-string-syntax-in-readtable :transformation '(string-emitting-form)))
-
-  (define-syntax quasi-quoted-string-to-binary ()
-                 (set-quasi-quoted-string-syntax-in-readtable :transformation '(quasi-quoted-binary binary)))
-
-  (define-syntax quasi-quoted-string-to-binary-emitting-form ()
-                 (set-quasi-quoted-string-syntax-in-readtable :transformation '(quasi-quoted-binary binary-emitting-form)))))

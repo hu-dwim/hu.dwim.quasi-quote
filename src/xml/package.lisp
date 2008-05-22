@@ -12,6 +12,7 @@
         :alexandria
         :iterate
         :cl-def
+        :closer-mop
         :cl-syntax-sugar
         :cl-quasi-quote
         :babel

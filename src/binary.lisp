@@ -133,9 +133,13 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def (class* e) quasi-quoted-binary-to-binary-emitting-form (emitting-form-transformation)
+(def (class* e) quasi-quoted-binary-to-binary-emitting-form (lisp-form-emitting-transformation)
   ()
-  (:default-initargs :handler 'transform-quasi-quoted-binary-to-binary-emitting-form/toplevel))
+  (:metaclass funcallable-standard-class))
+
+(def constructor quasi-quoted-binary-to-binary-emitting-form
+  (set-funcallable-instance-function self (lambda (node)
+                                            (transform-quasi-quoted-binary-to-binary-emitting-form/toplevel node))))
 
 #+nil ; TODO
 (def function binary-position ()
@@ -159,27 +163,31 @@
                        (lambda (el) (typep el 'ub8-vector))
                        #'binary-concatenate))
 
-(def function transform-quasi-quoted-binary-to-binary-emitting-form/toplevel (input)
-  (bind ((transformation *transformation*))
-    (etypecase input
+(def function make-quasi-quoted-binary-emitting-form  (node)
+  (bind ((stream-variable-name (stream-variable-name-of *transformation*)))
+    (etypecase node
+      (ub8-vector `(write-sequence ,node ,stream-variable-name))
+      (binary-unquote
+       `(write-quasi-quoted-binary
+         ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote *transformation* node)
+         ,stream-variable-name))
+      ;; a quasi-quoted-binary here means that it's a nested non-compatible
       (binary-quasi-quote
-       (bind ((stream-variable-name (stream-variable-name-of transformation))
-              (result (mapcar (lambda (node)
-                                (etypecase node
-                                  (ub8-vector `(write-sequence ,node ,stream-variable-name))
-                                  (binary-unquote
-                                   ;; TODO rebind *transformation* at runtime?
-                                   `(write-quasi-quoted-binary
-                                      ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote transformation node)
-                                      ,stream-variable-name))
-                                  ;; a quasi-quoted-binary here means that it's a nested non-compatible
-                                  (binary-quasi-quote `(emit ,(run-transformation-pipeline node)))
-                                  (side-effect (form-of node))))
-                              (reduce-binary-subsequences
-                               (transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body input)))))
-         (wrap-emitting-forms (with-inline-emitting? *transformation*) result (declarations-of *transformation*))))
-      #+nil(binary-unquote
-       (transform-quasi-quoted-binary-to-binary-emitting-form/unquote transformation input)))))
+       (assert (typep (first (transformation-pipeline-of node)) 'lisp-form-emitting-transformation))
+       `(emit ,(transform node)))
+      (side-effect (form-of node)))))
+
+(def function transform-quasi-quoted-binary-to-binary-emitting-form/toplevel (input)
+  (etypecase input
+    (binary-quasi-quote
+     (wrap-emitting-forms (with-inline-emitting? *transformation*)
+                          (mapcar 'make-quasi-quoted-binary-emitting-form
+                                  (reduce-binary-subsequences
+                                   (transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body input)))
+                          (declarations-of *transformation*)))
+    ;; TODO delme? write test that triggers it...
+    #+nil(binary-unquote
+          (transform-quasi-quoted-binary-to-binary-emitting-form/unquote transformation input))))
 
 (defun transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body (node)
   (let (result)
