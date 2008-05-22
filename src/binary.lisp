@@ -72,12 +72,12 @@
         (incf result (* multiplier value))
         (finally (return result))))
 
-(def (function o) process-binary-reader-body (form)
+(def (function o) process-binary-reader-body (form &optional allow-strings?)
   (etypecase form
     (cons
      (iter (with buffer = (make-adjustable-vector 8 :element-type '(unsigned-byte 8)))
            (for el :in form)
-           (for value = (process-binary-reader-body el))
+           (for value = (process-binary-reader-body el allow-strings?))
            (if (integerp value)
                (vector-push-extend value buffer)
                (progn
@@ -98,6 +98,9 @@
               (unless (<= 0 result 255)
                 (simple-reader-error nil "~A is out of the 0-255 range" result))
               result))
+    (string (if allow-strings?
+                form
+                (error "Strings are not allowed in the body of the quasi-quoted-binary reader: ~S" form)))
     (syntax-node form)))
 
 (def macro binary-quasi-quote (toplevel? body transformation-pipeline)
