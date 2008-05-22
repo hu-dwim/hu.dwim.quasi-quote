@@ -23,7 +23,7 @@
      (declare (ignore dispatched?))
      `(binary-quasi-quote ,(= 1 *quasi-quote-nesting-level*) ,body ,transformation-pipeline))
    (lambda (form spliced?)
-     (make-binary-unquote form spliced?))
+     `(binary-unquote ,form ,spliced?))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
@@ -109,6 +109,9 @@
     (if toplevel?
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
+
+(def macro binary-unquote (form spliced?)
+  (make-binary-unquote form spliced?))
 
 
 ;;;;;;;

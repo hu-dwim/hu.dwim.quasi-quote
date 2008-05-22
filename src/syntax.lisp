@@ -18,10 +18,11 @@
             (ast-node-class (when (and candidate
                                        (symbolp candidate))
                               (find-class candidate nil))))
-       (unless (subtypep ast-node-class 'quasi-quote)
+       (unless (or (subtypep ast-node-class 'quasi-quote)
+                   (subtypep ast-node-class 'unquote))
          (setf ast-node-class nil))
        (if ast-node-class
-           (macroexpand form env)
+           (recursively-macroexpand-reader-stubs (macroexpand form env))
            (iter (for entry :first form :then (cdr entry))
                  (collect (recursively-macroexpand-reader-stubs (car entry)) :into result)
                  (cond
@@ -32,6 +33,7 @@
                     (setf (cdr (last result)) (recursively-macroexpand-reader-stubs (cdr entry)))
                     (return result))
                    (t (return result)))))))
+    ;; also process the forms of unquote ast nodes
     (unquote (bind ((unquote-node form))
                (setf (form-of unquote-node) (recursively-macroexpand-reader-stubs (form-of unquote-node)))
                unquote-node))

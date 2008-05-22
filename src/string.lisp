@@ -20,7 +20,7 @@
      (declare (ignore dispatched?))
      `(string-quasi-quote ,(= 1 *quasi-quote-nesting-level*) ,body ,transformation-pipeline))
    (lambda (form spliced)
-     (make-string-unquote form spliced))
+     `(string-unquote ,form ,spliced))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
@@ -65,6 +65,9 @@
     (if toplevel?
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
+
+(def macro string-unquote (form spliced?)
+  (make-string-unquote form spliced?))
 
 ;;;;;;;
 ;;; AST
