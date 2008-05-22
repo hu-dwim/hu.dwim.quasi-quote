@@ -16,9 +16,11 @@
 (def (class* e) xml-quasi-quote (quasi-quote xml-syntax-node)
   ())
 
-(def (function e) make-xml-quasi-quote (body)
+(def (function e) make-xml-quasi-quote (transformation-pipeline body)
   (assert (not (typep body 'quasi-quote)))
-  (make-instance 'xml-quasi-quote :body body))
+  (make-instance 'xml-quasi-quote
+                 :transformation-pipeline transformation-pipeline
+                 :body body))
 
 (def (class* e) xml-unquote (unquote xml-syntax-node)
   ())

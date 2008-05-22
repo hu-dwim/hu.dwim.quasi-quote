@@ -11,6 +11,10 @@
 
 (def special-variable *transformation*)
 
+(def function wrap-transformation-form-delayed-to-runtime (form)
+  `(bind ((*transformation* ,*transformation*))
+     ,form))
+
 (def (class* e) transformation ()
   ((handler :type (or symbol function))))
 

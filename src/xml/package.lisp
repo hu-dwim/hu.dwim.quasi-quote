@@ -13,7 +13,10 @@
         :iterate
         :cl-def
         :cl-syntax-sugar
-        :cl-quasi-quote)
+        :cl-quasi-quote
+        :babel
+        :babel-streams
+        )
 
   (:export
    ))

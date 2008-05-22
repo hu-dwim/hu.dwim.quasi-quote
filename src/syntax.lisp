@@ -11,7 +11,7 @@
   `(bind ((*readtable* (copy-readtable *readtable*)))
      ,@body))
 
-(def function recursively-macroexpand-reader-stubs (form)
+(def function recursively-macroexpand-reader-stubs (form &optional env)
   (typecase form
     (cons
      (bind ((candidate (first form))
@@ -21,7 +21,7 @@
        (unless (subtypep ast-node-class 'quasi-quote)
          (setf ast-node-class nil))
        (if ast-node-class
-           (macroexpand form)
+           (macroexpand form env)
            (iter (for entry :first form :then (cdr entry))
                  (collect (recursively-macroexpand-reader-stubs (car entry)) :into result)
                  (cond
