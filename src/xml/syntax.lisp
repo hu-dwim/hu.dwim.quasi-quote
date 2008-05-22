@@ -85,24 +85,24 @@
                                                             :end-character end-character
                                                             :unquote-character unquote-character
                                                             :splice-character splice-character)))))
-  ;(x xml-emitting-form           '(xml-emitting-form))
-  (x string-emitting-form        (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
-                                                      :text-node-escaping-method text-node-escaping-method
-                                                      :indentation-width indentation-width)
-                                       (make-instance 'quasi-quoted-string-to-string-emitting-form
-                                                      :stream-variable-name stream-variable-name
-                                                      :with-inline-emitting with-inline-emitting
-                                                      :declarations declarations))
+  ;; TODO ? (x xml-emitting-form           '(xml-emitting-form))
+  (x string-emitting-form (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
+                                               :text-node-escaping-method text-node-escaping-method
+                                               :indentation-width indentation-width)
+                                (make-instance 'quasi-quoted-string-to-string-emitting-form
+                                               :stream-variable-name stream-variable-name
+                                               :with-inline-emitting with-inline-emitting
+                                               :declarations declarations))
      (stream-variable-name &key (text-node-escaping-method :per-character)))
-  (x binary-emitting-form        (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
-                                                      :text-node-escaping-method text-node-escaping-method
-                                                      :indentation-width indentation-width)
-                                       (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                                                      :encoding encoding)
-                                       (make-instance 'quasi-quoted-binary-to-binary-emitting-form
-                                                      :stream-variable-name stream-variable-name
-                                                      :with-inline-emitting with-inline-emitting
-                                                      :declarations declarations))
+  (x binary-emitting-form (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
+                                               :text-node-escaping-method text-node-escaping-method
+                                               :indentation-width indentation-width)
+                                (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
+                                               :encoding encoding)
+                                (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                                               :stream-variable-name stream-variable-name
+                                               :with-inline-emitting with-inline-emitting
+                                               :declarations declarations))
      (stream-variable-name &key
                            (text-node-escaping-method :per-character)
                            (encoding *default-character-encoding*))))
