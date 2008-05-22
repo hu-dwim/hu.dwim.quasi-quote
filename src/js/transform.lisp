@@ -15,15 +15,11 @@
 (def function simple-js-compile-error (walked-form message &rest args)
   (error 'simple-js-compile-error :walked-form walked-form :format-control message :format-arguments args))
 
-(def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
-  (map-filtered-tree (form-of node) 'js-quasi-quote fn))
-
-(def (special-variable e) *js-indent* 0) ; indenting is off by default
 (def special-variable *js-indent-level* 0)
 
 (def function make-indent ()
-  (when *js-indent*
-    (list (make-string-of-spaces (* *js-indent* *js-indent-level*)))))
+  (awhen (indentation-width-of *transformation*)
+    (list (make-string-of-spaces (* it *js-indent-level*)))))
 
 (def with-macro with-increased-indent* (really?)
   (if really?
@@ -68,7 +64,8 @@
     (integer (princ-to-string value))
     (float (format nil "~F" value))
     (ratio (concatenate 'string "(" (princ-to-string (numerator value)) " / " (princ-to-string (denominator value)) ")"))
-    (character (concatenate 'string "'" (escape-as-js-string (string value)) "'"))))
+    (character (concatenate 'string "'" (escape-as-js-string (string value)) "'"))
+    (null "null")))
 
 (def definer transform-function (name args &body body)
   `(def function ,name ,args
@@ -264,40 +261,42 @@
              ,(recurse slot-name)
              #\]))))))
 
+(def (class* e) quasi-quoted-js-to-quasi-quoted-string (transformation)
+  ((indentation-width nil))
+  (:metaclass funcallable-standard-class))
+
+(def constructor quasi-quoted-js-to-quasi-quoted-string
+  (set-funcallable-instance-function self (lambda (node)
+                                            (transform-quasi-quoted-js-to-quasi-quoted-string node))))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
+  (map-filtered-tree (form-of node) 'js-quasi-quote fn))
+
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (etypecase node
-    (function       node)
-    ((or integer float ratio) (lisp-literal-to-js-literal node))
+    (delayed-emitting node)
+    ((or number string character) (lisp-literal-to-js-literal node))
     (walked-form    (transform-quasi-quoted-js-to-quasi-quoted-string* node))
-    (js-quasi-quote (make-string-quasi-quote (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))))
+    (side-effect    node)
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
-    ;; TODO ?
-    (quasi-quote    (if (typep node 'string-quasi-quote)
-                        (body-of node)
-                        node))
-    (unquote        (transform 'quasi-quoted-string node))
-    (side-effect    node)))
+    (js-quasi-quote (make-string-quasi-quote (rest (transformation-pipeline-of node))
+                                             (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))))
+    (string-quasi-quote node)
+    (quasi-quote    (transform node))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/unquote (node)
   (assert (typep node 'js-unquote))
   (bind ((spliced? (spliced-p node)))
-    ;; TODO bullshit copy-paste...
     (make-string-unquote
-     (if spliced?
-         `(map 'list (lambda (node)
-                       ,(wrap-forms-with-bindings
-                         (when *js-indent* `((*js-indent-level* ,*js-indent-level*)))
-                         `(transform-quasi-quoted-js-to-quasi-quoted-string node)))
-               ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
-                 node (lambda (node)
-                        (transform-quasi-quoted-js-to-quasi-quoted-string node))))
-         (wrap-forms-with-bindings
-          (when *js-indent*
-            `((*js-indent* (+ *js-indent* ,*js-indent*))
-              (*js-indent-level* ,*js-indent-level*)))
-          `(transform-quasi-quoted-js-to-quasi-quoted-string
-            ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
-              node (lambda (node)
-                     (transform-quasi-quoted-js-to-quasi-quoted-string node))))))
+     (wrap-runtime-delayed-transformation-form
+      (wrap-forms-with-bindings
+       (when (indentation-width-of *transformation*)
+         `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*))))
+       (if spliced?
+           `(mapcar 'transform-quasi-quoted-js-to-quasi-quoted-string
+                    ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
+                      node 'transform-quasi-quoted-js-to-quasi-quoted-string))
+           `(transform-quasi-quoted-js-to-quasi-quoted-string
+             ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
+               node 'transform-quasi-quoted-js-to-quasi-quoted-string)))))
      spliced?)))
-

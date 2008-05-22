@@ -11,10 +11,14 @@
         :metabang-bind
         :alexandria
         :iterate
+        :closer-mop
         :cl-def
         :cl-walker
         :cl-syntax-sugar
-        :cl-quasi-quote)
+        :cl-quasi-quote
+        :babel
+        :babel-streams
+        )
 
   (:shadowing-import-from :cl-quasi-quote
    #:body-of

@@ -6,89 +6,79 @@
 
 (in-package :cl-quasi-quote-js)
 
-(define-syntax (quasi-quoted-js :readtime-wrapper-result-transformer
-                                 (lambda (result)
-                                   (if (rest result)
-                                       (make-js-quasi-quote (mapcar 'body-of result))
-                                       (first result))))
-    (&key start-character
-          end-character
-          dispatch-character
-          (unquote-character #\,)
-          (splice-character #\@)
-          (transformation nil))
+(define-syntax quasi-quoted-js (&key start-character
+                                     end-character
+                                     dispatch-character
+                                     (unquote-character #\,)
+                                     (splice-character #\@)
+                                     (transformation-pipeline nil)
+                                     (dispatched-quasi-quote-name "js"))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     `(transform-js-reader-body ,body ,transformation))
+     `(js-quasi-quote ,(= 1 *quasi-quote-depth*) ,body ,transformation-pipeline))
    (lambda (body spliced?)
-     `(js-reader-unquote ,body ,spliced?))
+     `(js-unquote ,body ,spliced?))
    :start-character start-character
    :dispatch-character dispatch-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
    :readtable-case :preserve
-   :dispatched-quasi-quote-name "js"))
+   :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
-(macrolet ((x (name transformation &optional args)
-             (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-JS-TO-~A" name)))
-               `(define-syntax ,syntax-name (,@args &key
-                                                    start-character
-                                                    end-character
-                                                    (unquote-character #\,)
-                                                    (splice-character #\@))
-                  (set-quasi-quoted-js-syntax-in-readtable :transformation ,transformation
+(macrolet ((x (name transformation-pipeline &optional args)
+             (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-JS-TO-~A" name))
+                    (&key-position (position '&key args)))
+               `(define-syntax ,syntax-name (,@(subseq args 0 (or &key-position (length args)))
+                                               &key
+                                               (with-inline-emitting #f)
+                                               (declarations '())
+                                               (indentation-width nil)
+                                               (start-character #\<)
+                                               (end-character #\>)
+                                               (unquote-character #\,)
+                                               (splice-character #\@)
+                                               (dispatched-quasi-quote-name "js")
+                                               ,@(when &key-position (subseq args (1+ &key-position))))
+                  (set-quasi-quoted-js-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                            :start-character start-character
                                                            :end-character end-character
                                                            :unquote-character unquote-character
-                                                           :splice-character splice-character)))))
-  (x js                          '(js))
-  (x js-emitting-form            '(js-emitting-form))
-  (x string                      '(quasi-quoted-string string))
-  (x string-emitting-form        '(quasi-quoted-string string-emitting-form))
-  (x string-stream-emitting-form `(quasi-quoted-string (string-emitting-form :stream-name ,stream-name)) (stream-name))
-  (x binary                      '(quasi-quoted-string quasi-quoted-binary binary))
-  (x binary-emitting-form        '(quasi-quoted-string quasi-quoted-binary binary-emitting-form))
-  (x binary-stream-emitting-form `(quasi-quoted-string quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name)) (stream-name)))
+                                                           :splice-character splice-character
+                                                           :dispatched-quasi-quote-name dispatched-quasi-quote-name)))))
+  ;; TODO ? (x js-emitting-form            '(js-emitting-form))
+  (x string-emitting-form (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                                               :indentation-width indentation-width)
+                                (make-instance 'quasi-quoted-string-to-string-emitting-form
+                                               :stream-variable-name stream-variable-name
+                                               :with-inline-emitting with-inline-emitting
+                                               :declarations declarations))
+     (stream-variable-name))
+  (x binary-emitting-form (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                                               :indentation-width indentation-width)
+                                (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
+                                               :encoding encoding)
+                                (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                                               :stream-variable-name stream-variable-name
+                                               :with-inline-emitting with-inline-emitting
+                                               :declarations declarations))
+     (stream-variable-name &key
+                           (encoding *default-character-encoding*))))
 
-(def macro transform-js-reader-body (form transformation &environment lexenv)
-  (labels ((expand (form)
-             (typecase form
-               (cons
-                (case (first form)
-                  (js-reader-unquote
-                   (assert (= (length form) 3))
-                   (make-js-unquote (second form) (third form)))
-                  (transform-js-reader-body (error "How did this happen? Send a unit test, please!"))
-                  (t form)))
-               (t form)))
-           (recurse (form)
-             (typecase form
-               ;;(string (make-xml-text form)) ;; TODO do this and when found on toplevel insert the text as is?
-               (cons
-                (setf form (expand form))
-                (if (typep form 'js-unquote)
-                    form
-                    (iter (for entry :first form :then (cdr entry))
-                          (collect (recurse (car entry)) :into result)
-                          (cond
-                            ((consp (cdr entry))
-                             ;; nop, go on looping
-                             )
-                            ((cdr entry)
-                             (setf (cdr (last result)) (recurse (cdr entry)))
-                             (return result))
-                            (t (return result))))))
-               (t form))))
-    (chain-transform transformation (make-js-quasi-quote (walk-js (recurse form) lexenv)))))
+(def macro js-quasi-quote (toplevel? form transformation-pipeline &environment lexenv)
+  (bind ((expanded-body (recursively-macroexpand-reader-stubs form lexenv))
+         (quasi-quote-node (make-js-quasi-quote transformation-pipeline (walk-js expanded-body))))
+    (if toplevel?
+        (run-transformation-pipeline quasi-quote-node)
+        quasi-quote-node)))
 
-(def macro js-reader-unquote (body spliced? &environment env)
+(def macro js-unquote (body spliced? &environment env)
   (declare (ignore env))
   ;; A macro to handle the quoted parts when the walker is walking the forms. Kinda like a kludge, but it's not that bad...
   (make-js-unquote body spliced?))
 
-(def method find-walker-handler ((ast-node js-syntax-node))
+(def method find-walker-handler ((ast-node syntax-node))
   (constantly ast-node))
 
 (def special-variable *js-walker-handlers* (make-hash-table :test #'eq))

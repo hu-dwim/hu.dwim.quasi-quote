@@ -17,12 +17,13 @@
 (def (class* e) js-quasi-quote (quasi-quote js-syntax-node)
   ())
 
-(def (function e) make-js-quasi-quote (body)
-  (make-instance 'js-quasi-quote :body body))
+(def (function e) make-js-quasi-quote (transformation-pipeline body)
+  (make-instance 'js-quasi-quote
+                 :transformation-pipeline transformation-pipeline
+                 :body body))
 
 (def (class* e) js-unquote (unquote js-syntax-node)
   ())
 
 (def (function e) make-js-unquote (form &optional (spliced? #f))
   (make-instance 'js-unquote :form form :spliced spliced?))
-
