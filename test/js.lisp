@@ -6,7 +6,7 @@
 
 (in-package :cl-quasi-quote-test)
 
-(enable-quasi-quoted-js-syntax)
+(defsuite* (test/js :in test))
 
 ;; this would hang sbcl, see the .asd for details...
 #+nil
@@ -29,76 +29,72 @@
             ("undefined" (return #f)))
           result)))))
 
-(def function read-from-string-with-js-syntax (string)
-  (with-local-readtable
-    (enable-quasi-quoted-js-to-string-emitting-form-syntax)
-    (read-from-string string)))
-
-(def function walk-ast-from-string-with-js-syntax (string)
-  (macroexpand (read-from-string-with-js-syntax string)))
-
-(def function pprint-js (string &key (indent 2))
-  (bind ((*js-indent* indent))
-    (pprint (macroexpand (read-from-string-with-js-syntax string)))))
-
-(defsuite* (test/js :in test) ()
-  (run-child-tests))
-
-(def syntax-test-definer js quasi-quoted-js)
-
 (def special-variable *js-stream*)
 
-(def function whitespace? (char)
-  (member char '(#\Space #\Newline) :test #'char=))
+(def function setup-readtable-for-js-test (inline? &optional (binary? #f))
+  (if binary?
+      (progn
+        (enable-quasi-quoted-js-to-binary-emitting-form-syntax
+         '*js-stream*
+         :encoding :utf-8
+         :with-inline-emitting inline?)
+        (enable-quasi-quoted-string-to-binary-emitting-form-syntax
+         '*js-stream*
+         :encoding :utf-8
+         :with-inline-emitting inline?))
+      (progn
+        (enable-quasi-quoted-js-to-string-emitting-form-syntax
+         '*js-stream*
+         :with-inline-emitting inline?)
+        (enable-quasi-quoted-string-to-string-emitting-form-syntax
+         '*js-stream*
+         :with-inline-emitting inline?))))
 
-(def function string=-ignoring-whitespaces (a b)
-  (string= (remove-if #'whitespace? a)
-           (remove-if #'whitespace? b)))
+(def syntax-test-definer js-test
+  (:test-function   test-js-emitting-forms
+   :readtable-setup (setup-readtable-for-js-test #f))
+  (:test-function   test-js-emitting-forms/binary
+   :readtable-setup (setup-readtable-for-js-test #f #t))
+  (:test-function   test-js-emitting-forms
+   :readtable-setup (setup-readtable-for-js-test #t))
+  (:test-function   test-js-emitting-forms/binary
+   :readtable-setup (setup-readtable-for-js-test #t #t)))
 
-;; TODO this is almost the same as test-xml-ast
-(def (function d) test-js-ast (expected ast)
-  ;; evaluate to string
-  (flet ((equal~ (a b)
-           (if (and (typep a 'float)
-                    (typep b 'float))
-               (< (abs (- a b)) 0.0000001)
-               (equal a b))))
-    (is (equal~ expected
-                (eval-js
-                 (transform-and-emit '(quasi-quoted-string
-                                       string-emitting-form
-                                       lambda-form
-                                       lambda)
-                                     ast))))
-    ;; write to string stream
-    (is (equal~ expected
-                (eval-js
-                 (with-output-to-string (*js-stream*)
-                   (transform-and-emit '(quasi-quoted-string
-                                         (string-emitting-form :stream-name *js-stream*)
-                                         lambda-form
-                                         lambda)
-                                       ast)))))
-    ;; evaluate to binary
-    (is (equal~ expected
-                (eval-js
-                 (babel:octets-to-string
-                  (transform-and-emit '(quasi-quoted-string
-                                        quasi-quoted-binary
-                                        binary-emitting-form
-                                        lambda-form
-                                        lambda)
-                                      ast)))))
-    ;; write to binary stream
-    (is (equal~ expected
-                (eval-js
-                 (with-output-to-sequence (*js-stream* :return-as 'string)
-                   (transform-and-emit '(quasi-quoted-string
-                                         quasi-quoted-binary
-                                         (binary-emitting-form :stream-name *js-stream*)
-                                         lambda-form
-                                         lambda)
-                                       ast)))))))
+(def function read-from-string-with-js-syntax (string &optional (with-inline-emitting #f))
+  (with-local-readtable
+    (setup-readtable-for-js-test with-inline-emitting)
+    (read-from-string string)))
+
+(def function pprint-js (string &optional (with-inline-emitting #f))
+  (pprint (macroexpand (read-from-string-with-js-syntax string with-inline-emitting))))
+
+(def function js-result-equal (a b)
+  (if (and (typep a 'float)
+           (typep b 'float))
+      (< (abs (- a b)) 0.0000001)
+      (equal a b)))
+
+(def function test-js-emitting-forms (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-string (*js-stream*)
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (js-result-equal expected
+                         (eval-js
+                          (funcall (compile nil lambda-form)))))))
+
+(def function test-js-emitting-forms/binary (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-sequence (*js-stream* :element-type '(unsigned-byte 8))
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (js-result-equal expected
+                         (eval-js
+                          (octets-to-string (funcall (compile nil lambda-form))
+                                            :encoding :utf-8))))))
+
+;;;;;;;;;;;;;;;;;;;;;
+;;; the tests finally
 
 (def js-test test/js/simple ()
   (42
@@ -124,12 +120,14 @@
          (defun ,'alma ()
            (setf x ,(+ 2 2))
            (return 3))
-         (print (setf x (+ 2 (,'alma) x 5))))｣)
+         (print (setf x (+ 2 (,'alma) x 5))))｣))
+
+(def js-test test/js/mixed-with-string-quasi-quote ()
   (42
    ｢`js(progn
-         ;; inject text without being transformed
-         ,(make-string-quasi-quote "a = 22")
-         (print (+ ,(make-string-quasi-quote "a") 10 ,10)))｣))
+         ;; this way you can inject untransformed (not even escaped) text into the js output
+         `str("a = 22")
+         (print (+ `str("a") 10 ,10)))｣))
 
 (def js-test test/js/expressions ()
   ("beforexafter"
@@ -161,7 +159,7 @@
 
 (def test test/js/array-errors ()
   (flet ((transform (string)
-           (transform '(quasi-quoted-string) (walk-ast-from-string-with-js-syntax string))))
+           (transform (macroexpand (read-from-string-with-js-syntax string)))))
     (signals js-compile-error
       (transform ｢`js(elt (vector 10 20) 1 2 3 4 5)｣))
     (signals js-compile-error
@@ -189,6 +187,6 @@
 ;; leave it at the end, because it screws up emacs coloring
 (def js-test test/js/string-quoting ()
   ("alma"
-   ｢`js (print "alma")｣)
+   ｢`js(print "alma")｣)
   (｢al'm"a｣
-   ｢`js (print "al'm\"a")｣))
+   ｢`js(print "al'm\"a")｣))
