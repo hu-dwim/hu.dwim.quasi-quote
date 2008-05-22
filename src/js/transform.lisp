@@ -301,5 +301,3 @@
                      (transform-quasi-quoted-js-to-quasi-quoted-string node))))))
      spliced?)))
 
-(def method transform ((to (eql 'quasi-quoted-string)) (input js-syntax-node) &rest args &key &allow-other-keys)
-  (apply #'transform-quasi-quoted-js-to-quasi-quoted-string input args))

@@ -22,7 +22,7 @@
         :cl-quasi-quote
         :cl-quasi-quote-system
         :cl-quasi-quote-xml
-        :cl-quasi-quote-pdf
+        ;; TODO :cl-quasi-quote-pdf
         :cl-quasi-quote-js
         )
 

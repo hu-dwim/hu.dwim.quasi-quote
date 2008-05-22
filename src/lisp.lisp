@@ -6,6 +6,8 @@
 
 (in-package :cl-quasi-quote)
 
+;; TODO this file lags behind the refactors and has been commented out
+
 ;;;;;;;;;
 ;;; Parse
 
