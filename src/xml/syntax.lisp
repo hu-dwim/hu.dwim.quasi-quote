@@ -112,21 +112,15 @@
 ;; converts the body to an xml AST, so that the transformations can actually collapse them into constant
 ;; strings.
 (def macro xml-quasi-quote (toplevel? dispatched? form transformation-pipeline &environment env)
-  (macrolet ((unless-unquote (value &body forms)
-               (once-only (value)
-                 `(if (typep ,value 'xml-unquote)
-                      ,value
-                      (progn
-                        ,@forms)))))
-    (bind ((expanded-body (recursively-macroexpand-reader-stubs form env))
-           (quasi-quote-node (if dispatched?
-                                 ;; dispatched `xml(element) xml
-                                 (process-dispatched-xml-reader-body expanded-body transformation-pipeline)
-                                 ;; normal <>-based xml
-                                 (process-<>-xml-reader-body expanded-body transformation-pipeline))))
-      (if toplevel?
-          (run-transformation-pipeline quasi-quote-node)
-          quasi-quote-node))))
+  (bind ((expanded-body (recursively-macroexpand-reader-stubs form env))
+         (quasi-quote-node (if dispatched?
+                               ;; dispatched `xml(element) xml
+                               (process-dispatched-xml-reader-body expanded-body transformation-pipeline)
+                               ;; normal <>-based xml
+                               (process-<>-xml-reader-body expanded-body transformation-pipeline))))
+    (if toplevel?
+        (run-transformation-pipeline quasi-quote-node)
+        quasi-quote-node)))
 
 (def macro unless-unquote (value &body forms)
   (once-only (value)

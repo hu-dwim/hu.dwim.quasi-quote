@@ -175,7 +175,7 @@
       (ub8-vector `(write-sequence ,node ,stream-variable-name))
       (binary-unquote
        `(write-quasi-quoted-binary
-         ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote *transformation* node)
+         ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote node)
          ,stream-variable-name))
       ;; a quasi-quoted-binary here means that it's a nested non-compatible
       (binary-quasi-quote
@@ -193,7 +193,7 @@
                           (declarations-of *transformation*)))
     ;; TODO delme? write test that triggers it...
     #+nil(binary-unquote
-          (transform-quasi-quoted-binary-to-binary-emitting-form/unquote transformation input))))
+          (transform-quasi-quoted-binary-to-binary-emitting-form/unquote input))))
 
 (defun transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body (node)
   (let (result)
@@ -215,10 +215,9 @@
       (traverse (body-of node)))
     (nreverse result)))
 
-(def function transform-quasi-quoted-binary-to-binary-emitting-form/unquote (transformation input)
+(def function transform-quasi-quoted-binary-to-binary-emitting-form/unquote (input)
   (map-filtered-tree (form-of input) 'binary-quasi-quote
-                     (lambda (node)
-                       (transform-quasi-quoted-binary-to-binary-emitting-form/toplevel node))))
+                     'transform-quasi-quoted-binary-to-binary-emitting-form/toplevel))
 
 
 
