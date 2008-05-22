@@ -25,13 +25,13 @@
   (set-ub8-reader-in-readtable))
 
 (def syntax-test-definer binary-test
-  (:test-function evaluate-and-compare-binary-emitting-forms
+  (:test-function test-binary-emitting-forms
    :readtable-setup (setup-readtable-for-binary-test #f)))
 
 (def syntax-test-definer binary-test/inline
-  (:test-function   evaluate-and-compare-binary-emitting-forms
+  (:test-function   test-binary-emitting-forms
    :readtable-setup (setup-readtable-for-binary-test #f))
-  (:test-function   evaluate-and-compare-binary-emitting-forms
+  (:test-function   test-binary-emitting-forms
    :readtable-setup (setup-readtable-for-binary-test #t)))
 
 (def function read-from-string-with-binary-syntax (string)
@@ -43,7 +43,7 @@
 (def function pprint-binary (string)
   (pprint (macroexpand (read-from-string-with-binary-syntax string))))
 
-(def function evaluate-and-compare-binary-emitting-forms (expected ast)
+(def function test-binary-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
                          (with-output-to-sequence (*test-binary-stream*)
                            (emit ,ast)))))
@@ -144,16 +144,16 @@
   (set-ub8-reader-in-readtable))
 
 (def syntax-test-definer binary-test/mixed
-  (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
+  (:test-function   test-binary-emitting-forms/mixed
    :readtable-setup (setup-readtable-for-mixed-binary-test #f #f))
-  (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
+  (:test-function   test-binary-emitting-forms/mixed
    :readtable-setup (setup-readtable-for-mixed-binary-test #t #t))
-  (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
+  (:test-function   test-binary-emitting-forms/mixed
    :readtable-setup (setup-readtable-for-mixed-binary-test #t #f))
-  (:test-function   evaluate-and-compare-binary-emitting-forms/mixed
+  (:test-function   test-binary-emitting-forms/mixed
    :readtable-setup (setup-readtable-for-mixed-binary-test #f #t)))
 
-(def function evaluate-and-compare-binary-emitting-forms/mixed (expected ast)
+(def function test-binary-emitting-forms/mixed (expected ast)
   (bind ((lambda-form `(lambda ()
                          (bind ((result))
                            (push (with-output-to-sequence (*test-binary-stream*)
