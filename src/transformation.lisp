@@ -85,6 +85,9 @@
     (set-funcallable-instance-function result thunk)
     result))
 
+(def macro as-delayed-emitting (&body body)
+  `(make-delayed-emitting (lambda () ,@body)))
+
 (def function wrap-emitting-forms (with-inline-emitting forms &optional declarations)
   (bind ((forms
           (append forms
@@ -93,13 +96,13 @@
                       '((values))))))
     (if with-inline-emitting
         (ensure-progn forms)
-        `(make-delayed-emitting (lambda ()
-                                  ,@declarations
-                                  ,@(if (and (consp forms)
-                                             (consp (first forms))
-                                             (eq 'progn (first (first forms))))
-                                        (cdr forms)
-                                        forms))))))
+        `(as-delayed-emitting
+           ,@declarations
+           ,@(if (and (consp forms)
+                      (consp (first forms))
+                      (eq 'progn (first (first forms))))
+                 (cdr forms)
+                 forms)))))
 
 (def function wrap-forms-with-bindings (bindings forms)
   (if bindings

@@ -41,6 +41,7 @@
      wrap-forms-with-bindings
      quoted-symbol?
      delayed-emitting
+     as-delayed-emitting
      wrap-runtime-delayed-transformation-form
      transformation-typecase
      transform
