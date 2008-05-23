@@ -54,27 +54,48 @@
                                                            :splice-character splice-character
                                                            :dispatched-quasi-quote-name dispatched-quasi-quote-name)))))
   ;; TODO ? (x js-emitting-form            '(js-emitting-form))
-  (x string-emitting-form (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
-                                               :output-prefix output-prefix
-                                               :output-postfix output-postfix
-                                               :indentation-width indentation-width)
-                                (make-instance 'quasi-quoted-string-to-string-emitting-form
-                                               :stream-variable-name stream-variable-name
-                                               :with-inline-emitting with-inline-emitting
-                                               :declarations declarations))
+  (x string-emitting-form (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                           stream-variable-name
+                           :binary #f
+                           :with-inline-emitting with-inline-emitting
+                           :indentation-width indentation-width
+                           :output-prefix output-prefix
+                           :output-postfix output-postfix
+                           :declarations declarations)
      (stream-variable-name))
-  (x binary-emitting-form (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
-                                               :output-prefix output-prefix
-                                               :output-postfix output-postfix
-                                               :indentation-width indentation-width)
-                                (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                                               :encoding encoding)
-                                (make-instance 'quasi-quoted-binary-to-binary-emitting-form
-                                               :stream-variable-name stream-variable-name
-                                               :with-inline-emitting with-inline-emitting
-                                               :declarations declarations))
+  (x binary-emitting-form (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                           stream-variable-name
+                           :binary #t
+                           :with-inline-emitting with-inline-emitting
+                           :indentation-width indentation-width
+                           :encoding encoding
+                           :output-prefix output-prefix
+                           :output-postfix output-postfix
+                           :declarations declarations)
      (stream-variable-name &key
                            (encoding *default-character-encoding*))))
+
+(def (function e) make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+    (stream-variable-name &key binary with-inline-emitting indentation-width (encoding :utf-8) output-prefix output-postfix declarations)
+  (if binary
+      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                           :output-prefix output-prefix
+                           :output-postfix output-postfix
+                           :indentation-width indentation-width)
+            (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
+                           :encoding encoding)
+            (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))
+      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                           :output-prefix output-prefix
+                           :output-postfix output-postfix
+                           :indentation-width indentation-width)
+            (make-instance 'quasi-quoted-string-to-string-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))))
 
 (def macro js-quasi-quote (toplevel? form transformation-pipeline &environment lexenv)
   (bind ((expanded-body (recursively-macroexpand-reader-stubs form lexenv))

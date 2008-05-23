@@ -32,42 +32,21 @@
 (def special-variable *js-stream*)
 (def special-variable *xml/js-stream*)
 
-(def function make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-    (stream-variable-name &key binary? with-inline-emitting indentation-width (encoding :utf-8) prefix postfix declarations)
-  (if binary?
-      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
-                           :output-prefix prefix
-                           :output-postfix postfix
-                           :indentation-width indentation-width)
-            (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                           :encoding encoding)
-            (make-instance 'quasi-quoted-binary-to-binary-emitting-form
-                           :stream-variable-name stream-variable-name
-                           :with-inline-emitting with-inline-emitting
-                           :declarations declarations))
-      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
-                           :output-prefix prefix
-                           :output-postfix postfix
-                           :indentation-width indentation-width)
-            (make-instance 'quasi-quoted-string-to-string-emitting-form
-                           :stream-variable-name stream-variable-name
-                           :with-inline-emitting with-inline-emitting
-                           :declarations declarations))))
-
 (def function setup-readtable-for-js-test (&key with-inline-emitting indentation-width (binary? #f)
-                                                (prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
-                                                (postfix #.(format nil "~%// ]]>~%</script>~%"))
+                                                (output-prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
+                                                (output-postfix #.(format nil "~%// ]]>~%</script>~%"))
                                                 (xml? #f) (output-stream-name (if xml? '*xml/js-stream* '*js-stream*)))
   (if binary?
       (progn
         (enable-quasi-quoted-js-syntax
          :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                   output-stream-name :binary? #t :with-inline-emitting with-inline-emitting
+                                   output-stream-name :binary #t :with-inline-emitting with-inline-emitting
                                    :indentation-width indentation-width)
          :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                          output-stream-name :binary? #t :with-inline-emitting with-inline-emitting
+                                          output-stream-name :binary #t :with-inline-emitting with-inline-emitting
                                           :indentation-width indentation-width
-                                          :prefix prefix :postfix postfix))
+                                          :output-prefix output-prefix
+                                          :output-postfix output-postfix))
         (when xml?
           (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
            output-stream-name
@@ -81,12 +60,17 @@
       (progn
         (enable-quasi-quoted-js-syntax
          :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                   output-stream-name :with-inline-emitting with-inline-emitting
+                                   output-stream-name
+                                   :binary #f
+                                   :with-inline-emitting with-inline-emitting
                                    :indentation-width indentation-width)
          :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                          output-stream-name :with-inline-emitting with-inline-emitting
+                                          output-stream-name
+                                          :binary #f
+                                          :with-inline-emitting with-inline-emitting
                                           :indentation-width indentation-width
-                                          :prefix prefix :postfix postfix))
+                                          :output-prefix output-prefix
+                                          :output-postfix output-postfix))
         (when xml?
           (enable-quasi-quoted-xml-to-string-emitting-form-syntax
            output-stream-name

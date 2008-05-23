@@ -86,26 +86,46 @@
                                                             :unquote-character unquote-character
                                                             :splice-character splice-character)))))
   ;; TODO ? (x xml-emitting-form           '(xml-emitting-form))
-  (x string-emitting-form (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
-                                               :text-node-escaping-method text-node-escaping-method
-                                               :indentation-width indentation-width)
-                                (make-instance 'quasi-quoted-string-to-string-emitting-form
-                                               :stream-variable-name stream-variable-name
-                                               :with-inline-emitting with-inline-emitting
-                                               :declarations declarations))
+  (x string-emitting-form (make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
+                           stream-variable-name
+                           :binary #f
+                           :indentation-width indentation-width
+                           :text-node-escaping-method text-node-escaping-method
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations)
      (stream-variable-name &key (text-node-escaping-method :per-character)))
-  (x binary-emitting-form (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
-                                               :text-node-escaping-method text-node-escaping-method
-                                               :indentation-width indentation-width)
-                                (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                                               :encoding encoding)
-                                (make-instance 'quasi-quoted-binary-to-binary-emitting-form
-                                               :stream-variable-name stream-variable-name
-                                               :with-inline-emitting with-inline-emitting
-                                               :declarations declarations))
+  (x binary-emitting-form (make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
+                           stream-variable-name
+                           :binary #t
+                           :indentation-width indentation-width
+                           :text-node-escaping-method text-node-escaping-method
+                           :encoding encoding
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations)
      (stream-variable-name &key
                            (text-node-escaping-method :per-character)
                            (encoding *default-character-encoding*))))
+
+(def (function e) make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
+    (stream-variable-name &key binary with-inline-emitting indentation-width
+                          (encoding :utf-8) declarations (text-node-escaping-method :per-character))
+  (if binary
+      (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
+                           :text-node-escaping-method text-node-escaping-method
+                           :indentation-width indentation-width)
+            (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
+                           :encoding encoding)
+            (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))
+      (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
+                           :text-node-escaping-method text-node-escaping-method
+                           :indentation-width indentation-width)
+            (make-instance 'quasi-quoted-string-to-string-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))))
 
 ;; the xml reader expands into a macro call of this macro. this way the implementation's normal lisp backquote
 ;; can work fine when mixed with the xml reader. this macro descends into its body as deep as it can, and
