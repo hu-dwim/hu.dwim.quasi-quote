@@ -6,7 +6,7 @@
 
 (in-package :cl-quasi-quote)
 
-(def (type e) ub8-vector ()
+(def type ub8-vector ()
   '(vector (unsigned-byte 8)))
 
 ;;;;;;;;;

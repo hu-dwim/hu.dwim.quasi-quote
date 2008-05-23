@@ -37,6 +37,7 @@
      make-string-of-spaces
      find-ancestor
      binary-position
+     ub8-vector
      vector-extend
      wrap-forms-with-bindings
      quoted-symbol?
