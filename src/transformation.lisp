@@ -17,23 +17,18 @@
      ,form))
 
 (def (class* e) transformation ()
-  ()
-  (:metaclass funcallable-standard-class))
+  ((transformer :type (or symbol function))))
 
-(def (definer e :available-flags "e") transformation (name supers slots handler)
+(def (definer e :available-flags "e") transformation (name supers slots transformer)
   `(progn
      (def (class* ,@(when (getf -options- :export) '(:export t))) ,name ,(if (find 'transformation supers)
                               supers
                               (append supers '(transformation)))
-       ,slots
-       (:metaclass funcallable-standard-class))
+       ,slots)
      (def method initialize-instance :after ((self ,name) &key)
        (bind ((-transformation- self))
          (declare (ignorable -transformation-))
-         (set-funcallable-instance-function self ,(if (symbolp handler)
-                                                      `(lambda (node)
-                                                         (,handler node))
-                                                      handler))))))
+         (setf (transformer-of self) ,transformer)))))
 
 (def method make-load-form ((self transformation) &optional environment)
   (make-load-form-saving-slots self :environment environment))
@@ -54,8 +49,7 @@
 (def class* lisp-form-emitting-transformation (transformation)
   ((with-inline-emitting #f :accessor with-inline-emitting? :documentation "WITH-INLINE-EMITTING means that the order of the creation of the syntax nodes at runtime is in sync with the expected order of these nodes in the output (i.e. nothing like <a () ,@(reverse (list <b> <c>))>). It enables an optimization: in this mode the write-sequence calls are not wrapped in closures but rather everything is emitted at the place where it is in the code.")
    (stream-variable-name)
-   (declarations '() :documentation "Add these declarations to the emitted lambda forms."))
-  (:metaclass funcallable-standard-class))
+   (declarations '() :documentation "Add these declarations to the emitted lambda forms.")))
 
 (def method compatible-transformations? and ((a lisp-form-emitting-transformation)
                                              (b lisp-form-emitting-transformation))
@@ -120,7 +114,7 @@
 (def function transform (node)
   (assert (typep node 'quasi-quote))
   (bind ((*transformation* (first (transformation-pipeline-of node))))
-    (funcall *transformation* node)))
+    (funcall (transformer-of *transformation*) node)))
 
 (def macro transformation-typecase (quasi-quote-node &body cases)
   (once-only (quasi-quote-node)

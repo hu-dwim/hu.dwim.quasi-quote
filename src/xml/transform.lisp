@@ -9,7 +9,7 @@
 (def (transformation e) quasi-quoted-xml-to-quasi-quoted-string ()
   ((text-node-escaping-method :per-character :type (member :cdata :per-character))
    (indentation-width nil))
-  transform-quasi-quoted-xml-to-quasi-quoted-string/element)
+  'transform-quasi-quoted-xml-to-quasi-quoted-string/element)
 
 (def special-variable *xml-indent-level* 0)
 

@@ -141,7 +141,7 @@
 
 (def (transformation e) quasi-quoted-binary-to-binary-emitting-form (lisp-form-emitting-transformation)
   ()
-  transform-quasi-quoted-binary-to-binary-emitting-form/toplevel)
+  'transform-quasi-quoted-binary-to-binary-emitting-form/toplevel)
 
 #+nil ; TODO
 (def function binary-position ()

@@ -98,7 +98,7 @@
 
 (def (transformation e) quasi-quoted-string-to-string-emitting-form (lisp-form-emitting-transformation)
   ()
-  transform-quasi-quoted-string-to-string-emitting-form)
+  'transform-quasi-quoted-string-to-string-emitting-form)
 
 (def function string-concatenate (elements)
   (bind ((*print-pretty* #f)
@@ -174,7 +174,7 @@
 
 (def (transformation e) quasi-quoted-string-to-quasi-quoted-binary ()
   ((encoding *default-character-encoding*))
-  transform-quasi-quoted-string-to-quasi-quoted-binary)
+  'transform-quasi-quoted-string-to-quasi-quoted-binary)
 
 (def method compatible-transformations? and ((a quasi-quoted-string-to-quasi-quoted-binary)
                                              (b quasi-quoted-string-to-quasi-quoted-binary))

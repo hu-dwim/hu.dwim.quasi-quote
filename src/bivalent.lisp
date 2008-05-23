@@ -98,7 +98,7 @@
 
 (def (transformation e) quasi-quoted-bivalent-to-bivalent-emitting-form (lisp-form-emitting-transformation)
   ()
-  transform-quasi-quoted-bivalent-to-bivalent-emitting-form)
+  'transform-quasi-quoted-bivalent-to-bivalent-emitting-form)
 
 (def function write-quasi-quoted-bivalent (node stream)
   (etypecase node
@@ -143,7 +143,7 @@
 
 (def (transformation e) quasi-quoted-bivalent-to-quasi-quoted-binary (transformation)
   ((encoding *default-character-encoding*))
-  transform-quasi-quoted-bivalent-to-quasi-quoted-binary)
+  'transform-quasi-quoted-bivalent-to-quasi-quoted-binary)
 
 (def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node)
   (transformation-typecase node
