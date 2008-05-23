@@ -31,12 +31,14 @@
 
 (def special-variable *js-stream*)
 
-(def function setup-readtable-for-js-test (inline? &optional (binary? #f))
+(def function setup-readtable-for-js-test (inline? &key (binary? #f) prefix postfix)
   (if binary?
       (progn
         (enable-quasi-quoted-js-to-binary-emitting-form-syntax
          '*js-stream*
          :encoding :utf-8
+         :output-prefix prefix
+         :output-postfix postfix
          :with-inline-emitting inline?)
         (enable-quasi-quoted-string-to-binary-emitting-form-syntax
          '*js-stream*
@@ -45,6 +47,8 @@
       (progn
         (enable-quasi-quoted-js-to-string-emitting-form-syntax
          '*js-stream*
+         :output-prefix prefix
+         :output-postfix postfix
          :with-inline-emitting inline?)
         (enable-quasi-quoted-string-to-string-emitting-form-syntax
          '*js-stream*
@@ -54,15 +58,15 @@
   (:test-function   test-js-emitting-forms
    :readtable-setup (setup-readtable-for-js-test #f))
   (:test-function   test-js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test #f #t))
+   :readtable-setup (setup-readtable-for-js-test #f :binary? #t))
   (:test-function   test-js-emitting-forms
    :readtable-setup (setup-readtable-for-js-test #t))
   (:test-function   test-js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test #t #t)))
+   :readtable-setup (setup-readtable-for-js-test #t :binary? #t)))
 
-(def function read-from-string-with-js-syntax (string &optional (with-inline-emitting #f))
+(def function read-from-string-with-js-syntax (string &optional (with-inline-emitting #f) prefix  postfix)
   (with-local-readtable
-    (setup-readtable-for-js-test with-inline-emitting)
+    (setup-readtable-for-js-test with-inline-emitting :prefix prefix :postfix postfix)
     (read-from-string string)))
 
 (def function pprint-js (string &optional (with-inline-emitting #f))

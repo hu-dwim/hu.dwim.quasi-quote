@@ -262,12 +262,20 @@
              #\]))))))
 
 (def (class* e) quasi-quoted-js-to-quasi-quoted-string (transformation)
-  ((indentation-width nil))
+  ((indentation-width nil)
+   (output-prefix nil)
+   (output-postfix nil))
   (:metaclass funcallable-standard-class))
 
 (def constructor quasi-quoted-js-to-quasi-quoted-string
   (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-js-to-quasi-quoted-string node))))
+                                            (bind ((result (transform-quasi-quoted-js-to-quasi-quoted-string node)))
+                                              (assert (typep result 'string-quasi-quote))
+                                              (awhen (output-prefix-of self)
+                                                (setf (body-of result) (list it (body-of result))))
+                                              (awhen (output-postfix-of self)
+                                                (setf (body-of result) (list (body-of result) it)))
+                                              result))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))

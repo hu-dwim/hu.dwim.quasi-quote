@@ -34,6 +34,8 @@
                                                &key
                                                (with-inline-emitting #f)
                                                (declarations '())
+                                               (output-prefix nil)
+                                               (output-postfix nil)
                                                (indentation-width nil)
                                                (start-character #\<)
                                                (end-character #\>)
@@ -49,6 +51,8 @@
                                                            :dispatched-quasi-quote-name dispatched-quasi-quote-name)))))
   ;; TODO ? (x js-emitting-form            '(js-emitting-form))
   (x string-emitting-form (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                                               :output-prefix output-prefix
+                                               :output-postfix output-postfix
                                                :indentation-width indentation-width)
                                 (make-instance 'quasi-quoted-string-to-string-emitting-form
                                                :stream-variable-name stream-variable-name
@@ -56,6 +60,8 @@
                                                :declarations declarations))
      (stream-variable-name))
   (x binary-emitting-form (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                                               :output-prefix output-prefix
+                                               :output-postfix output-postfix
                                                :indentation-width indentation-width)
                                 (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
                                                :encoding encoding)
