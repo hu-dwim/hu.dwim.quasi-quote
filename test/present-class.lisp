@@ -15,16 +15,13 @@
 (in-package :cl-present-class)
 
 (enable-sharp-boolean-syntax)
+(enable-quasi-quoted-xml-to-binary-emitting-form-syntax '*http-stream*)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Turn on special syntax
-
-(defvar *transformation*
-  '(quasi-quoted-string ;; may (quasi-quoted-string :indent 2)
-    (quasi-quoted-binary :encoding :utf-8)
-    (binary-emitting-form :stream-name *http-stream* :with-inline-emitting #t)))
-
-(enable-quasi-quoted-xml-syntax :transformation *transformation*)
+;; tell Swank which readtable to use when C-c C-c'ing
+(cl-syntax-sugar:register-readtable-for-swank
+ "CL-PRESENT-CLASS" (lambda ()
+                      (enable-sharp-boolean-syntax)
+                      (enable-quasi-quoted-xml-to-binary-emitting-form-syntax '*http-stream*)))
 
 (defvar *http-stream*)
 
@@ -128,7 +125,7 @@
 (defun present-class-to-file (&optional (class (find-class 'standard-object)) file-name)
   (with-open-file (*http-stream* (or file-name (concatenate 'string  "/tmp/" (class-file-name class)))
                                  :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede)
-    (emit *transformation* (present-class class))))
+    (emit (present-class class))))
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Present on the web
@@ -142,7 +139,7 @@
          (*http-stream* (ucw::network-stream response)))
     (setf (ucw::response-managed-p response) nil)
     (ucw::send-headers response)
-    (emit *transformation* (present-class class))))
+    (emit (present-class class))))
 
 (defun start-server ()
   (ucw:create-server
