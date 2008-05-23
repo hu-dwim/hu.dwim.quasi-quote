@@ -71,50 +71,50 @@
     (is (eq str (escape-as-xml str)))))
 
 (def xml-test test/xml/escaping/2 ()
-  ("<element attribute=\"&lt;1&gt;\"/>"
+  (｢<element attribute="&lt;1&gt;"/>｣
    ｢<element (,@(list (make-xml-attribute "attribute" "<1>")))>｣)
-  ("<element attribute=\"&lt;1&gt;\"/>"
+  (｢<element attribute="&lt;1&gt;"/>｣
    ｢<element (attribute "<1>")>｣)
-  ("<element>&lt;tunneled&gt;42&lt;/tunneled&gt;</element>"
+  (｢<element>&lt;tunneled&gt;42&lt;/tunneled&gt;</element>｣
    ｢<element () ,(make-xml-text "<tunneled>42</tunneled>")>｣))
 
 (def xml-test test/xml/simple ()
-  ("<element/>"
+  (｢<element/>｣
    ｢<element>｣)
-  ("<element attribute=\"1\"/>"
+  (｢<element attribute="1"/>｣
    ｢<element (:attribute 1)>｣)
-  ("<element attribute1=\"1\" attribute2=\"2\"/>"
+  (｢<element attribute1="1" attribute2="2"/>｣
    ｢<element (:attribute1 "1" :attribute2 "2")>｣)
-  ("<element>Hello</element>"
+  (｢<element>Hello</element>｣
    ｢<element "Hello">｣)
   ;; test that attribute list is optional
-  ("<element><child/></element>"
+  (｢<element><child/></element>｣
    ｢<element <child>>｣)
-  ("<element><child/></element>"
+  (｢<element><child/></element>｣
    ｢<element () <child>>｣))
 
 (def xml-test test/xml/simple-dispatched ()
-  ("<element/>"
+  (｢<element/>｣
    ｢`xml(element)｣)
-  ("<element attribute=\"1\"/>"
+  (｢<element attribute="1"/>｣
    ｢`xml(element (:attribute 1))｣)
-  ("<element attribute1=\"1\" attribute2=\"2\"/>"
+  (｢<element attribute1="1" attribute2="2"/>｣
    ｢`xml(element (:attribute1 "1" :attribute2 "2"))｣)
-  ("<element>Hello</element>"
+  (｢<element>Hello</element>｣
    ｢`xml(element () "Hello")｣)
-  ("<element><child/></element>"
+  (｢<element><child/></element>｣
    ｢`xml(element () (child))｣)
-  ("<element><child/></element>"
+  (｢<element><child/></element>｣
    ｢`xml(element () child)｣)
-  ("&lt;escaped&gt;"
+  (｢&lt;escaped&gt;｣
    ｢`xml "<escaped>"｣))
 
 (def xml-test test/xml/element-unquoting-dispatched ()
-  ("<element/>"
+  (｢<element/>｣
    ｢`xml(,"element")｣)
-  ("<element><nested/></element>"
+  (｢<element><nested/></element>｣
    ｢`xml(element () ,(make-xml-element "nested"))｣)
-  ("<element><child1/><child2/><child3/><child4 attribute1=\"1\"/><child5/></element>"
+  (｢<element><child1/><child2/><child3/><child4 attribute1="1"/><child5/></element>｣
    ｢`xml(element ()
           (child1)
           ,(make-xml-element "child2")
@@ -123,25 +123,25 @@
           (child5))｣))
 
 (def xml-test test/xml/element-unquoting ()
-  ("<element/>"
+  (｢<element/>｣
    ｢<,"element">｣)
-  ("<element><nested/></element>"
+  (｢<element><nested/></element>｣
    ｢<element
      ,(make-xml-element "nested")>｣)
-  ("<element><child1/><child2/><child3/><child4 attribute1=\"1\"/><child5/></element>"
+  (｢<element><child1/><child2/><child3/><child4 attribute1="1"/><child5/></element>｣
    ｢<element
      <child1>
      ,(make-xml-element "child2")
      ,@(list (make-xml-element "child3")
              (make-xml-element "child4" (list (make-xml-attribute "attribute1" "1"))))
      <child5>>｣)
-  ("<a>foobar</a>"
+  (｢<a>foobar</a>｣
    ｢<a "foo" ,"bar">｣))
 
 (def xml-test test/xml/attribute-unquoting ()
-  ("<element attribute=\"1\"/>"
+  (｢<element attribute="1"/>｣
    ｢<element (,@(list (make-xml-attribute "attribute" "1")))>｣)
-  ("<element attribute1=\"1\" attribute2=\"2\" attribute3=\"3\" attribute4=\"4\" aTTriUte5=\"5\" attribute6=\"6\"/>"
+  (｢<element attribute1="1" attribute2="2" attribute3="3" attribute4="4" aTTriUte5="5" attribute6="6"/>｣
    ｢<element (attribute1 1
               ,(make-xml-attribute "attribute2" "2")
               ,@(list (make-xml-attribute "attribute3" "3")
@@ -151,7 +151,7 @@
 
 (def xml-test test/xml/case-sensitivity ()
    ;; the xml reader is case sensitive, but unquoted regions are returning to the toplevel readtable's readtable-case
-  ("<eLement AttributE1=\"1\"><ElemenT/><fOOO baR=\"42\"/></eLement>"
+  (｢<eLement AttributE1="1"><ElemenT/><fOOO baR="42"/></eLement>｣
    ｢<eLement (AttributE1 1)
     ,@(progn
        (list
@@ -159,13 +159,13 @@
         <fOOO (baR 42)>))>｣))
 
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote1 ()
-  ("<taggg attribute=\"atttr\"><foo/></taggg>"
+  (｢<taggg attribute="atttr"><foo/></taggg>｣
    ｢(macrolet ((nester (tag-name attribute-value &body body)
                  `<,,tag-name (attribute ,,attribute-value) ,,@body>))
       (nester "taggg" "atttr" <foo>))｣))
 
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
-  ("<html><body><foo/><bar/></body></html>"
+  (｢<html><body><foo/><bar/></body></html>｣
    ｢(macrolet ((nester (&body body)
                  ;; first ,@ is for xml, the ,@body is for the lisp quasi-quote
                  `<html <body ,@(list ,@body)>>))
@@ -190,11 +190,11 @@
   (is (equal '(< a b) (read-from-string "(< a b)"))))
 
 (def xml-test test/xml/spliced-attribute-list ()
-  ("<element ok=\"1\"/>"
+  (｢<element ok="1"/>｣
    ｢<element (,@(when (< 3 4) (list (make-xml-attribute "ok" "1"))))>｣))
 
 (def xml-test/normal test/xml/nested-unquoting ()
-  ("<a><b><c><d/></c></b></a>"
+  (｢<a><b><c><d/></c></b></a>｣
    ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣))
 
 (def xml-test test/xml/mixed ()
