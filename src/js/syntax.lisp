@@ -12,11 +12,15 @@
                                      (unquote-character #\,)
                                      (splice-character #\@)
                                      (transformation-pipeline nil)
+                                     (nested-transformation-pipeline nil)
                                      (dispatched-quasi-quote-name "js"))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     `(js-quasi-quote ,(= 1 *quasi-quote-depth*) ,body ,transformation-pipeline))
+     `(js-quasi-quote ,(= 1 *quasi-quote-depth*) ,body ,(if (= 1 *quasi-quote-depth*)
+                                                            transformation-pipeline
+                                                            (or nested-transformation-pipeline
+                                                                transformation-pipeline))))
    (lambda (body spliced?)
      `(js-unquote ,body ,spliced?))
    :start-character start-character
