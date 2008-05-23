@@ -139,13 +139,9 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def (class* e) quasi-quoted-binary-to-binary-emitting-form (lisp-form-emitting-transformation)
+(def (transformation e) quasi-quoted-binary-to-binary-emitting-form (lisp-form-emitting-transformation)
   ()
-  (:metaclass funcallable-standard-class))
-
-(def constructor quasi-quoted-binary-to-binary-emitting-form
-  (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-binary-to-binary-emitting-form/toplevel node))))
+  transform-quasi-quoted-binary-to-binary-emitting-form/toplevel)
 
 #+nil ; TODO
 (def function binary-position ()

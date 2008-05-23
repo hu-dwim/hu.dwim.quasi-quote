@@ -44,6 +44,7 @@
      wrap-runtime-delayed-transformation-form
      transformation-typecase
      transform
+     -transformation-
      transformation-pipeline
      transformation-pipeline-of
      *transformation*

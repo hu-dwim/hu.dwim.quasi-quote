@@ -20,6 +20,24 @@
   ()
   (:metaclass funcallable-standard-class))
 
+(def (definer e :available-flags "e") transformation (name supers slots handler)
+  `(progn
+     (def (class* ,@(when (getf -options- :export) '(:export t))) ,name ,(if (find 'transformation supers)
+                              supers
+                              (append supers '(transformation)))
+       ,slots
+       (:metaclass funcallable-standard-class))
+     (def method initialize-instance :after ((self ,name) &key)
+       (bind ((-transformation- self))
+         (declare (ignorable -transformation-))
+         (set-funcallable-instance-function self ,(if (symbolp handler)
+                                                      `(lambda (node)
+                                                         (,handler node))
+                                                      handler))))))
+
+(def method make-load-form ((self transformation) &optional environment)
+  (make-load-form-saving-slots self environment))
+
 (def generic compatible-transformations? (a b)
   (:method-combination and)
   (:method and (a b)

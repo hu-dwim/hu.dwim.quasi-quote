@@ -96,13 +96,9 @@
 ;;;;;;;;;;;;;
 ;;; Transform
 
-(def (class* e) quasi-quoted-bivalent-to-bivalent-emitting-form (lisp-form-emitting-transformation)
+(def (transformation e) quasi-quoted-bivalent-to-bivalent-emitting-form (lisp-form-emitting-transformation)
   ()
-  (:metaclass funcallable-standard-class))
-
-(def constructor quasi-quoted-bivalent-to-bivalent-emitting-form
-  (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-bivalent-to-bivalent-emitting-form node))))
+  transform-quasi-quoted-bivalent-to-bivalent-emitting-form)
 
 (def function write-quasi-quoted-bivalent (node stream)
   (etypecase node
@@ -145,13 +141,9 @@
 
 
 
-(def (class* e) quasi-quoted-bivalent-to-quasi-quoted-binary (transformation)
+(def (transformation e) quasi-quoted-bivalent-to-quasi-quoted-binary (transformation)
   ((encoding *default-character-encoding*))
-  (:metaclass funcallable-standard-class))
-
-(def constructor quasi-quoted-bivalent-to-quasi-quoted-binary
-  (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-bivalent-to-quasi-quoted-binary node))))
+  transform-quasi-quoted-bivalent-to-quasi-quoted-binary)
 
 (def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node)
   (transformation-typecase node

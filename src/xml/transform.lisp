@@ -6,14 +6,10 @@
 
 (in-package :cl-quasi-quote-xml)
 
-(def class* quasi-quoted-xml-to-quasi-quoted-string (transformation)
+(def (transformation e) quasi-quoted-xml-to-quasi-quoted-string ()
   ((text-node-escaping-method :per-character :type (member :cdata :per-character))
    (indentation-width nil))
-  (:metaclass funcallable-standard-class))
-
-(def constructor quasi-quoted-xml-to-quasi-quoted-string
-  (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-xml-to-quasi-quoted-string/element node))))
+  transform-quasi-quoted-xml-to-quasi-quoted-string/element)
 
 (def special-variable *xml-indent-level* 0)
 

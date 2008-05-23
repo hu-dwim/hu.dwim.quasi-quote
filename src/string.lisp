@@ -96,13 +96,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to binary-emitting-form
 
-(def (class* e) quasi-quoted-string-to-string-emitting-form (lisp-form-emitting-transformation)
+(def (transformation e) quasi-quoted-string-to-string-emitting-form (lisp-form-emitting-transformation)
   ()
-  (:metaclass funcallable-standard-class))
-
-(def constructor quasi-quoted-string-to-string-emitting-form
-  (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-string-to-string-emitting-form node))))
+  transform-quasi-quoted-string-to-string-emitting-form)
 
 (def function string-concatenate (elements)
   (bind ((*print-pretty* #f)
@@ -176,17 +172,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to binary-quasi-quote
 
-(def (class* e) quasi-quoted-string-to-quasi-quoted-binary (transformation)
+(def (transformation e) quasi-quoted-string-to-quasi-quoted-binary ()
   ((encoding *default-character-encoding*))
-  (:metaclass funcallable-standard-class))
+  transform-quasi-quoted-string-to-quasi-quoted-binary)
 
 (def method compatible-transformations? and ((a quasi-quoted-string-to-quasi-quoted-binary)
                                              (b quasi-quoted-string-to-quasi-quoted-binary))
   (eql (encoding-of a) (encoding-of b)))
-
-(def constructor quasi-quoted-string-to-quasi-quoted-binary
-  (set-funcallable-instance-function self (lambda (node)
-                                            (transform-quasi-quoted-string-to-quasi-quoted-binary node))))
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node)
   (bind ((encoding (encoding-of *transformation*)))
