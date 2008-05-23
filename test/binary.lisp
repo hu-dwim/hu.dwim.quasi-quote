@@ -36,8 +36,7 @@
 
 (def function read-from-string-with-binary-syntax (string)
   (with-local-readtable
-    (set-ub8-reader-in-readtable)
-    (enable-quasi-quoted-binary-syntax :transformation-pipeline *pipeline-to-binary-emitting-form-with-inline-emitting*)
+    (setup-readtable-for-binary-test #t)
     (read-from-string string)))
 
 (def function pprint-binary (string)

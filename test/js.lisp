@@ -30,47 +30,105 @@
           result)))))
 
 (def special-variable *js-stream*)
+(def special-variable *xml/js-stream*)
 
-(def function setup-readtable-for-js-test (inline? &key (binary? #f) prefix postfix)
+(def function make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+    (stream-variable-name &key binary? with-inline-emitting indentation-width (encoding :utf-8) prefix postfix declarations)
+  (if binary?
+      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                           :output-prefix prefix
+                           :output-postfix postfix
+                           :indentation-width indentation-width)
+            (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
+                           :encoding encoding)
+            (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))
+      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
+                           :output-prefix prefix
+                           :output-postfix postfix
+                           :indentation-width indentation-width)
+            (make-instance 'quasi-quoted-string-to-string-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))))
+
+(def function setup-readtable-for-js-test (&key with-inline-emitting indentation-width (binary? #f)
+                                                (prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
+                                                (postfix #.(format nil "~%// ]]>~%</script>~%"))
+                                                (xml? #f) (output-stream-name (if xml? '*xml/js-stream* '*js-stream*)))
   (if binary?
       (progn
-        (enable-quasi-quoted-js-to-binary-emitting-form-syntax
-         '*js-stream*
-         :encoding :utf-8
-         :output-prefix prefix
-         :output-postfix postfix
-         :with-inline-emitting inline?)
+        (enable-quasi-quoted-js-syntax
+         :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                   output-stream-name :binary? #t :with-inline-emitting with-inline-emitting
+                                   :indentation-width indentation-width)
+         :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                          output-stream-name :binary? #t :with-inline-emitting with-inline-emitting
+                                          :indentation-width indentation-width
+                                          :prefix prefix :postfix postfix))
+        (when xml?
+          (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
+           output-stream-name
+           :encoding :utf-8
+           :indentation-width indentation-width
+           :with-inline-emitting with-inline-emitting))
         (enable-quasi-quoted-string-to-binary-emitting-form-syntax
-         '*js-stream*
+         output-stream-name
          :encoding :utf-8
-         :with-inline-emitting inline?))
+         :with-inline-emitting with-inline-emitting))
       (progn
-        (enable-quasi-quoted-js-to-string-emitting-form-syntax
-         '*js-stream*
-         :output-prefix prefix
-         :output-postfix postfix
-         :with-inline-emitting inline?)
+        (enable-quasi-quoted-js-syntax
+         :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                   output-stream-name :with-inline-emitting with-inline-emitting
+                                   :indentation-width indentation-width)
+         :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                          output-stream-name :with-inline-emitting with-inline-emitting
+                                          :indentation-width indentation-width
+                                          :prefix prefix :postfix postfix))
+        (when xml?
+          (enable-quasi-quoted-xml-to-string-emitting-form-syntax
+           output-stream-name
+           :indentation-width indentation-width
+           :with-inline-emitting with-inline-emitting))
         (enable-quasi-quoted-string-to-string-emitting-form-syntax
-         '*js-stream*
-         :with-inline-emitting inline?))))
+         output-stream-name
+         :with-inline-emitting with-inline-emitting))))
 
 (def syntax-test-definer js-test
   (:test-function   test-js-emitting-forms
-   :readtable-setup (setup-readtable-for-js-test #f))
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f))
   (:test-function   test-js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test #f :binary? #t))
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :binary? #t))
   (:test-function   test-js-emitting-forms
-   :readtable-setup (setup-readtable-for-js-test #t))
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t))
   (:test-function   test-js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test #t :binary? #t)))
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :binary? #t)))
 
-(def function read-from-string-with-js-syntax (string &optional (with-inline-emitting #f) prefix  postfix)
+(def syntax-test-definer xml/js-test
+  (:test-function   test-xml/js-emitting-forms
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :xml? #t))
+  (:test-function   test-xml/js-emitting-forms/binary
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :xml? #t :binary? #t))
+  (:test-function   test-xml/js-emitting-forms
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :xml? #t))
+  (:test-function   test-xml/js-emitting-forms/binary
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :xml? #t :binary? #t)))
+
+(def function read-from-string-with-xml/js-syntax (string &optional (with-inline-emitting #f) (binary? #f))
   (with-local-readtable
-    (setup-readtable-for-js-test with-inline-emitting :prefix prefix :postfix postfix)
+    (setup-readtable-for-js-test :with-inline-emitting with-inline-emitting :xml? #t :binary? binary?)
     (read-from-string string)))
 
-(def function pprint-js (string &optional (with-inline-emitting #f))
-  (pprint (macroexpand (read-from-string-with-js-syntax string with-inline-emitting))))
+(def function pprint-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
+  (pprint (macroexpand (read-from-string-with-xml/js-syntax string with-inline-emitting binary?))))
+
+(def function emit-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
+  (with-output-to-string (*xml/js-stream*)
+    (emit
+     (eval
+      (read-from-string-with-xml/js-syntax string with-inline-emitting binary?)))))
 
 (def function js-result-equal (a b)
   (if (and (typep a 'float)
@@ -96,6 +154,23 @@
                          (eval-js
                           (octets-to-string (funcall (compile nil lambda-form))
                                             :encoding :utf-8))))))
+
+(def function test-xml/js-emitting-forms (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-string (*xml/js-stream*)
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (string= expected
+                 (funcall (compile nil lambda-form))))))
+
+(def function test-xml/js-emitting-forms/binary (expected ast)
+  (bind ((lambda-form `(lambda ()
+                         (with-output-to-sequence (*xml/js-stream* :element-type '(unsigned-byte 8))
+                           (emit ,ast)))))
+    ;;(print (macroexpand-all lambda-form))
+    (is (string= expected
+                 (octets-to-string (funcall (compile nil lambda-form))
+                                   :encoding :utf-8)))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; the tests finally
@@ -125,13 +200,6 @@
            (setf x ,(+ 2 2))
            (return 3))
          (print (setf x (+ 2 (,'alma) x 5))))｣))
-
-(def js-test test/js/mixed-with-string-quasi-quote ()
-  (42
-   ｢`js(progn
-         ;; this way you can inject untransformed (not even escaped) text into the js output
-         `str("a = 22")
-         (print (+ `str("a") 10 ,10)))｣))
 
 (def js-test test/js/expressions ()
   ("beforexafter"
@@ -163,7 +231,7 @@
 
 (def test test/js/array-errors ()
   (flet ((transform (string)
-           (transform (macroexpand (read-from-string-with-js-syntax string)))))
+           (transform (macroexpand (read-from-string-with-xml/js-syntax string)))))
     (signals js-compile-error
       (transform ｢`js(elt (vector 10 20) 1 2 3 4 5)｣))
     (signals js-compile-error
@@ -177,16 +245,35 @@
          (print (slot-value (create :a 1 :b 2) a)))｣))
 
 (def js-test test/js/defun ()
-  (3
-   ｢`js(progn
-         (defun x (a &key (b 42) &allow-other-keys)
-           (return (+ a b)))
-         (print (x 1 :b 2)))｣))
+  (with-expected-failures
+    (3
+     ｢`js(progn
+           (defun x (a &key (b 42) &allow-other-keys)
+             (return (+ a b)))
+           (print (x 1 :b 2)))｣)))
 
 (def test test/js/escaping ()
   (let ((str "alma"))
     ;; return the input if there's no need for escaping
     (is (eq str (escape-as-js-string str)))))
+
+(def js-test test/js/mixed-with-string-quasi-quote ()
+  (42
+   ｢`js(progn
+         ;; this way you can inject untransformed (not even escaped) text into the js output
+         `str("a = 22")
+         (print (+ `str("a") 10 ,10)))｣))
+
+(def xml/js-test test/js/mixed-with-xml ()
+  ("<body>
+<script>
+// <![CDATA[
+\(2 + 2)
+// ]]>
+</script>
+</body>"
+   ｢<body
+      `js(+ 2 2)>｣))
 
 ;; leave it at the end, because it screws up emacs coloring
 (def js-test test/js/string-quoting ()
@@ -194,3 +281,17 @@
    ｢`js(print "alma")｣)
   (｢al'm"a｣
    ｢`js(print "al'm\"a")｣))
+
+#|
+REPL demos
+
+(bind ((code ｢<body
+               ,(concatenate 'string "some runtime" " generated <escaped> text")
+               `str("***<put some unescaped text here!>***")
+               ;; let's insert some JavaScript here, with some unquoted runtime part
+               `js(print (+ 2 ,(+ 20 20))
+                  `str(#\Newline "***<put one more unescaped text here!>***"))>｣))
+  (pprint-xml/js code t)
+  (emit-xml/js code))
+
+|#
