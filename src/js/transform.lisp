@@ -281,16 +281,16 @@
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
-  (etypecase node
-    (delayed-emitting node)
+  (transformation-typecase node
     ((or number string character) (lisp-literal-to-js-literal node))
     (walked-form    (transform-quasi-quoted-js-to-quasi-quoted-string* node))
-    (side-effect    node)
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
-    (js-quasi-quote (make-string-quasi-quote (rest (transformation-pipeline-of node))
-                                             (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))))
-    (string-quasi-quote node)
-    (quasi-quote    (transform node))))
+    (js-quasi-quote (if (compatible-transformation-pipelines? *transformation-pipeline*
+                                                              (transformation-pipeline-of node))
+                        (make-string-quasi-quote (rest (transformation-pipeline-of node))
+                                                 (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node)))
+                        (transform node)))
+    (string-quasi-quote node)))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/unquote (node)
   (assert (typep node 'js-unquote))

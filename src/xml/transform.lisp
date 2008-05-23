@@ -39,8 +39,7 @@
                          (list (make-string-of-spaces (* it *xml-indent-level*)))))
          (indent-new-line (when indent-level
                             '(#\NewLine))))
-    (etypecase node
-      (function node)
+    (transformation-typecase node
       (string (escape-as-xml node))
       (xml-element
        (bind ((attributes (attributes-of node))
@@ -49,7 +48,6 @@
                                   (xml-unquote (make-string-unquote
                                                 (wrap-runtime-delayed-transformation-form
                                                  (form-of name))))
-                                  (unquote name)
                                   (string name)))
               (children (children-of node)))
          `(,@indent-level
@@ -86,8 +84,11 @@
                      (:cdata (wrap-with-xml-quote content))
                      (:per-character (escape-as-xml content)))))))
       (xml-quasi-quote
-       (make-string-quasi-quote (rest (transformation-pipeline-of node))
-                                (transform-quasi-quoted-xml-to-quasi-quoted-string/element (body-of node))))
+       (if (compatible-transformation-pipelines? *transformation-pipeline*
+                                                 (transformation-pipeline-of node))
+           (make-string-quasi-quote (rest (transformation-pipeline-of node))
+                                    (transform-quasi-quoted-xml-to-quasi-quoted-string/element (body-of node)))
+           (transform node)))
       (xml-unquote
        (bind ((spliced? (spliced-p node)))
          (make-string-unquote
@@ -106,13 +107,10 @@
                      node (lambda (node)
                             (transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))))))
           spliced?)))
-      (string-quasi-quote node)
-      ;; TODO ? (unquote (transform 'quasi-quoted-string node))
-      (side-effect node))))
+      (string-quasi-quote node))))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
-  (etypecase node
-    (function node)
+  (transformation-typecase node
     (xml-attribute
      (bind ((name (name-of node))
             (value (value-of node)))
@@ -148,6 +146,5 @@
                ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                  node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))))
         spliced?)))
-    (string-quasi-quote node)
-    (quasi-quote (transform node))))
+    (string-quasi-quote node)))
 

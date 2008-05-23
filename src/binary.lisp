@@ -184,7 +184,7 @@
       (side-effect (form-of node)))))
 
 (def function transform-quasi-quoted-binary-to-binary-emitting-form/toplevel (input)
-  (etypecase input
+  (transformation-typecase input
     (binary-quasi-quote
      (wrap-emitting-forms (with-inline-emitting? *transformation*)
                           (mapcar 'make-quasi-quoted-binary-emitting-form

@@ -115,6 +115,11 @@
        (member (car form) '(cl:lambda |lambda|))
        #t))
 
+#+nil
+(defun undefined-js-reference-handler (type name)
+  (unless (member name '())
+    (cl-walker::undefined-reference-handler type name)))
+
 (def function walk-js (form &optional lexenv)
   (with-walker-configuration (;;:undefined-reference-handler 'undefined-js-reference-handler
                               :function-name?      'js-function-name?
@@ -178,11 +183,6 @@
                                 (if (quoted-symbol? slot-name)
                                     (second slot-name)
                                     (walk-form slot-name node env))))))
-
-#+nil
-(defun undefined-js-reference-handler (type name)
-  (unless (member name '())
-    (cl-walker::undefined-reference-handler type name)))
 
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...

@@ -54,7 +54,7 @@
 ;;; Transform
 
 (def function transform-quasi-quoted-lisp-to-lisp-emitting-form (input &key (toplevel #t))
-  (etypecase input
+  (transformation-typecase input
     (lisp-quasi-quote
      (labels ((process (node)
                 (etypecase node

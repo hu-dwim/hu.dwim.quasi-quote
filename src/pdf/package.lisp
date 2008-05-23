@@ -19,7 +19,6 @@
 
 (in-package :cl-quasi-quote-pdf)
 
-(cl-quasi-quote::import-duplicate-symbols)
 (cl-quasi-quote::import-semi-external-quasi-quote-symbols)
 
 (defun transform-function-definer-options (options)

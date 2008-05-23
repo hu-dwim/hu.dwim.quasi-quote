@@ -128,7 +128,7 @@
       (side-effect (form-of node)))))
 
 (def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input)
-  (etypecase input
+  (transformation-typecase input
     (bivalent-quasi-quote
      (wrap-emitting-forms (with-inline-emitting? *transformation*)
                           (mapcar 'make-quasi-quoted-bivalent-emitting-form
@@ -154,7 +154,7 @@
                                             (transform-quasi-quoted-bivalent-to-quasi-quoted-binary node))))
 
 (def function transform-quasi-quoted-bivalent-to-quasi-quoted-binary (node)
-  (etypecase node
+  (transformation-typecase node
     (list
      (mapcar 'transform-quasi-quoted-bivalent-to-quasi-quoted-binary
              node))
@@ -170,8 +170,6 @@
        `(transform-quasi-quoted-bivalent-to-quasi-quoted-binary
          ,(map-filtered-tree (form-of node) 'bivalent-quasi-quote
                              'transform-quasi-quoted-bivalent-to-quasi-quoted-binary)))))
-    (side-effect node)
-    (delayed-emitting node)
     ;; TODO add tests that trigger it or delete them
     #+nil(quasi-quote
      (if (typep node 'binary-quasi-quote)

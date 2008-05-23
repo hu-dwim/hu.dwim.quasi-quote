@@ -140,7 +140,7 @@
                        #'string-concatenate))
 
 (def function transform-quasi-quoted-string-to-string-emitting-form (input)
-  (etypecase input
+  (transformation-typecase input
     (string-quasi-quote
      (wrap-emitting-forms (with-inline-emitting? *transformation*)
                           (mapcar 'make-quasi-quoted-string-emitting-form
@@ -180,13 +180,17 @@
   ((encoding *default-character-encoding*))
   (:metaclass funcallable-standard-class))
 
+(def method compatible-transformations? and ((a quasi-quoted-string-to-quasi-quoted-binary)
+                                             (b quasi-quoted-string-to-quasi-quoted-binary))
+  (eql (encoding-of a) (encoding-of b)))
+
 (def constructor quasi-quoted-string-to-quasi-quoted-binary
   (set-funcallable-instance-function self (lambda (node)
                                             (transform-quasi-quoted-string-to-quasi-quoted-binary node))))
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node)
   (bind ((encoding (encoding-of *transformation*)))
-    (etypecase node
+    (transformation-typecase node
       (list
        (mapcar (lambda (child)
                  (transform-quasi-quoted-string-to-quasi-quoted-binary child))
@@ -202,6 +206,4 @@
          `(transform-quasi-quoted-string-to-quasi-quoted-binary
            ,(map-filtered-tree (form-of node) 'string-quasi-quote
                                (lambda (child)
-                                 (transform-quasi-quoted-string-to-quasi-quoted-binary child)))))))
-      (delayed-emitting node)
-      (side-effect node))))
+                                 (transform-quasi-quoted-string-to-quasi-quoted-binary child))))))))))

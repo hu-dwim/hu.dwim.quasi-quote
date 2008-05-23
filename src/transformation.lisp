@@ -9,6 +9,7 @@
 ;; TODO delme
 (def (special-variable e) *quasi-quote-stream*)
 
+(def special-variable *transformation-pipeline*)
 (def special-variable *transformation*)
 
 (def function wrap-runtime-delayed-transformation-form (form)
@@ -16,12 +17,16 @@
      ,form))
 
 (def (class* e) transformation ()
-  ((handler :type (or symbol function)))
+  ()
   (:metaclass funcallable-standard-class))
 
 (def generic compatible-transformations? (a b)
-  (:method (a b)
-    #f))
+  (:method-combination and)
+  (:method and (a b)
+    #t)
+  (:method :around (a b)
+    (or (eq a b)
+        (call-next-method))))
 
 (def function compatible-transformation-pipelines? (a b)
   (every (lambda (a b)
@@ -34,13 +39,11 @@
    (declarations '() :documentation "Add these declarations to the emitted lambda forms."))
   (:metaclass funcallable-standard-class))
 
-(def method compatible-transformations? ((a lisp-form-emitting-transformation)
-                                         (b lisp-form-emitting-transformation))
-  (or (eq a b)
-      (and (eq (class-of a) (class-of b))
-           (eql (with-inline-emitting? a) (with-inline-emitting? b))
-           (eql (stream-variable-name-of a) (stream-variable-name-of b))
-           (equalp (declarations-of a) (declarations-of b)))))
+(def method compatible-transformations? and ((a lisp-form-emitting-transformation)
+                                             (b lisp-form-emitting-transformation))
+  (and (eql (with-inline-emitting? a) (with-inline-emitting? b))
+       (eql (stream-variable-name-of a) (stream-variable-name-of b))
+       (equalp (declarations-of a) (declarations-of b))))
 
 (def function ensure-progn (forms)
   (if (and (consp forms)
@@ -88,14 +91,23 @@
 
 (def function run-transformation-pipeline (node)
   (assert (typep node 'quasi-quote))
-  (iter (setf node (transform node))
-        (while (typep node 'quasi-quote)))
+  (bind ((*transformation-pipeline* (transformation-pipeline-of node)))
+    (iter (setf node (transform node))
+          (while (typep node 'quasi-quote))))
   node)
 
 (def function transform (node)
   (assert (typep node 'quasi-quote))
   (bind ((*transformation* (first (transformation-pipeline-of node))))
     (funcall *transformation* node)))
+
+(def macro transformation-typecase (quasi-quote-node &body cases)
+  (once-only (quasi-quote-node)
+    `(etypecase ,quasi-quote-node
+       ,@cases
+       (quasi-quote (transform ,quasi-quote-node))
+       (delayed-emitting ,quasi-quote-node)
+       (side-effect ,quasi-quote-node))))
 
 (def generic make-syntax-node-emitting-form (node)
   (:method ((node null))
