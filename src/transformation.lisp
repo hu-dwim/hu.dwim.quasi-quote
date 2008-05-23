@@ -36,7 +36,7 @@
                                                       handler))))))
 
 (def method make-load-form ((self transformation) &optional environment)
-  (make-load-form-saving-slots self environment))
+  (make-load-form-saving-slots self :environment environment))
 
 (def generic compatible-transformations? (a b)
   (:method-combination and)
