@@ -36,7 +36,11 @@
          (indent-new-line (when indent-level
                             '(#\NewLine))))
     (transformation-typecase node
-      (string (escape-as-xml node))
+      (string (ecase (text-node-escaping-method-of *transformation*)
+                (:cdata (wrap-with-xml-quote node))
+                (:per-character (escape-as-xml node))))
+      (integer (princ-to-string node))
+      (float (format nil "~F" node))
       (xml-element
        (bind ((attributes (attributes-of node))
               (name (name-of node))
