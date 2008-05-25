@@ -198,8 +198,10 @@
    ｢<a ,(make-xml-element "b" nil (list <c ,(make-xml-element "d")>))>｣))
 
 (def xml-test test/xml/mixed ()
-  ("<element>Hello UN<>QUOTED World</element>"
-   ｢<element `str("Hello" ,(list " UN<>QUOTED " "World"))>｣))
+  (｢<element>Hello UN<>QUOTED World</element>｣
+   ｢<element `str("Hello" ,(list " UN<>QUOTED " "World"))>｣)
+  (｢<element attribute="42"/>｣
+   ｢<element (:attribute `str("4" ,(list "2")))>｣))
 
 (def xml-test/normal test/xml/reverse ()
   ("<element><child2/><child1/></element>"

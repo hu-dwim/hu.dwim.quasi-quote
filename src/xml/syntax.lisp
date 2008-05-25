@@ -142,9 +142,9 @@
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
 
-(def macro unless-unquote (value &body forms)
+(def macro unless-syntax-node (value &body forms)
   (once-only (value)
-    `(if (typep ,value 'xml-unquote)
+    `(if (typep ,value 'syntax-node)
          ,value
          (progn
            ,@forms))))
@@ -168,7 +168,7 @@
            (symbol (make-xml-element (name-as-string form)))
            (cons
             (setf form (expand form)) ;; TODO ?
-            (unless-unquote form
+            (unless-syntax-node form
               (bind ((name (aif (pop form)
                                 (expand it)
                                 (simple-reader-error nil "No xml element name?")))
@@ -176,14 +176,14 @@
                      (children form))
                 (assert (or (listp attributes) (typep attributes 'syntax-node)))
                 (make-xml-element
-                    (unless-unquote name
+                    (unless-syntax-node name
                       (name-as-string name))
-                    (unless-unquote attributes
+                    (unless-syntax-node attributes
                       (iter (for (name value) :on attributes :by #'cddr)
                             ;; TODO cleanup attribute syntax, see below
                             (collect (make-xml-attribute
-                                      (unless-unquote name (name-as-string name))
-                                      (unless-unquote value (princ-to-string value))))))
+                                      (unless-syntax-node name (name-as-string name))
+                                      (unless-syntax-node value (princ-to-string value))))))
                   (mapcar #'recurse children)))))
            (t form))))
     (make-xml-quasi-quote transformation-pipeline (recurse form))))
@@ -211,17 +211,17 @@
                         (push attributes form)
                         (setf attributes nil))
                       (make-xml-element
-                          (unless-unquote name (name-as-string name))
-                          (unless-unquote attributes (iter (generate element :in attributes)
+                          (unless-syntax-node name (name-as-string name))
+                          (unless-syntax-node attributes (iter (generate element :in attributes)
                                                            (for name = (recurse (next element)))
                                                            ;; TODO this is bullshit here, clean up attribute syntax
                                                            ;; <a (,name ,value) > ,name is interpreted as a full attribute currently
-                                                           (if (typep name 'xml-unquote)
+                                                           (if (typep name 'syntax-node)
                                                                (collect name)
                                                                (bind ((value (recurse (next element))))
                                                                  (collect (make-xml-attribute
-                                                                           (unless-unquote name (name-as-string name))
-                                                                           (unless-unquote value (princ-to-string value))))))))
+                                                                           (unless-syntax-node name (name-as-string name))
+                                                                           (unless-syntax-node value (princ-to-string value))))))))
                         (mapcar (lambda (el)
                                   (if (stringp el)
                                       (make-xml-text el)
@@ -242,7 +242,6 @@
                         (setf (cdr (last result)) (recurse (cdr entry)))
                         (return result))
                        (t (return result)))))))
-           (syntax-node form)
            (t form))))
     (make-xml-quasi-quote transformation-pipeline (recurse `(xml-quasi-quote/nested ,form)))))
 

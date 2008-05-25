@@ -115,15 +115,15 @@
                      (unquote name)
                      (string name))
           "=\""
-          ,(etypecase value
-                      (xml-unquote (make-string-unquote
-                                    (wrap-runtime-delayed-transformation-form
-                                     `(escape-as-xml
-                                       (princ-to-string
-                                        ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                          value #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))))))
-                      (unquote value)
-                      (string (escape-as-xml value)))
+          ,(transformation-typecase value
+             (xml-unquote (make-string-unquote
+                           (wrap-runtime-delayed-transformation-form
+                            `(escape-as-xml
+                              (princ-to-string
+                               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
+                                 value #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))))))
+             (string-quasi-quote value) ;; TODO what about xml escaping?
+             (string (escape-as-xml value)))
           "\"")))
     (xml-quasi-quote
      (make-string-quasi-quote (rest (transformation-pipeline-of node))
