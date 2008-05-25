@@ -269,13 +269,14 @@
 #|
 REPL demos
 
-(bind ((code ｢<body
-               ,(concatenate 'string "some runtime" " generated <escaped> text")
-               `str("***<put some unescaped text here!>***")
-               ;; let's insert some JavaScript here, with some unquoted runtime part
-               `js(print (+ 2 ,(+ 20 20))
-                  `str(#\Newline "***<put one more unescaped text here!>***"))>｣))
-  (pprint-xml/js code t)
-  (emit-xml/js code))
+(bind ((code-as-string
+        ｢<body
+         ,(concatenate 'string "some runtime" " generated <escaped> text")
+         `str("***<put some unescaped text here!>***")
+         ;; let's insert some JavaScript here, with some unquoted runtime part:
+         `js(print (+ 2 ,(+ 20 20))
+             `str(#\Newline "***<put one more unescaped text here!>***"))>｣))
+  (pprint-xml/js code-as-string t)
+  (emit-xml/js code-as-string))
 
 |#
