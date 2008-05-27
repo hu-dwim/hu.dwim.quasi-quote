@@ -35,7 +35,7 @@
      body-of
      syntax-node
      make-string-of-spaces
-     find-ancestor
+     find-ancestor-syntax-node
      binary-position
      ub8-vector
      vector-extend

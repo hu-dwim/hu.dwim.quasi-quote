@@ -92,7 +92,7 @@
                      (when (typep key 'parent-mixin)
                        (setf (parent-of key) self)))))))))
 
-(def function find-ancestor (node type)
+(def function find-ancestor-syntax-node (node type)
   (iter (for current :initially node :then (parent-of current))
         (until (typep current type))
         (finally (return current))))

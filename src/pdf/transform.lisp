@@ -192,7 +192,7 @@
       (bind ((name (name-of node)))
         (when name
           (setf node
-                (find name (elements-of (find-ancestor node 'pdf-document))
+                (find name (elements-of (find-ancestor-syntax-node node 'pdf-document))
                       :key (lambda (node)
                              (when (and (typep node 'pdf-indirect-object)
                                         (slot-boundp node 'name))
