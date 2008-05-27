@@ -25,7 +25,7 @@
 
 (in-package :cl-quasi-quote)
 
-(def function import-semi-external-quasi-quote-symbols (&optional (package *package*))
+(def (function e) import-semi-external-quasi-quote-symbols (&optional (package *package*))
   "Import those symbols in PACKAGE that are public to extensions of cl-quasi-quote but not to its users."
   (import-duplicate-symbols)
   (import

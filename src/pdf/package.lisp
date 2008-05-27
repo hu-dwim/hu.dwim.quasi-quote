@@ -19,7 +19,7 @@
 
 (in-package :cl-quasi-quote-pdf)
 
-(cl-quasi-quote::import-semi-external-quasi-quote-symbols)
+(import-semi-external-quasi-quote-symbols)
 
 (defun transform-function-definer-options (options)
   (cl-quasi-quote::transform-function-definer-options options))
