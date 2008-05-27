@@ -183,7 +183,9 @@
   (:method ((node syntax-node))
     (remove 'parent (class-slots (class-of node)) :key #'slot-definition-name)))
 
-(export 'collect-slots-for-syntax-node-emitting-form)
+(def (transformation e) quasi-quoted-syntax-node-to-syntax-node-emitting-form (lisp-form-emitting-transformation)
+  ()
+  'make-syntax-node-emitting-form)
 
 ;;;;;;;;
 ;;; Emit
