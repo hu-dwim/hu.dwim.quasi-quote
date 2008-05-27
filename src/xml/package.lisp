@@ -24,6 +24,15 @@
 
 (in-package :cl-quasi-quote-xml)
 
+(def (function e) import-external-quasi-quote-symbols-for-extensions/xml (&optional (package *package*))
+  "Import those symbols in PACKAGE that are public to extensions of cl-quasi-quote-xml but not to its users."
+  (import
+   '(children-of
+     name-of
+     attributes-of
+     )
+   package))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (import-external-quasi-quote-symbols-for-extensions))
 
