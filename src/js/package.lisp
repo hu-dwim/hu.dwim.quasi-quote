@@ -29,7 +29,7 @@
 
 (in-package :cl-quasi-quote-js)
 
-(import-semi-external-quasi-quote-symbols)
+(import-external-quasi-quote-symbols-for-extensions)
 
 (enable-readtime-wrapper-syntax)
 

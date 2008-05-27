@@ -25,7 +25,7 @@
 (in-package :cl-quasi-quote-xml)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (import-semi-external-quasi-quote-symbols))
+  (import-external-quasi-quote-symbols-for-extensions))
 
 (defun transform-function-definer-options (options)
   (cl-quasi-quote::transform-function-definer-options options))

@@ -179,7 +179,7 @@
                                 (appending (list (first (slot-definition-initargs slot))
                                                  (make-syntax-node-emitting-form (slot-value-using-class class node slot))))))))))
 
-(defgeneric collect-slots-for-syntax-node-emitting-form (node)
+(def generic collect-slots-for-syntax-node-emitting-form (node)
   (:method ((node syntax-node))
     (remove 'parent (class-slots (class-of node)) :key #'slot-definition-name)))
 

@@ -36,7 +36,7 @@
 
 (in-package :cl-quasi-quote-test)
 
-(import-semi-external-quasi-quote-symbols)
+(import-external-quasi-quote-symbols-for-extensions)
 
 (defun setup-readtable ()
   (cl-quasi-quote::setup-readtable)

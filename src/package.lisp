@@ -25,7 +25,7 @@
 
 (in-package :cl-quasi-quote)
 
-(def (function e) import-semi-external-quasi-quote-symbols (&optional (package *package*))
+(def (function e) import-external-quasi-quote-symbols-for-extensions (&optional (package *package*))
   "Import those symbols in PACKAGE that are public to extensions of cl-quasi-quote but not to its users."
   (import-duplicate-symbols)
   (import
@@ -55,5 +55,8 @@
      compatible-transformations?
      run-transformation-pipeline
      recursively-macroexpand-reader-stubs
+     lisp-form-emitting-transformation
+     make-syntax-node-emitting-form
+     collect-slots-for-syntax-node-emitting-form
      )
    package))
