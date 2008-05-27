@@ -52,7 +52,9 @@
               (children (children-of node)))
          `(,@indent-level
            "<" ,transformed-name
-           ,@(when attributes
+           ,@(when (and attributes
+                        (or (consp attributes)
+                            (not (zerop (length attributes)))))
                    `(" "
                      ,@(typecase attributes
                                  (xml-unquote (make-string-unquote
@@ -60,16 +62,16 @@
                                                 `(mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
                                                          ,(form-of attributes)))))
                                  (unquote attributes)
-                                 (t (iter (for attribute :in attributes)
+                                 (t (iter (for attribute :in-sequence attributes)
                                           (unless (first-iteration-p)
                                             (collect " "))
                                           (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute attribute)))))))
            ,@(if children
                  `(">" ,@indent-new-line
-                       ,@(mapcar (lambda (child)
-                                   (with-increased-xml-indent-level
-                                     (transform-quasi-quoted-xml-to-quasi-quoted-string/element child)))
-                                 children)
+                       ,@(map 'list (lambda (child)
+                                      (with-increased-xml-indent-level
+                                        (transform-quasi-quoted-xml-to-quasi-quoted-string/element child)))
+                              children)
                        (,@indent-level "</" ,transformed-name ">" ,@indent-new-line))
                  `("/>" ,@indent-new-line)))))
       (xml-text
