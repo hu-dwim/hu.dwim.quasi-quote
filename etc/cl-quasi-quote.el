@@ -1,4 +1,8 @@
-;;; -*- coding: utf-8 -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;;
+;;; Copyright (c) 2008 by the authors.
+;;;
+;;; See LICENCE for details.
 
 (require 'paredit)
 (provide 'cl-quasi-quote)

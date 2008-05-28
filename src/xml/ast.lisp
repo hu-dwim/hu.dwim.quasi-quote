@@ -30,7 +30,7 @@
 
 (def (class* e) xml-element (xml-syntax-node)
   ((name)
-   (attributes nil)
+   (attributes nil :documentation "A list of xml-attribute nodes.")
    (children nil)))
 
 (def (class* e) xml-attribute (xml-syntax-node)

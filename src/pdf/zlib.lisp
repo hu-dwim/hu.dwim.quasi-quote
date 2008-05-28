@@ -131,7 +131,8 @@
 (cffi:defcfun (%inflate-end "inflateEnd" :library zlib) :int
   (stream (:pointer z-stream)))
 
-(assert (= (cffi:foreign-type-size 'z-stream) 112) () "Hm, something's wrong with the length of the z-stream CFFI struct?!")
+;; this would be 64 bit only
+;;(assert (= (cffi:foreign-type-size 'z-stream) 112) () "Hm, something's wrong with the length of the z-stream CFFI struct?!")
 
 ;;;
 ;;; Lisp part
