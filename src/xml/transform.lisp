@@ -109,7 +109,8 @@
                      node (lambda (node)
                             (transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))))))
           spliced?)))
-      (string-quasi-quote node))))
+      (string-quasi-quote node)
+      (null (values)))))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
   (transformation-typecase node
