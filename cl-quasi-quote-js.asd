@@ -15,7 +15,8 @@
   :version "0.1"
   :description "Quasi quote transformations for emitting JavaScript"
   :setup-readtable-function "cl-quasi-quote-js::setup-readtable"
-  :depends-on (:cl-quasi-quote
+  :depends-on (:cl-ppcre
+               :cl-quasi-quote
                :cl-walker
                )
   :components
