@@ -74,23 +74,23 @@
   ((parent :type syntax-node)))
 
 (def constructor parent-mixin
-  (iter (with class = (class-of self))
+  (iter (with class = (class-of -self-))
         (for slot :in (class-slots class))
-        (when (slot-boundp-using-class class self slot)
-          (bind ((value (slot-value-using-class class self slot)))
+        (when (slot-boundp-using-class class -self- slot)
+          (bind ((value (slot-value-using-class class -self- slot)))
             ;; TODO: this is really fragile
             (typecase value
-              (parent-mixin (setf (parent-of value) self))
+              (parent-mixin (setf (parent-of value) -self-))
               (list
                (when (eq 'list (slot-definition-type slot))
                  (dolist (element value)
-                   (setf (parent-of element) self))))
+                   (setf (parent-of element) -self-))))
               (hash-table
                (iter (for (key value) :in-hashtable value)
                      (when (typep value 'parent-mixin)
-                       (setf (parent-of value) self))
+                       (setf (parent-of value) -self-))
                      (when (typep key 'parent-mixin)
-                       (setf (parent-of key) self)))))))))
+                       (setf (parent-of key) -self-)))))))))
 
 (def function find-ancestor-syntax-node (node type)
   (iter (for current :initially node :then (parent-of current))
@@ -128,13 +128,13 @@
 (def constant +ast-print-depth+ 2)
 
 (def print-object syntax-node
-  (bind ((class (class-of self))
+  (bind ((class (class-of -self-))
          (*ast-print-object-nesting-level* (1+ *ast-print-object-nesting-level*)))
     (if (> *ast-print-object-nesting-level* +ast-print-depth+)
         (write-string "...")
         (iter (for slot :in (class-slots class))
-              (when (slot-boundp-using-class class self slot)
-                (for value = (slot-value-using-class class self slot))
+              (when (slot-boundp-using-class class -self- slot)
+                (for value = (slot-value-using-class class -self- slot))
                 (unless (first-iteration-p)
                   (write-string " "))
                 (write (first (slot-definition-initargs slot)))
