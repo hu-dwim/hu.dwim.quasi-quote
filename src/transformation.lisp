@@ -70,9 +70,9 @@
     (:documentation "A distinct type to be able to assert for it while emitting.")))
 
 ;; TODO: +void+ should be replaced by using (values) in user code (somewhat difficult)
-(def (constant e :test (constantly #t)) +void+ (bind ((result (make-instance 'delayed-emitting)))
-                                                 (set-funcallable-instance-function result (lambda () (values)))
-                                                 result))
+(def (special-variable e) +void+ (bind ((result (make-instance 'delayed-emitting)))
+                                   (set-funcallable-instance-function result (lambda () (values)))
+                                   result))
 
 (def (function i) make-delayed-emitting (thunk)
   (bind ((result (make-instance 'delayed-emitting)))
