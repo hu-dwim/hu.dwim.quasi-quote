@@ -171,6 +171,19 @@
                  `<html <body ,@(list ,@body)>>))
       (nester <foo> <bar>))｣))
 
+(def xml-test test/xml/macrolet-in-unquote ()
+  (｢<wrapper><element><tag1>value1</tag1><tag2>value2</tag2></element><last/></wrapper>｣
+   ｢(macrolet ((wrapper (&body body)
+                 `<wrapper ,@(list ,@body)>))
+      (wrapper
+       <element
+        ,@(macrolet ((x (tag value)
+                        `<,,tag () ,,value>))
+                    (list
+                     (x "tag1" "value1")
+                     (x "tag2" "value2")))>
+       <last>))｣))
+
 (def test test/xml/sharp-plus-works ()
   (enable-quasi-quoted-xml-syntax)
   (is (eql 42 (read-from-string "#+nil(< 1 2) 42"))))
