@@ -166,10 +166,9 @@
                 (multiple-value-list (funcall (compile nil lambda-form)))))))
 
 (def binary-test/mixed test/binary/mixed ()
-  (with-expected-failures
-    ((list #(1 2 3 4 5 6)
-           #(7 8 9 10))
-     "`bin1(1 2
-           `bin2(7 8 ,(list `bin2(9 a)))
-           ,(list `bin1(3 4))
-           5 6)")))
+  ((list #(1 2 3 4 5 6)
+         #(7 8 9 10))
+   "`bin1(1 2
+          `bin2(7 8 ,(list `bin2(9 a)))
+          ,(list `bin1(3 4))
+          5 6)"))

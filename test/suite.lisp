@@ -30,16 +30,5 @@
                                             (process-test-entry test-function form))
                                           forms)))))))))
 
-;; TODO delme, convert usages to syntax-test-definer. see xml tests...
-(def (definer e) test-definer (name)
-  `(def definer ,(format-symbol *package* "~A-TEST" name) (name args &body forms)
-     (labels ((process-entry (entry)
-                (if (eq (first entry) 'with-expected-failures)
-                    `(with-expected-failures
-                       ,@(mapcar #'process-entry (rest entry)))
-                    (bind (((expected ast) entry))
-                      `(,',(format-symbol *package* "TEST-~A-AST" name) ,expected ,ast)))))
-       `(def test ,name ,args
-          ,@(mapcar #'process-entry forms)))))
 
 
