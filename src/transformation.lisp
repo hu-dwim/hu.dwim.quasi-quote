@@ -166,7 +166,7 @@
     (make-syntax-node-emitting-form (body-of node)))
 
   (:method ((node unquote))
-    (map-filtered-tree (form-of node) 'quasi-quote #'make-syntax-node-emitting-form))
+    (map-filtered-tree (form-of node) 'quasi-quote #'run-transformation-pipeline))
 
   (:method ((node syntax-node))
     (bind ((class (class-of node)))
