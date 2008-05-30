@@ -139,13 +139,12 @@
        (member (car form) '(cl:lambda |lambda|))
        #t))
 
-#+nil
 (defun undefined-js-reference-handler (type name)
-  (unless (member name '())
+  (unless (member name '("document") :test #'string=)
     (cl-walker::undefined-reference-handler type name)))
 
 (def function walk-js (form &optional lexenv)
-  (with-walker-configuration (;;:undefined-reference-handler 'undefined-js-reference-handler
+  (with-walker-configuration (:undefined-reference-handler 'undefined-js-reference-handler
                               :function-name?      'js-function-name?
                               :macro-name?         'js-macro-name?
                               :symbol-macro-name?  'js-symbol-macro-name?
