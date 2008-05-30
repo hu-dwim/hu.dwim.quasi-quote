@@ -265,14 +265,7 @@
   ((indentation-width nil)
    (output-prefix nil)
    (output-postfix nil))
-  (lambda (node)
-    (bind ((result (transform-quasi-quoted-js-to-quasi-quoted-string node)))
-      (assert (typep result 'string-quasi-quote))
-      (awhen (output-prefix-of -transformation-)
-        (setf (body-of result) (list it (body-of result))))
-      (awhen (output-postfix-of -transformation-)
-        (setf (body-of result) (list (body-of result) it)))
-      result)))
+  'transform-quasi-quoted-js-to-quasi-quoted-string)
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))
@@ -285,7 +278,9 @@
     (js-quasi-quote (if (compatible-transformation-pipelines? *transformation-pipeline*
                                                               (transformation-pipeline-of node))
                         (make-string-quasi-quote (rest (transformation-pipeline-of node))
-                                                 (transform-quasi-quoted-js-to-quasi-quoted-string (body-of node)))
+                                                 `(,(output-prefix-of *transformation*)
+                                                   ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
+                                                   ,(output-postfix-of *transformation*)))
                         (transform node)))
     (string-quasi-quote node)))
 
