@@ -28,7 +28,7 @@
       (-body-)))
 
 (def with-macro with-increased-indent ()
-  (with-increased-indent* (#t)
+  (with-increased-indent* #t
     (-body-)))
 
 (def (function io) lisp-name-to-js-name (symbol)
@@ -129,17 +129,17 @@
       (-body-)))
 
 (def with-macro within-nested-js-block ()
-  (within-nested-js-block* (#t)
+  (within-nested-js-block* #t
     (-body-)))
 
 (def transform-function transform-progn (node &key (wrap? nil wrap-provided?) (nest? #t) (increase-indent? #f))
-  (within-nested-js-block* (nest?)
+  (within-nested-js-block* nest?
     (bind ((body (cl-walker:body-of node)))
       (unless wrap-provided?
         (setf wrap? (and (rest body)
                          (not (in-toplevel-js-block?)))))
-      `(,@(when wrap? (list #\{))
-        ,@(with-increased-indent* (increase-indent?)
+      `(,@(when wrap? #\{)
+        ,@(with-increased-indent* increase-indent?
             (iter (for statement :in body)
                   (collect #\Newline)
                   (awhen (make-indent)
@@ -226,7 +226,7 @@
                   ,@(iter (for argument :in (arguments-of -node-))
                           (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
                   ") {"
-                  ,@(transform-progn -node- :wrap? #f)
+                  ,@(transform-progn -node- :wrap? #f :increase-indent? #t)
                   #\Newline
                   "}"))
    (return-from-form
