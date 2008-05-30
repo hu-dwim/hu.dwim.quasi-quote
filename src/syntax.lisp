@@ -11,41 +11,67 @@
   `(bind ((*readtable* (copy-readtable *readtable*)))
      ,@body))
 
+(def special-variable *reader-stub-expanders* (make-hash-table))
+
+(def definer reader-stub (name args &body body)
+  (with-unique-names (arg-values)
+    `(progn
+       (setf (find-reader-stub ',name)
+             (named-lambda ,(format-symbol *package* "READER-STUB/~A" name) (,arg-values -environment-)
+               (declare (ignorable -environment-))
+               (destructuring-bind ,args ,arg-values
+                 ,@body)))
+       ;; define a macro that is actually a macro, so the reader can read into a macro form with this
+       ;; which will start the whole transformation. this way when walking the unquoted forms, libs like iter will
+       ;; not think that nested quasi-quote forms are macros...
+       (def macro ,(format-symbol *package* "~A/TOPLEVEL" name) (&whole whole &rest args &environment environment)
+         (declare (ignore args))
+         (expand-reader-stub (cons ',name (rest whole)) environment)))))
+
+(def function find-reader-stub (name &key (otherwise :error))
+  (or (gethash name *reader-stub-expanders*)
+      (handle-otherwise otherwise)))
+
+(def function (setf find-reader-stub) (value name)
+  (setf (gethash name *reader-stub-expanders*) value))
+
+(def function expand-reader-stub (form environment)
+  (macroexpand (funcall (find-reader-stub (first form)) (rest form) environment) environment))
+
 (def function recursively-macroexpand-reader-stubs (form &optional env)
   (typecase form
     (cons
-     (bind ((candidate (first form))
-            (ast-node-class (when (and candidate
-                                       (symbolp candidate))
-                              (find-class candidate nil))))
-       (unless (or (subtypep ast-node-class 'quasi-quote)
-                   (subtypep ast-node-class 'unquote))
-         (setf ast-node-class nil))
-       (if ast-node-class
-           (recursively-macroexpand-reader-stubs (macroexpand form env))
-           (iter (for entry :first form :then (cdr entry))
-                 (collect (recursively-macroexpand-reader-stubs (car entry)) :into result)
-                 (cond
-                   ((consp (cdr entry))
-                    ;; nop, go on looping
-                    )
-                   ((cdr entry)
-                    (setf (cdr (last result)) (recursively-macroexpand-reader-stubs (cdr entry)))
-                    (return result))
-                   (t (return result)))))))
+     (if (find-reader-stub (first form) :otherwise nil)
+         (recursively-macroexpand-reader-stubs (expand-reader-stub form env) env)
+         (iter (for entry :first form :then (cdr entry))
+               (collect (recursively-macroexpand-reader-stubs (car entry) env) :into result)
+               (cond
+                 ((consp (cdr entry))
+                  ;; nop, go on looping
+                  )
+                 ((cdr entry)
+                  (setf (cdr (last result)) (recursively-macroexpand-reader-stubs (cdr entry) env))
+                  (return result))
+                 (t (return result))))))
     ;; also process the forms of unquote ast nodes
     (unquote (bind ((unquote-node form))
-               (setf (form-of unquote-node) (recursively-macroexpand-reader-stubs (form-of unquote-node)))
+               (setf (form-of unquote-node)
+                     (recursively-macroexpand-reader-stubs
+                      ;; first descend into the unquoted forms and macroexpand all the macros
+                      ;; except the quasi-quote and unquote reader wrappers which are reader-stub's
+                      ;; so they are not expanded by the walker. this is needed
+                      ;; to flatten the lisp `(foo ,bar) used inside lisp macros (macrolet's),
+                      ;; so that later the RECURSIVELY-MACROEXPAND-READER-STUBS call can properly
+                      ;; walk the simple expanded lists.
+                      (cl-walker:with-walker-configuration (:undefined-reference-handler nil)
+                        (cl-walker:macroexpand-all (form-of unquote-node) env))
+                      env))
                unquote-node))
     (t form)))
 
-#+nil                                   ; TODO delme eventually
-(def (function e) with-transformed-quasi-quoted-syntax (&rest transformatations)
-  (lambda (reader)
-    (bind (((name &rest args) (ensure-list (first transformatations))))
-      (chain-transform (cdr transformatations)
-                       (funcall (apply (format-symbol (symbol-package name)  "WITH-~A-SYNTAX" name) args)
-                                reader)))))
+#+nil
+(def method cl-walker:unwalk-form ((self syntax-node))
+  self)
 
 ;;;;;;;
 ;;; AST

@@ -27,11 +27,12 @@
      (lambda (body dispatched?)
        (when (< (length body) 1)
          (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
-       `(xml-quasi-quote ,(= 1 *quasi-quote-depth*) ,dispatched? ,body ,transformation-pipeline))
+       (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
+         `(,(if toplevel? 'xml-quasi-quote/toplevel 'xml-quasi-quote) ,toplevel? ,dispatched? ,body ,transformation-pipeline)))
      (lambda (body spliced?)
-       ;; that progn is for helping on `<foo ,,@body> not turning into (xml-reader-unquote ,@body nil/t).
+       ;; that progn is for helping on `<foo ,,@body> not turning into (xml-unquote ,@body nil/t).
        ;; see test test/xml/nested-through-macro-using-lisp-quasi-quote2 for a reproduction of it.
-       `(xml-reader-unquote (progn ,body) ,spliced?))
+       `(xml-unquote (progn ,body) ,spliced?))
      :nested-quasi-quote-wrapper (lambda (body dispatched?)
                                    (when (< (length body) 1)
                                      (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
@@ -127,12 +128,12 @@
                            :with-inline-emitting with-inline-emitting
                            :declarations declarations))))
 
-;; the xml reader expands into a macro call of this macro. this way the implementation's normal lisp backquote
+;; the xml reader expands into a reader stub. this way the implementation's normal lisp backquote
 ;; can work fine when mixed with the xml reader. this macro descends into its body as deep as it can, and
 ;; converts the body to an xml AST, so that the transformations can actually collapse them into constant
 ;; strings.
-(def macro xml-quasi-quote (toplevel? dispatched? form transformation-pipeline &environment env)
-  (bind ((expanded-body (recursively-macroexpand-reader-stubs form env))
+(def reader-stub xml-quasi-quote (toplevel? dispatched? form transformation-pipeline)
+  (bind ((expanded-body (recursively-macroexpand-reader-stubs form -environment-))
          (quasi-quote-node (if dispatched?
                                ;; dispatched `xml(element) xml
                                (process-dispatched-xml-reader-body expanded-body transformation-pipeline)
@@ -141,6 +142,9 @@
     (if toplevel?
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
+
+(def reader-stub xml-unquote (body spliced?)
+  (make-xml-unquote body spliced?))
 
 (def macro unless-syntax-node (value &body forms)
   (once-only (value)
@@ -155,7 +159,7 @@
          (typecase form
            (cons
             (case (first form)
-              (xml-reader-unquote
+              (xml-unquote
                (assert (= (length form) 3))
                (make-xml-unquote (second form) (third form)))
               ((or xml-quasi-quote xml-quasi-quote/nested) (error "How did this happen? Send a unit test, please!"))
@@ -194,7 +198,6 @@
          (typecase form
            (cons
             (case (first form)
-              ;; TODO delme (xml-quasi-quote (macroexpand form env))
               (xml-quasi-quote/nested
                (assert (= (length form) 2))
                (bind ((form (second form)))
@@ -228,7 +231,7 @@
                                       (recurse el)))
                                 form))))
                    (null (simple-reader-error nil "Empty xml tag?")))))
-              (xml-reader-unquote
+              (xml-unquote
                (assert (= (length form) 3))
                (make-xml-unquote (recurse (second form)) (third form)))
               (t

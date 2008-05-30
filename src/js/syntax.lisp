@@ -17,10 +17,14 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     `(js-quasi-quote ,(= 1 *quasi-quote-depth*) ,body ,(if (= 1 *quasi-quote-depth*)
-                                                            transformation-pipeline
-                                                            (or nested-transformation-pipeline
-                                                                transformation-pipeline))))
+     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
+       `(,(if toplevel? 'js-quasi-quote/toplevel 'js-quasi-quote)
+          ,(= 1 *quasi-quote-depth*)
+          ,body
+          ,(if (= 1 *quasi-quote-depth*)
+               transformation-pipeline
+               (or nested-transformation-pipeline
+                   transformation-pipeline)))))
    (lambda (body spliced?)
      `(js-unquote ,body ,spliced?))
    :start-character start-character
@@ -97,15 +101,14 @@
                            :with-inline-emitting with-inline-emitting
                            :declarations declarations))))
 
-(def macro js-quasi-quote (toplevel? form transformation-pipeline &environment lexenv)
-  (bind ((expanded-body (recursively-macroexpand-reader-stubs form lexenv))
+(def reader-stub js-quasi-quote (toplevel? form transformation-pipeline)
+  (bind ((expanded-body (recursively-macroexpand-reader-stubs form -environment-))
          (quasi-quote-node (make-js-quasi-quote transformation-pipeline (walk-js expanded-body))))
     (if toplevel?
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
 
-(def macro js-unquote (body spliced? &environment env)
-  (declare (ignore env))
+(def reader-stub js-unquote (body spliced?)
   ;; A macro to handle the quoted parts when the walker is walking the forms. Kinda like a kludge, but it's not that bad...
   (make-js-unquote body spliced?))
 

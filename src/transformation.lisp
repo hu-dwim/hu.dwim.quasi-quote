@@ -6,9 +6,6 @@
 
 (in-package :cl-quasi-quote)
 
-;; TODO delme
-(def (special-variable e) *quasi-quote-stream*)
-
 (def special-variable *transformation-pipeline*)
 (def special-variable *transformation*)
 

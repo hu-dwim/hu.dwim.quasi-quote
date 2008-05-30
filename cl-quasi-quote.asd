@@ -54,6 +54,7 @@
                :closer-mop
                :cl-def
                :cl-syntax-sugar
+               :cl-walker
                :babel
                :babel-streams
                )

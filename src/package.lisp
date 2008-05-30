@@ -41,11 +41,13 @@
      vector-extend
      wrap-forms-with-bindings
      quoted-symbol?
+     reader-stub
      delayed-emitting
      as-delayed-emitting
      wrap-runtime-delayed-transformation-form
      transformation-typecase
      transform
+     -environment-
      -transformation-
      transformation-pipeline
      transformation-pipeline-of

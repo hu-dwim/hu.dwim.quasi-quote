@@ -21,7 +21,8 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     `(binary-quasi-quote ,(= 1 *quasi-quote-nesting-level*) ,body ,transformation-pipeline))
+     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
+       `(,(if toplevel? 'binary-quasi-quote/toplevel 'binary-quasi-quote) ,toplevel? ,body ,transformation-pipeline)))
    (lambda (form spliced?)
      `(binary-unquote ,form ,spliced?))
    :start-character start-character
@@ -103,14 +104,14 @@
                 (error "Strings are not allowed in the body of the quasi-quoted-binary reader: ~S" form)))
     (syntax-node form)))
 
-(def macro binary-quasi-quote (toplevel? body transformation-pipeline)
-  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body)))
+(def reader-stub binary-quasi-quote (toplevel? body transformation-pipeline)
+  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body -environment-)))
          (quasi-quote-node (make-binary-quasi-quote transformation-pipeline expanded-body)))
     (if toplevel?
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
 
-(def macro binary-unquote (form spliced?)
+(def reader-stub binary-unquote (form spliced?)
   (make-binary-unquote form spliced?))
 
 
@@ -218,16 +219,3 @@
 
 
 
-#+nil
-(def (macro e) with-binary-stream-to-binary (stream &body forms)
-  `(with-output-to-sequence (,stream :element-type '(unsigned-byte 8))
-     ,@forms))
-
-
-#+nil ; TODO delme
-(def method setup-emitting-environment ((to (eql 'binary-emitting-form)) &key stream-name next-method &allow-other-keys)
-  (if stream-name
-      (bind ((*quasi-quote-stream* (symbol-value stream-name)))
-        (funcall next-method))
-      (with-binary-stream-to-binary *quasi-quote-stream*
-        (funcall next-method))))

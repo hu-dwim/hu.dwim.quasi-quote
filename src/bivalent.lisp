@@ -18,7 +18,8 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     `(bivalent-quasi-quote ,(= 1 *quasi-quote-nesting-level*) ,body ,transformation-pipeline))
+     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
+       `(,(if toplevel? 'bivalent-quasi-quote/toplevel 'bivalent-quasi-quote) ,toplevel? ,body ,transformation-pipeline)))
    (lambda (form spliced)
      `(bivalent-unquote ,form ,spliced))
    :start-character start-character
@@ -59,14 +60,14 @@
                                                :declarations declarations))
      (stream-variable-name &key (encoding *default-character-encoding*))))
 
-(def macro bivalent-quasi-quote (toplevel? body transformation-pipeline)
-  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body) #t))
+(def reader-stub bivalent-quasi-quote (toplevel? body transformation-pipeline)
+  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body -environment-) #t))
          (quasi-quote-node (make-bivalent-quasi-quote transformation-pipeline expanded-body)))
     (if toplevel?
         (run-transformation-pipeline quasi-quote-node)
         quasi-quote-node)))
 
-(def macro bivalent-unquote (form spliced?)
+(def reader-stub bivalent-unquote (form spliced?)
   (make-bivalent-unquote form spliced?))
 
 ;;;;;;;
