@@ -65,6 +65,10 @@
        (not (null (second thing)))
        (symbolp (second thing))))
 
+(def (function io) princ-to-string-unless-nil (thing)
+  (when thing
+    (princ-to-string thing)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; make-string-of-spaces
 

@@ -41,6 +41,7 @@
      vector-extend
      wrap-forms-with-bindings
      quoted-symbol?
+     princ-to-string-unless-nil
      reader-stub
      delayed-emitting
      as-delayed-emitting
