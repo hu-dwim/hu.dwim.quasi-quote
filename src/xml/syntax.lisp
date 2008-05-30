@@ -192,6 +192,10 @@
            (t form))))
     (make-xml-quasi-quote transformation-pipeline (recurse form))))
 
+(def function check-literal-xml-attribute-name-or-value (value)
+  (when (consp value)
+    (simple-style-warning "Literal list for an xml name or attribute value? Are you sure you are not missing a comma around here: ~S" value)))
+
 (def function process-<>-xml-reader-body (form transformation-pipeline)
   (labels
       ((recurse (form)
@@ -215,16 +219,23 @@
                         (setf attributes nil))
                       (make-xml-element
                           (unless-syntax-node name (name-as-string name))
-                          (unless-syntax-node attributes (iter (generate element :in attributes)
-                                                           (for name = (recurse (next element)))
-                                                           ;; TODO this is bullshit here, clean up attribute syntax
-                                                           ;; <a (,name ,value) > ,name is interpreted as a full attribute currently
-                                                           (if (typep name 'syntax-node)
-                                                               (collect name)
-                                                               (bind ((value (recurse (next element))))
-                                                                 (collect (make-xml-attribute
-                                                                           (unless-syntax-node name (name-as-string name))
-                                                                           (unless-syntax-node value (princ-to-string value))))))))
+                          (unless-syntax-node attributes
+                            (iter (generate element :in attributes)
+                                  (for name = (recurse (next element)))
+                                  ;; in <a (,name ,value) > we interpret ,name as a full attribute.
+                                  ;; this way you can use both (:foo "bar" ,@(list (make-xml-attribute "name" "value")) :baz "alma")
+                                  ;; and (:foo "bar" :name ,value :baz "alma") at the same time - although name unquoting is only
+                                  ;; possible using MAKE-XML-ATTRIBUTE.
+                                  (if (typep name 'syntax-node)
+                                      (collect name)
+                                      (bind ((value (recurse (next element))))
+                                        (collect (make-xml-attribute
+                                                  (unless-syntax-node name
+                                                    (check-literal-xml-attribute-name-or-value name)
+                                                    (name-as-string name))
+                                                  (unless-syntax-node value
+                                                    (check-literal-xml-attribute-name-or-value value)
+                                                    (princ-to-string value))))))))
                         (mapcar (lambda (el)
                                   (if (stringp el)
                                       (make-xml-text el)
