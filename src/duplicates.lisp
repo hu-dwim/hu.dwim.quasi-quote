@@ -10,7 +10,8 @@
 
 (defun import-duplicate-symbols (&optional (package *package*))
   (import
-   '(shrink-vector if-bind aif when-bind awhen prog1-bind aprog1 it capitalize-first-letter capitalize-first-letter!)
+   '(shrink-vector if-bind aif when-bind awhen prog1-bind aprog1 it capitalize-first-letter capitalize-first-letter!
+     handle-otherwise)
    package))
 
 (def (function io) make-adjustable-vector (initial-length &key (element-type t))
@@ -69,3 +70,18 @@
 (defun capitalize-first-letter! (str)
   (setf (aref str 0) (char-upcase (aref str 0)))
   str)
+
+;; wui
+(def (function io) handle-otherwise (otherwise)
+  (cond
+    ((eq otherwise :error)
+     (error "Otherwise assertion failed"))
+    ((and (consp otherwise)
+          (member (first otherwise) '(:error :warn)))
+     (case (first otherwise)
+       (:error (apply #'error (second otherwise) (nthcdr 2 otherwise)))
+       (:warn (apply #'warn (second otherwise) (nthcdr 2 otherwise)))))
+    ((functionp otherwise)
+     (funcall otherwise))
+    (t
+     otherwise)))
