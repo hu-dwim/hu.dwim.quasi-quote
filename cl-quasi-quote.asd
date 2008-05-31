@@ -73,7 +73,7 @@
              (:file "string" :depends-on ("transformation" "syntax" "binary" "utils" ))))))
 
 (defsystem-connection cl-quasi-quote-and-swank
-  :requires (:cl-quasi-quote :swank)
+  :requires (:cl-quasi-quote :swank #:cl-syntax-sugar-and-swank)
   :components
   ((:module "src"
             :components ((:file "swank-integration")))))
