@@ -81,6 +81,10 @@
 (def xml-test test/xml/simple ()
   (｢<element/>｣
    ｢<element>｣)
+  ;; this is braindead here, but let's just test that the name of the xml element is read unconditionally until
+  ;; a newline, space, start-character, end-character or the unquote-character.
+  (｢<aaa$#@!]{}[]()bbb/>｣
+   ｢<aaa$#@!]{}[]()bbb>｣)
   (｢<element attribute="1"/>｣
    ｢<element (:attribute 1)>｣)
   (｢<element attribute1="1" attribute2="2"/>｣
@@ -148,7 +152,7 @@
               ,(make-xml-attribute "attribute2" "2")
               ,@(list (make-xml-attribute "attribute3" "3")
                       (make-xml-attribute "attribute4" "4"))
-              "aTTriUte5" "5"
+              aTTriUte5 "5"
               ,(make-xml-attribute "attribute6" "6"))>｣))
 
 (def xml-test test/xml/case-sensitivity ()
@@ -194,6 +198,10 @@
   (enable-quasi-quoted-xml-syntax)
   (signals reader-error
     (read-from-string "<element < >>"))
+  (signals reader-error
+    (read-from-string "<al&ma>"))
+  (signals reader-error
+    (read-from-string "<alma (kor&te 42)>"))
   (signals end-of-file
     (read-from-string "<element")))
 
