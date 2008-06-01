@@ -1,4 +1,3 @@
-;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
 ;;; Copyright (c) 2008 by the authors.
 ;;;
@@ -15,21 +14,69 @@
 ;;
 ;; (define-key slime-mode-map (kbd "C-w") (lambda (n)
 ;;                                          (interactive "P")
-;;                                          (cl-quasi-quote-wrap-selection-or-sexp-at-point nil n)))
+;;                                          (cl-quasi-quote-wrap-selection-or-sexp nil n)))
 ;; (define-key slime-mode-map (kbd "C-S-w") (lambda (n)
 ;;                                            (interactive "P")
-;;                                            (cl-quasi-quote-wrap-selection-or-sexp-at-point t n)))
+;;                                            (cl-quasi-quote-wrap-selection-or-sexp t n)))
 
-(mapcar (lambda (parens)
-          (let ((open (elt parens 0))
-                (close (elt parens 1)))
-            (modify-syntax-entry open (concat "\(" (string close)) lisp-mode-syntax-table)
-            (modify-syntax-entry close (concat "\)" (string open)) lisp-mode-syntax-table)))
-        ;; tell emacs that these should behave as normal parens
-        '("[]" "{}" "｢｣" "「」" "«»"
-          ;; adding <> causes headache when < and > are used in their normal meanings, so don't...
-          ;;"<>"
-          ))
+(defvar cl-quasi-quote-xml-syntax-table
+  (let ((table (copy-syntax-table lisp-mode-syntax-table)))
+    (modify-syntax-entry ?< "(>" table)
+    (modify-syntax-entry ?> ")<" table)
+    table))
+
+(defface font-lock-cl-quasi-quote-xml-element-face
+   '((((class color) (background light)) (:foreground "#888")))
+  "Face for the element name in the <element ()> syntax."
+  :group 'font-lock-faces)
+
+(defun cl-quasi-quote-lisp-mode-hook ()
+  (mapcar (lambda (parens)
+            (let ((open (elt parens 0))
+                  (close (elt parens 1)))
+              (modify-syntax-entry open (concat "\(" (string close)) lisp-mode-syntax-table)
+              (modify-syntax-entry close (concat "\)" (string open)) lisp-mode-syntax-table)))
+          ;; tell emacs that these should behave just like normal parens.
+          ;; adding <> here woult causes headache for < and > when they are
+          ;; used in their normal meaning, so don't. see below for extra treatment.
+          '("[]" "{}" "｢｣" "「」" "«»"))
+  (make-local-variable 'parse-sexp-lookup-properties)
+  (setf parse-sexp-lookup-properties t)
+  (make-local-variable 'text-property-default-nonsticky)
+  (let ((elem (assq 'syntax-table text-property-default-nonsticky)))
+    (if elem
+        (setcdr elem t)
+        (setq text-property-default-nonsticky
+              (cons '(syntax-table . t)
+                    text-property-default-nonsticky))))
+  ;; set up some prepended rules that apply the new syntax table on the regexp matched <> chars
+  (font-lock-add-keywords
+   nil `(("[ 	\n`]\\(<\\)\\(\\w*\\)"
+          (0 (progn
+               (add-text-properties (match-beginning 1) (match-end 1)
+                                    `(syntax-table ,cl-quasi-quote-xml-syntax-table))
+               nil))
+          (1 'font-lock-cl-quasi-quote-xml-element-face)
+          (2 'font-lock-cl-quasi-quote-xml-element-face))
+         ("[^(]\\(>+\\)"
+          (0 (progn
+               (add-text-properties (match-beginning 1) (match-end 1)
+                                    `(syntax-table ,cl-quasi-quote-xml-syntax-table))
+               nil))
+          (1 'font-lock-cl-quasi-quote-xml-element-face)))
+   t)
+  ;; set up some appended rules that remove it
+  (font-lock-add-keywords
+   nil `(("(\\(<\\)[= 	()\n]"
+          (0 (progn
+               (remove-text-properties (match-beginning 1) (match-end 1) `(syntax-table nil))
+               nil)))
+         ("[(]\\(>\\)[= 	()\n]"
+          (0 (progn
+               (remove-text-properties (match-beginning 1) (match-end 1) `(syntax-table nil))
+               nil))))))
+
+(add-hook 'lisp-mode-hook 'cl-quasi-quote-lisp-mode-hook)
 
 (defvar cl-quasi-quote-paren-pairs
   (mapcar
@@ -94,4 +141,6 @@
                              'goto-char)
       (insert (second parens))
       (backward-char)))
-  (save-excursion (backward-up-list) (indent-sexp)))
+  (save-excursion
+    ;; not needed, but why if it's there in paredit-wrap-sexp? (backward-up-list)
+    (indent-sexp)))
