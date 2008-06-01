@@ -13,6 +13,10 @@
 (def function setup-readtable-for-xml-test (inline? &key (binary? #t) indentation-width)
   (if binary?
       (progn
+        (enable-quasi-quoted-string-to-binary-emitting-form-syntax
+         '*xml-stream*
+         :encoding :utf-8
+         :with-inline-emitting inline?)
         (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
          '*xml-stream*
          :encoding :utf-8
@@ -24,6 +28,9 @@
          :encoding :utf-8
          :with-inline-emitting inline?))
       (progn
+        (enable-quasi-quoted-string-to-string-emitting-form-syntax
+         '*xml-stream*
+         :with-inline-emitting inline?)
         (enable-quasi-quoted-xml-to-string-emitting-form-syntax
          '*xml-stream*
          :text-node-escaping-method :per-character
@@ -224,7 +231,9 @@
   (｢<element>Hello UN<>QUOTED World</element>｣
    ｢<element `str("Hello" ,(list " UN<>QUOTED " "World"))>｣)
   (｢<element attribute="42"/>｣
-   ｢<element (:attribute `str("4" ,(list "2")))>｣))
+   ｢<element (:attribute `str("4" ,(list "2")))>｣)
+  (｢<element attribute="fooBAR"/>｣
+   ｢<element (:attribute `str("foo" ,(string-upcase "bar")))>｣))
 
 (def xml-test/normal test/xml/reverse ()
   ("<element><child2/><child1/></element>"
