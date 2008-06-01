@@ -45,6 +45,7 @@
      :splice-character splice-character
      :readtable-case :preserve
      :dispatched-quasi-quote-name dispatched-quasi-quote-name
+     :body-reader (make-quasi-quoted-xml-body-reader start-character end-character unquote-character)
      :toplevel-reader-wrapper (lambda (reader)
                                 (declare (optimize debug))
                                 (named-lambda xml-toplevel-reader-wrapper (stream char)
@@ -67,6 +68,54 @@
                                               (apply 'set-macro-character unquote-character original-reader-on-unquote-character)
                                               (return (read stream t 'eof t))))
                                           (funcall reader stream char)))))))))
+
+(def function make-quasi-quoted-xml-body-reader (start-character end-character unquote-character)
+  (named-lambda quasi-quoted-xml-body-reader (stream)
+    (assert end-character)
+    (bind ((first-character (peek-char nil stream #t nil #t))
+           (element-name (if (char= first-character unquote-character)
+                             (read stream #t nil #t)
+                             (read-quasi-quoted-xml-name stream start-character end-character unquote-character)))
+           (attributes (list)))
+      (when (char= #\( (peek-char #t stream #t nil #t))
+        (read-char stream #t nil #t)
+        (setf attributes
+              (iter (for next-character = (peek-char #t stream #t nil #t))
+                    (until (char= next-character #\) ))
+                    (if (char= next-character unquote-character)
+                        (collect (read stream #t nil #t))
+                        (bind ((attribute-name (read-quasi-quoted-xml-name stream start-character
+                                                                           end-character unquote-character)))
+                          (when (starts-with #\: attribute-name :test #'char=)
+                            (setf attribute-name (subseq attribute-name 1)))
+                          (assert-valid-xml-name attribute-name stream)
+                          (collect attribute-name)
+                          (collect (read stream #t nil #t))))
+                    (finally (read-char stream #t nil #t)))))
+      (list* element-name
+             attributes
+             (bind ((*readtable* (copy-readtable)))
+               (set-syntax-from-char end-character #\) *readtable*)
+               (read-delimited-list end-character stream t))))))
+
+(def function read-quasi-quoted-xml-name (stream start-character end-character unquote-character)
+  (iter (with delimiters = (list start-character end-character unquote-character #\space #\newline))
+        (with element-name = (make-array 8 :element-type 'character :adjustable #t :fill-pointer 0))
+        (for char = (peek-char nil stream #t nil #t))
+        (until (member char delimiters :test #'char=))
+        (vector-push-extend (read-char stream #t nil #t) element-name)
+        (finally
+         (when (zerop (length element-name))
+           (simple-reader-error stream "No xml element name?"))
+         (assert-valid-xml-name element-name stream)
+         (return element-name))))
+
+(def function assert-valid-xml-name (name &optional stream)
+  (when (position-if (lambda (el)
+                       (member el '(#\< #\> #\= #\& #\") :test #'char=))
+                     name)
+    ;; TODO do a proper check for valid xml names...
+    (simple-reader-error stream "Illegal character in element name ~S" name)))
 
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-XML-TO-~A" name))
