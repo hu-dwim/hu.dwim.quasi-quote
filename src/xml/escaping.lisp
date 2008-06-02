@@ -12,7 +12,7 @@
                                         (#\> "&gt;")
                                         (#\& "&amp;")
                                         (#\" "&quot;")))
-          (setf (aref result (char-code character)) entity))
+          (setf (aref result (char-code character)) (coerce entity 'simple-base-string)))
     result))
 
 (def (function eo) escape-as-xml (string &optional destination)

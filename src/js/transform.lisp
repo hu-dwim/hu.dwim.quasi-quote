@@ -58,7 +58,7 @@
     (=   '\=\=)
     (t op)))
 
-(def (function oi) lisp-literal-to-js-literal (value)
+(def (function oie) to-js-literal (value)
   (etypecase value
     (string (concatenate 'string "'" (escape-as-js-string value) "'"))
     (integer (princ-to-string value))
@@ -66,6 +66,9 @@
     (ratio (concatenate 'string "(" (princ-to-string (numerator value)) " / " (princ-to-string (denominator value)) ")"))
     (character (concatenate 'string "'" (escape-as-js-string (string value)) "'"))
     (null "null")))
+
+(def (function ioe) to-js-boolean (value)
+  (if value "true" "false"))
 
 (def definer transform-function (name args &body body)
   `(def function ,name ,args
@@ -208,7 +211,7 @@
                                 ,@(mapcar #'recurse arguments)
                                 #\) )))))))
    (constant-form
-    (lisp-literal-to-js-literal (value-of -node-)))
+    (to-js-literal (value-of -node-)))
    (variable-binding-form
     (bind ((indent (make-indent)))
       (within-nested-js-block
@@ -272,7 +275,7 @@
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (transformation-typecase node
-    ((or number string character) (lisp-literal-to-js-literal node))
+    ((or number string character) (to-js-literal node))
     (walked-form    (transform-quasi-quoted-js-to-quasi-quoted-string* node))
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
     (js-quasi-quote (if (compatible-transformation-pipelines? *transformation-pipeline*
