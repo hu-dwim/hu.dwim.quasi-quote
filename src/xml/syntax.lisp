@@ -99,6 +99,7 @@
                (read-delimited-list end-character stream t))))))
 
 (def function read-quasi-quoted-xml-name (stream start-character end-character unquote-character)
+  ;; FIXME this should have at least some minimal ;; comment handling
   (iter (with delimiters = (list start-character end-character unquote-character #\space #\newline))
         (with element-name = (make-array 8 :element-type 'character :adjustable #t :fill-pointer 0))
         (for char = (peek-char nil stream #t nil #t))
