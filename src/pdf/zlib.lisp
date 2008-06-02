@@ -170,9 +170,9 @@ Note that the size of the DESTINATION array should be at least 0.1% more than th
                                compressed-length
                                (cffi:inc-pointer source-bytes source-start)
                                (- source-end source-start)
-                               level)
-          (let ((destination-end (+ destination-start (cffi:mem-ref compressed-length :long))))
-            destination-end))))))
+                               level))
+        (let ((destination-end (+ destination-start (cffi:mem-ref compressed-length :long))))
+          destination-end)))))
 
 (defun uncompress (source destination &key
                    (source-start 0)
@@ -188,9 +188,9 @@ Note that the size of the DESTINATION array should be at least 0.1% more than th
         (zlib-call (%uncompress (cffi:inc-pointer destination-bytes destination-start)
                                 uncompressed-length
                                 (cffi:inc-pointer source-bytes source-start)
-                                (- source-end source-start))
-          (let ((destination-end (+ destination-start (cffi:mem-ref uncompressed-length :long))))
-            destination-end))))))
+                                (- source-end source-start)))
+        (let ((destination-end (+ destination-start (cffi:mem-ref uncompressed-length :long))))
+          destination-end)))))
 
 (defun make-deflate-z-stream (&key (level +z-default-compression+) (method +z-deflated+)
                       (window-bits 15) (memory-level 8) (strategy +z-default-strategy+))
