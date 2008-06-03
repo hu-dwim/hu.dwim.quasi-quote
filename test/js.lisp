@@ -236,6 +236,15 @@
              (return (+ a b)))
            (print (x 1 :b 2)))｣)))
 
+(def js-test test/js/lambda ()
+  ("foobarbaz"
+   ｢`js(print
+        ((lambda (fn x)
+           (return (fn (+ x "bar"))))
+         (lambda (x)
+           (return (+ x "baz")))
+         "foo"))｣))
+
 (def test test/js/escaping ()
   (let ((str "alma"))
     ;; return the input if there's no need for escaping
