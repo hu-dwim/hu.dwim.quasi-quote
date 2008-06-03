@@ -41,7 +41,7 @@
            setf setq incf decf
            defun lambda
            block return
-           create
+           create array
            &optional &key &allow-other-keys &rest)}
         :cl-quasi-quote-js)
 

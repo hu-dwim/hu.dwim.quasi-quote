@@ -118,7 +118,11 @@
                `(,(recurse (first arguments))
                   #\[
                   ,(recurse (second arguments))
-                  #\])))))
+                  #\])))
+   (|array|  (bind ((arguments (arguments-of -node-)))
+               `(#\[
+                 ,@(mapcar #'recurse arguments)
+                 #\])))))
 
 (def special-variable *js-block-nesting-level* 0)
 
