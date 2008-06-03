@@ -160,8 +160,14 @@
     (lisp-name-to-js-name (name-of node))))
 
 (macrolet ((frob (&rest entries)
-             `(flet ((recurse (form)
-                       (transform-quasi-quoted-js-to-quasi-quoted-string form)))
+             `(labels ((recurse (form)
+                         (transform-quasi-quoted-js-to-quasi-quoted-string form))
+                       (recurse-as-comma-separated (form &optional (recurse-fn #'recurse))
+                         (bind ((recurse-fn (ensure-function recurse-fn)))
+                           (iter (for el :in form)
+                                 (unless (first-iteration-p)
+                                   (collect ", "))
+                                 (collect (funcall recurse-fn el))))))
                 (defgeneric transform-quasi-quoted-js-to-quasi-quoted-string* (form)
                   ,@(iter (for (type . body) :in entries)
                           (collect `(:method ((-node- ,type))
@@ -177,12 +183,11 @@
       (assert (typep operator 'lambda-function-form))
       `(,(recurse operator)
          #\(
-         ,@(mapcar #'recurse arguments)
+         ,@(recurse-as-comma-separated arguments)
          #\) )))
    (lambda-function-form
     `("function ("
-      ,@(iter (for argument :in (arguments-of -node-))
-              (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
+      ,@(recurse-as-comma-separated (arguments-of -node-) 'transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument)
       ") {"
       ,@(transform-progn -node- :wrap? #f)
       #\Newline
@@ -209,10 +214,10 @@
            (if dotted?
                `(,(recurse (first arguments))
                   ,operator-name #\(
-                  ,@(mapcar #'recurse (rest arguments))
+                  ,@(recurse-as-comma-separated arguments)
                   #\) )
                `(,operator-name #\(
-                                ,@(mapcar #'recurse arguments)
+                                ,@(recurse-as-comma-separated arguments)
                                 #\) )))))))
    (constant-form
     (to-js-literal (value-of -node-)))

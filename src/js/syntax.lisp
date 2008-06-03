@@ -173,6 +173,10 @@
                         body env)
       (setf (name-of result) name))))
 
+;; cl:lambda a macro that expands to (function (lambda ...)), so we need to define our own handler here
+(def js-walker-handler |lambda| (form parent env)
+  (walk-lambda form parent env))
+
 (def js-walker-handler |return| (form parent env)
   (unless (<= 1 (length form) 2)
     (simple-walker-error "Illegal return form: ~S" form))
@@ -211,7 +215,8 @@
 ;; because `js is case sensitive...
 (progn
   (dolist (symbol {(with-readtable-case :preserve)
-                   '(progn let let* setf setq defun lambda block return)})
+                   ;; NOTE lambda needs its own handler, see above
+                   '(progn let let* setf setq defun block return)})
     (export symbol :cl-quasi-quote-js)
     (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
       (assert cl-symbol)
