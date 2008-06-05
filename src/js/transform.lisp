@@ -214,7 +214,7 @@
            (if dotted?
                `(,(recurse (first arguments))
                   ,operator-name #\(
-                  ,@(recurse-as-comma-separated arguments)
+                  ,@(recurse-as-comma-separated (rest arguments))
                   #\) )
                `(,operator-name #\(
                                 ,@(recurse-as-comma-separated arguments)
@@ -246,7 +246,7 @@
                         (list #\space (recurse it)))))
    (create-form
     (bind ((elements (elements-of -node-)))
-      `("({ "
+      `("{ "
         ,@(with-increased-indent
            (iter (with indent = `(#\, #\Newline ,@(make-indent)))
                  (for (name . value) :in elements)
@@ -260,7 +260,7 @@
                                                         name (source-of -node-)))))
                  (collect ": ")
                  (collect (recurse value))))
-        "})")))
+        "}")))
    (slot-value-form
     (bind ((object (object-of -node-))
            (slot-name (slot-name-of -node-)))

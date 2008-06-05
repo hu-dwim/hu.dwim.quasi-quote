@@ -140,7 +140,7 @@
        #t))
 
 (defun undefined-js-reference-handler (type name)
-  (unless (member name '("document") :test #'string=)
+  (unless (member name '("document" "debugger") :test #'string=)
     (cl-walker::undefined-reference-handler type name)))
 
 (def function walk-js (form &optional lexenv)
