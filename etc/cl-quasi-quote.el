@@ -51,14 +51,14 @@
                     text-property-default-nonsticky))))
   ;; set up some prepended rules that apply the new syntax table on the regexp matched <> chars
   (font-lock-add-keywords
-   nil `(("[ 	\n`]\\(<\\)\\(\\w*\\)"
+   nil `(("[ 	\n`]\\(<\\)\\(\\w+\\)"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
                nil))
           (1 'font-lock-cl-quasi-quote-xml-element-face)
           (2 'font-lock-cl-quasi-quote-xml-element-face))
-         ("[^(]\\(>+\\)"
+         ("[^(-=/<]\\(>+\\)"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
@@ -67,13 +67,13 @@
    t)
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
-   nil `(("(\\(<\\)[= 	()\n]"
+   nil `(("\\w\\([<>]+\\)\\|(\\([<>]+\\)"
           (0 (progn
-               (remove-text-properties (match-beginning 1) (match-end 1) `(syntax-table nil))
-               nil)))
-         ("[(]\\(>\\)[= 	()\n]"
-          (0 (progn
-               (remove-text-properties (match-beginning 1) (match-end 1) `(syntax-table nil))
+               (remove-text-properties (or (match-beginning 1)
+                                           (match-beginning 2))
+                                       (or (match-end 1)
+                                           (match-end 2))
+                                       `(syntax-table nil))
                nil))))))
 
 (add-hook 'lisp-mode-hook 'cl-quasi-quote-lisp-mode-hook)
