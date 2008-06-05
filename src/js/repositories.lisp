@@ -38,17 +38,18 @@
         (values (funcall expander args) #t)
         (values form #f))))
 
-(def (definer e) js-macro (name args &rest body)
+(def (definer e :available-flags "e") js-macro (name args &rest body)
   "Define a javascript macro, and store it in the toplevel macro environment."
   ;; TODO (undefine-js-compiler-macro name)
   (with-unique-names (arg-values)
-    `(progn
-       (when (gethash ',name *js-macros*)
-         (simple-style-warning "Redefining js macro ~S" ',name))
-       (setf (gethash ',name *js-macros*)
-             (lambda (,arg-values)
-               (destructuring-bind ,args ,arg-values ,@body)))
-       ',name)))
+    (with-standard-definer-options name
+      `(progn
+         (when (gethash ',name *js-macros*)
+           (simple-style-warning "Redefining js macro ~S" ',name))
+         (setf (gethash ',name *js-macros*)
+               (lambda (,arg-values)
+                 (destructuring-bind ,args ,arg-values ,@body)))
+         ',name))))
 
 (def definer js-literal (name string)
   `(progn
