@@ -67,7 +67,7 @@
              (:file "utils" :depends-on ("configuration"))
              (:file "syntax" :depends-on ("utils"))
              (:file "transformation" :depends-on ("utils" "syntax"))
-             ;; TODO (:file "lisp" :depends-on ("syntax"))
+             (:file "list" :depends-on ("syntax" "transformation" "utils"))
              (:file "bivalent" :depends-on ("transformation" "syntax" "string" "binary" "utils"))
              (:file "binary" :depends-on ("transformation" "syntax" "utils"))
              (:file "string" :depends-on ("transformation" "syntax" "binary" "utils" ))))))

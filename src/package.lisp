@@ -35,6 +35,7 @@
      body-of
      syntax-node
      make-string-of-spaces
+     bq
      find-ancestor-syntax-node
      binary-position
      ub8-vector

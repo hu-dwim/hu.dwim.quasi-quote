@@ -79,6 +79,10 @@
 (def (class* e) syntax-node ()
   ())
 
+;; TODO ? maybe it's just a thinko that it's needed
+(def method cl-walker:unwalk-form ((self syntax-node))
+  self)
+
 (def (class* e) quasi-quote (syntax-node)
   ((transformation-pipeline)
    (body)))
