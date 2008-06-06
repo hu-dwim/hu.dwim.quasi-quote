@@ -51,14 +51,14 @@
                     text-property-default-nonsticky))))
   ;; set up some prepended rules that apply the new syntax table on the regexp matched <> chars
   (font-lock-add-keywords
-   nil `(("[ 	\n`]\\(<\\)\\(\\w+\\)"
+   nil `(("[ 	\n`]\\(<\\)\\(\\w+\\|,\\)"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
                nil))
           (1 'font-lock-cl-quasi-quote-xml-element-face)
           (2 'font-lock-cl-quasi-quote-xml-element-face))
-         ("[^(-=/<]\\(>+\\)"
+         ("[^-=/<(]\\(>+\\)"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
