@@ -45,9 +45,14 @@
        (bind ((attributes (attributes-of node))
               (name (name-of node))
               (transformed-name (etypecase name
-                                  (xml-unquote (make-string-unquote
-                                                (wrap-runtime-delayed-transformation-form
-                                                 (form-of name))))
+                                  (xml-unquote (if (and (consp (form-of name))
+                                                        (eq (first (form-of name)) 'progn)
+                                                        (every #'stringp (rest (form-of name))))
+                                                   ;; TODO this optimization may be superfluous once the list qq code is revived... check, delete.
+                                                   (apply #'concatenate 'string (rest (form-of name)))
+                                                   (make-string-unquote
+                                                    (wrap-runtime-delayed-transformation-form
+                                                     (form-of name)))))
                                   (string name)))
               (children (children-of node)))
          `(,@indent-level
