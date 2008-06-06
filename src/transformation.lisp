@@ -16,12 +16,13 @@
 (def (class* e) transformation ()
   ((transformer :type (or symbol function))))
 
-(def (definer e :available-flags "e") transformation (name supers slots transformer)
+(def (definer e :available-flags "e") transformation (name supers slots transformer &body class-options)
   `(progn
      (def (class* ,@(when (getf -options- :export) '(:export t))) ,name ,(if (find 'transformation supers)
                               supers
                               (append supers '(transformation)))
-       ,slots)
+       ,slots
+       ,@class-options)
      (def method initialize-instance :after ((self ,name) &key)
        (bind ((-transformation- self))
          (declare (ignorable -transformation-))
@@ -45,6 +46,7 @@
 
 (def class* lisp-form-emitting-transformation (transformation)
   ((with-inline-emitting #f :accessor with-inline-emitting? :documentation "WITH-INLINE-EMITTING means that the order of the creation of the syntax nodes at runtime is in sync with the expected order of these nodes in the output (i.e. nothing like <a () ,@(reverse (list <b> <c>))>). It enables an optimization: in this mode the write-sequence calls are not wrapped in closures but rather everything is emitted at the place where it is in the code.")
+   ;; TODO there's some confusion here: stream-variable-name and declarations is meaningless for quasi-quoted-list-to-list-emitting-form...
    (stream-variable-name)
    (declarations '() :documentation "Add these declarations to the emitted lambda forms.")))
 
@@ -79,19 +81,20 @@
 (def macro as-delayed-emitting (&body body)
   `(make-delayed-emitting (lambda () ,@body)))
 
-(def function wrap-emitting-forms (with-inline-emitting forms &optional declarations)
-  (bind ((forms
-          (append forms
-                  (if with-inline-emitting
-                      '(+void+)
-                      '((values))))))
+(def function wrap-emitting-forms (forms)
+  (bind ((with-inline-emitting (with-inline-emitting? *transformation*))
+         (forms (if (eq with-inline-emitting :as-is)
+                    forms
+                    (append forms
+                            (if with-inline-emitting
+                                '(+void+)
+                                '((values)))))))
     (if with-inline-emitting
         (ensure-progn forms)
         `(as-delayed-emitting
-           ,@declarations
+           ,@(declarations-of *transformation*)
            ,@(if (and (consp forms)
-                      (consp (first forms))
-                      (eq 'progn (first (first forms))))
+                      (eq 'progn (first forms)))
                  (cdr forms)
                  forms)))))
 

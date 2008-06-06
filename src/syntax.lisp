@@ -69,10 +69,6 @@
                unquote-node))
     (t form)))
 
-#+nil
-(def method cl-walker:unwalk-form ((self syntax-node))
-  self)
-
 ;;;;;;;
 ;;; AST
 

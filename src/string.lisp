@@ -139,11 +139,9 @@
 (def function transform-quasi-quoted-string-to-string-emitting-form (input)
   (transformation-typecase input
     (string-quasi-quote
-     (wrap-emitting-forms (with-inline-emitting? *transformation*)
-                          (mapcar 'make-quasi-quoted-string-emitting-form
+     (wrap-emitting-forms (mapcar 'make-quasi-quoted-string-emitting-form
                                   (reduce-string-subsequences
-                                   (transform-quasi-quoted-string-to-string-emitting-form/flatten-body input)))
-                          (declarations-of *transformation*)))
+                                   (transform-quasi-quoted-string-to-string-emitting-form/flatten-body input)))))
     (string-unquote
      (map-filtered-tree (form-of input) 'string-quasi-quote
                         (lambda (node)
@@ -164,7 +162,7 @@
                                              ;; if the pipelines are compatible, then just skip over the qq node
                                              ;; and descend into its body as if it never was there...
                                              (traverse (body-of nested-node))
-                                             (push nested-node result))))
+                                             (push (transform nested-node) result))))
                    (t (push subtree result))))))
       (traverse (body-of node)))
     (nreverse result)))

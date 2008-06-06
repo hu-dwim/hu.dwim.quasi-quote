@@ -127,13 +127,11 @@
 (def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input)
   (transformation-typecase input
     (bivalent-quasi-quote
-     (wrap-emitting-forms (with-inline-emitting? *transformation*)
-                          (mapcar 'make-quasi-quoted-bivalent-emitting-form
+     (wrap-emitting-forms (mapcar 'make-quasi-quoted-bivalent-emitting-form
                                   (reduce-binary-subsequences
                                    (reduce-string-subsequences
                                     ;; TODO mimic transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body?
-                                    (flatten (body-of input)))))
-                          (declarations-of *transformation*)))
+                                    (flatten (body-of input)))))))
     ;; TODO delme? write test that triggers it...
     #+nil(bivalent-unquote
      (map-filtered-tree (form-of input) 'bivalent-quasi-quote

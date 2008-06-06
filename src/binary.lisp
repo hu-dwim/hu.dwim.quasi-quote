@@ -183,11 +183,9 @@
 (def function transform-quasi-quoted-binary-to-binary-emitting-form/toplevel (input)
   (transformation-typecase input
     (binary-quasi-quote
-     (wrap-emitting-forms (with-inline-emitting? *transformation*)
-                          (mapcar 'make-quasi-quoted-binary-emitting-form
+     (wrap-emitting-forms (mapcar 'make-quasi-quoted-binary-emitting-form
                                   (reduce-binary-subsequences
-                                   (transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body input)))
-                          (declarations-of *transformation*)))
+                                   (transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body input)))))
     ;; TODO delme? write test that triggers it...
     #+nil(binary-unquote
           (transform-quasi-quoted-binary-to-binary-emitting-form/unquote input))))
@@ -207,6 +205,7 @@
                                              ;; if the pipelines are compatible, then just skip over the qq node
                                              ;; and descend into its body as if it never was there...
                                              (traverse (body-of nested-node))
+                                             ;; TODO hm, why not (push (transform nested-node) result)?
                                              (push nested-node result))))
                    (t (push subtree result))))))
       (traverse (body-of node)))
