@@ -39,7 +39,7 @@
            progn let let*
            vector list aref elt slot-value
            setf setq incf decf
-           defun lambda
+           defun lambda map mapcar map-into
            block return
            create array
            &optional &key &allow-other-keys &rest)}

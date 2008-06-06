@@ -17,6 +17,8 @@
 
 (def special-variable *js-indent-level* 0)
 
+(def special-variable *in-js-statement-context* #t)
+
 (def function make-indent ()
   (awhen (indentation-width-of *transformation*)
     (list (make-string-of-spaces (* it *js-indent-level*)))))
@@ -72,9 +74,7 @@
 
 (def definer transform-function (name args &body body)
   `(def function ,name ,args
-     (flet ((recurse (form)
-              (transform-quasi-quoted-js-to-quasi-quoted-string form)))
-       (declare (ignorable #'recurse))
+     (with-lexical-transform-functions
        ,@body)))
 
 (def transform-function transform-incf-like (node plus-plus plus-equal)
@@ -91,6 +91,39 @@
             (collect (recurse argument)))
     #\]))
 
+(def transform-function transform-map-like (node &key (destructively-into :inplace))
+  (bind ((arguments (arguments-of node))
+         (fn (pop arguments))
+         (fn-processed (if (and (typep fn 'constant-form)
+                                (symbolp (value-of fn)))
+                           (lisp-name-to-js-name (value-of fn))
+                           (recurse fn)))
+         (sequence (pop arguments))
+         (idx-var (unique-js-name "_idx"))
+         (array-var (unique-js-name "_src"))
+         (result nil))
+    (when arguments
+      (simple-js-compile-error node "TODO: js compiler doesn't support iterating multiple sequences using map constructs yet"))
+    (when (eq :inplace destructively-into)
+      (setf destructively-into array-var))
+    (when (and (not *in-js-statement-context*)
+               (not destructively-into))
+      (setf destructively-into (unique-js-name "_tgt"))
+      (setf result (list (format "var ~A = [];~%" destructively-into))))
+    (bind ((result `(,(format nil "var ~A = " array-var)
+                     ,(recurse sequence)
+                     ,(format nil ";~%for (~A = 0; ~A < ~A.length; ~A++) {~%" idx-var idx-var array-var idx-var)
+                     ,@(when destructively-into
+                         `(,array-var "[" ,idx-var "] = "))
+                     "("
+                     ,fn-processed
+                     ,(format nil ")(~A[~A])~%}" array-var idx-var))))
+      (if *in-js-statement-context*
+          result
+          `("(function () { "
+            ,result
+            ,(format nil "; return ~A; })()" destructively-into))))))
+
 (macrolet ((frob (&body entries)
              `(progn
                 ,@(iter (for (name . body) :in entries)
@@ -101,6 +134,7 @@
    (|decf|   (transform-incf-like -node- "--" "-="))
    (|vector| (transform-vector-like -node-))
    (|list|   (transform-vector-like -node-))
+   (|map|    (transform-map-like -node-))
    (|not|    (unless (length= 1 (arguments-of -node-))
                (simple-js-compile-error -node- "The not operator expects exactly one argument!"))
              `("!(" ,(recurse (first (arguments-of -node-))) ")"))
@@ -121,8 +155,20 @@
                   #\])))
    (|array|  (bind ((arguments (arguments-of -node-)))
                `(#\[
-                 ,@(mapcar #'recurse arguments)
+                 ,@(recurse-as-comma-separated arguments
+                                               (lambda (node)
+                                                 (if (and (typep node 'js-unquote)
+                                                          (spliced-p node))
+                                                     (make-string-unquote
+                                                      `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
+                                                        ,(form-of node))))))
                  #\])))))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
+  (iter (for element :in-sequence elements)
+        (unless (first-iteration-p)
+          (collect ", "))
+        (collect (transform-quasi-quoted-js-to-quasi-quoted-string element))))
 
 (def special-variable *js-block-nesting-level* 0)
 
@@ -141,7 +187,8 @@
 
 (def transform-function transform-progn (node &key (wrap? nil wrap-provided?) (nest? #t) (increase-indent? #f))
   (within-nested-js-block* nest?
-    (bind ((body (cl-walker:body-of node)))
+    (bind ((body (cl-walker:body-of node))
+           (*in-js-statement-context* #t))
       (unless wrap-provided?
         (setf wrap? (and (rest body)
                          (not (in-toplevel-js-block?)))))
@@ -160,14 +207,7 @@
     (lisp-name-to-js-name (name-of node))))
 
 (macrolet ((frob (&rest entries)
-             `(labels ((recurse (form)
-                         (transform-quasi-quoted-js-to-quasi-quoted-string form))
-                       (recurse-as-comma-separated (form &optional (recurse-fn #'recurse))
-                         (bind ((recurse-fn (ensure-function recurse-fn)))
-                           (iter (for el :in form)
-                                 (unless (first-iteration-p)
-                                   (collect ", "))
-                                 (collect (funcall recurse-fn el))))))
+             `(with-lexical-transform-functions
                 (defgeneric transform-quasi-quoted-js-to-quasi-quoted-string* (form)
                   ,@(iter (for (type . body) :in entries)
                           (collect `(:method ((-node- ,type))

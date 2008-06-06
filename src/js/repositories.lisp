@@ -79,13 +79,24 @@
    (nil       "null")
    (undefined "undefined")))
 
+(def macro with-lexical-transform-functions (&body body)
+  `(labels ((recurse (form)
+              (bind ((*in-js-statement-context* #f))
+                (transform-quasi-quoted-js-to-quasi-quoted-string form)))
+            (recurse-as-comma-separated (form &optional (recurse-fn #'recurse))
+              (bind ((recurse-fn (ensure-function recurse-fn)))
+                (iter (for el :in form)
+                      (unless (first-iteration-p)
+                        (collect ", "))
+                      (collect (funcall recurse-fn el))))))
+     (declare (ignorable #'recurse #'recurse-as-comma-separated))
+     ,@body))
+
 (def definer js-special-form (name &body body)
   `(setf (gethash ',name *js-special-forms*)
-         (lambda (-node-)
+         (named-lambda ,(symbolicate '#:js-special-form/ name) (-node-)
            (declare (ignorable -node-))
-           (flet ((recurse (form)
-                    (transform-quasi-quoted-js-to-quasi-quoted-string form)))
-             (declare (ignorable #'recurse))
+           (with-lexical-transform-functions
              ,@body))))
 
 (def special-variable *js-operator-name->precedence*
