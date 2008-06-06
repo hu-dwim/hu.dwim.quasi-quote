@@ -38,7 +38,7 @@
 	    :components
             ((:file "package")
              (:file "suite" :depends-on ("package"))
-             ;; TODO (:file "lisp" :depends-on ("suite"))
+             (:file "list" :depends-on ("suite"))
              (:file "binary" :depends-on ("suite"))
              (:file "string" :depends-on ("suite"))
              (:file "bivalent" :depends-on ("suite"))
