@@ -11,7 +11,19 @@
 (def special-variable *js-special-forms*        (make-hash-table :test 'eq))
 (def special-variable *js-literals*             (make-hash-table :test 'eq))
 (def special-variable *js-special-forms*        (make-hash-table :test 'eq))
+(def special-variable *js-unique-counter*       (or (when (boundp '*js-unique-counter*)
+                                                      *js-unique-counter*)
+                                                    ;; protect it from being reseted at an accidental reload
+                                                    0))
 ;;(def special-variable *js-operator-name->arity* (make-hash-table :test 'eq))
+
+(def (function ie) unique-js-name (&optional (prefix "g"))
+  (concatenate 'string prefix (princ-to-string (incf *js-unique-counter*))))
+
+(def (macro e) with-unique-js-names (names &body body)
+  `(bind (,@(iter (for name :in names)
+                  (collect `(,name ,(unique-js-name (string name))))))
+     ,@body))
 
 (def (function io) js-special-form? (name)
   (nth-value 1 (gethash name *js-special-forms*)))
