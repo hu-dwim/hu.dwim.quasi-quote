@@ -94,10 +94,13 @@
 (def transform-function transform-map-like (node &key (destructively-into :inplace))
   (bind ((arguments (arguments-of node))
          (fn (pop arguments))
-         (fn-processed (if (and (typep fn 'constant-form)
-                                (symbolp (value-of fn)))
-                           (lisp-name-to-js-name (value-of fn))
-                           (recurse fn)))
+         (fn-processed (cond
+                         ((typep fn 'walked-lexical-variable-reference-form)
+                          (lisp-name-to-js-name (name-of fn)))
+                         ((and (typep fn 'constant-form)
+                               (symbolp (value-of fn)))
+                          (lisp-name-to-js-name (value-of fn)))
+                         (t (recurse fn))))
          (sequence (pop arguments))
          (idx-var (unique-js-name "_idx"))
          (array-var (unique-js-name "_src"))
@@ -161,7 +164,8 @@
                                                           (spliced-p node))
                                                      (make-string-unquote
                                                       `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
-                                                        ,(form-of node))))))
+                                                        ,(form-of node)))
+                                                     (recurse node))))
                  #\])))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
