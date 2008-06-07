@@ -40,9 +40,4 @@
   (cl-quasi-quote::transform-function-definer-options options))
 
 (defun setup-readtable ()
-  (enable-sharp-boolean-syntax)
-  (enable-readtime-wrapper-syntax))
-
-#+#.(cl:when (cl:find-package "SWANK") '(:and))
-(register-readtable-for-swank
- '("CL-QUASI-QUOTE-XML") 'setup-readtable)
+  (cl-quasi-quote::setup-readtable))

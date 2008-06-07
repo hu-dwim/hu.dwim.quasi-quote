@@ -17,10 +17,17 @@
                (error "The ~A system requires ~A." (or *compile-file-pathname* *load-pathname*) system)))
            (asdf:operate 'asdf:load-op system)))
     (try :asdf-system-connections)
+    (try :alexandria)
     (try :cl-syntax-sugar)))
 
 (defpackage #:cl-quasi-quote-system
-  (:use :cl :asdf :cl-syntax-sugar :asdf-system-connections)
+  (:use
+   :common-lisp
+   :asdf
+   :alexandria
+   :cl-syntax-sugar
+   :asdf-system-connections
+   )
 
   (:export
    #:*load-as-production-p*
@@ -116,6 +123,12 @@
                         '(:cl-quasi-quote ; and everything else it depends on...
                           ))
        :components ,components)
+
+     (defsystem-connection ,(symbolicate name '#:-and-swank)
+       :requires (,name :swank #:cl-syntax-sugar-and-swank)
+       :components
+       ((:module "src"
+                 :components ((:file "swank-integration")))))
 
      (defmethod perform ((op test-op) (system (eql (find-system ,name))))
        (operate 'test-op :cl-quasi-quote))
