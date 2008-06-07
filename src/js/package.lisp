@@ -34,7 +34,7 @@
 (enable-readtime-wrapper-syntax)
 
 (export {(with-readtable-case :preserve)
-         '(and or not
+         '(nil t and or not
            if when unless cond
            progn let let*
            vector list aref elt slot-value

@@ -284,6 +284,11 @@
    (return-from-form
     `("return" ,@(awhen (result-of -node-)
                         (list #\space (recurse it)))))
+   (instantiate-form
+    `("new " ,(lisp-name-to-js-name (type-to-instantiate-of -node-))
+             "("
+             ,@(recurse-as-comma-separated (arguments-of -node-))
+             ")"))
    (create-form
     (bind ((elements (elements-of -node-)))
       `("{ "

@@ -122,10 +122,11 @@
            (gethash (first name) *js-walker-handlers*))
       (find-walker-handler name)))
 
-(def definer js-walker-handler (name (form parent lexenv) &body body)
-  `(bind ((cl-walker::*walker-handlers* *js-walker-handlers*))
-     (defwalker-handler ,name (,form ,parent ,lexenv)
-       ,@body)))
+(def (definer :available-flags "e") js-walker-handler (name (form parent lexenv) &body body)
+  (with-standard-definer-options name
+    `(bind ((cl-walker::*walker-handlers* *js-walker-handlers*))
+       (defwalker-handler ,name (,form ,parent ,lexenv)
+         ,@body))))
 
 (def function js-constant-name? (form &optional env)
   (declare (ignore env))
@@ -173,11 +174,11 @@
                         body env)
       (setf (name-of result) name))))
 
-;; cl:lambda a macro that expands to (function (lambda ...)), so we need to define our own handler here
-(def js-walker-handler |lambda| (form parent env)
+;; cl:lambda is a macro that expands to (function (lambda ...)), so we need to define our own handler here
+(def (js-walker-handler e) |lambda| (form parent env)
   (walk-lambda form parent env))
 
-(def js-walker-handler |return| (form parent env)
+(def (js-walker-handler e) |return| (form parent env)
   (unless (<= 1 (length form) 2)
     (simple-walker-error "Illegal return form: ~S" form))
   (let ((value (second form)))
@@ -201,7 +202,7 @@
   ((object)
    (slot-name)))
 
-(def js-walker-handler |slot-value| (form parent env)
+(def (js-walker-handler e) |slot-value| (form parent env)
   (unless (length= 2 (rest form))
     (simple-js-compile-error "Invalid slot-value form" form))
   (with-form-object (node slot-value-form :parent parent :source form)
@@ -210,6 +211,19 @@
                                 (if (quoted-symbol? slot-name)
                                     (second slot-name)
                                     (walk-form slot-name node env))))))
+
+(def class* instantiate-form (walked-form)
+  ((type-to-instantiate)
+   (arguments)))
+
+(def (js-walker-handler e) |new| (form parent env)
+  (when (< (length (rest form)) 2)
+    (simple-js-compile-error "Invalid 'new' form" form))
+  (bind ((type (second form))
+         (args (cddr form)))
+    (with-form-object (node instantiate-form :parent parent :source form)
+      (setf (type-to-instantiate-of node) type)
+      (setf (arguments-of node) (mapcar [walk-form !1 node env] args)))))
 
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
