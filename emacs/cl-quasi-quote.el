@@ -1,3 +1,4 @@
+;;; -*- encoding: utf-8 -*-
 ;;;
 ;;; Copyright (c) 2008 by the authors.
 ;;;
@@ -25,10 +26,20 @@
     (modify-syntax-entry ?> ")<" table)
     table))
 
-(defface font-lock-cl-quasi-quote-xml-element-face
+(defgroup cl-quasi-quote-faces nil
+  "Faces installed by cl-quasi-quote."
+  :prefix "cl-quasi-quote-"
+  :group 'applications)
+
+(defface cl-quasi-quote-quasi-quote-face
+   '((((class color) (background light)) (:foreground "Purple3" :weight bold)))
+  "Face for the start syntax of the cl-quasi-quote stuff."
+  :group 'cl-quasi-quote-faces)
+
+(defface cl-quasi-quote-xml-element-face
    '((((class color) (background light)) (:foreground "#888")))
   "Face for the element name in the <element ()> syntax."
-  :group 'font-lock-faces)
+  :group 'cl-quasi-quote-faces)
 
 (defun cl-quasi-quote-lisp-mode-hook ()
   (mapcar (lambda (parens)
@@ -37,8 +48,8 @@
               (modify-syntax-entry open (concat "\(" (string close)) lisp-mode-syntax-table)
               (modify-syntax-entry close (concat "\)" (string open)) lisp-mode-syntax-table)))
           ;; tell emacs that these should behave just like normal parens.
-          ;; adding <> here woult causes headache for < and > when they are
-          ;; used in their normal meaning, so don't. see below for extra treatment.
+          ;; adding <> here would causes headaches for < and > when they are
+          ;; used in their normal meaning, so don't. see below for special treatment.
           '("[]" "{}" "｢｣" "「」" "«»"))
   (make-local-variable 'parse-sexp-lookup-properties)
   (setf parse-sexp-lookup-properties t)
@@ -51,19 +62,20 @@
                     text-property-default-nonsticky))))
   ;; set up some prepended rules that apply the new syntax table on the regexp matched <> chars
   (font-lock-add-keywords
-   nil `(("[ 	\n`]\\(<\\)\\(\\w+\\|,\\)"
+   nil `(("\\(`ui\\|`xml\\|`js-inline\\|`js\\|`\\|,\\)" 1 'cl-quasi-quote-quasi-quote-face)
+         ("[ 	\n`]\\(<\\)\\(\\w+\\|,\\)"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
                nil))
-          (1 'font-lock-cl-quasi-quote-xml-element-face)
-          (2 'font-lock-cl-quasi-quote-xml-element-face))
+          (1 'cl-quasi-quote-xml-element-face)
+          (2 'cl-quasi-quote-xml-element-face))
          ("[^-=/<(]\\(>+\\)"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
                nil))
-          (1 'font-lock-cl-quasi-quote-xml-element-face)))
+          (1 'cl-quasi-quote-xml-element-face)))
    t)
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
