@@ -151,9 +151,9 @@
                     (unless (first-iteration-p)
                       (collect " "))
                     (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute attribute)))
-             `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute
-               ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                 node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute))))
+             `(awhen ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
+                       node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)
+                (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute it))))
         spliced?)))
     (string-quasi-quote node)))
 
