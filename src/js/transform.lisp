@@ -196,7 +196,7 @@
       (unless wrap-provided?
         (setf wrap? (and (rest body)
                          (not (in-toplevel-js-block?)))))
-      `(,@(when wrap? #\{)
+      `(,@(when wrap? '(#\{))
         ,@(with-increased-indent* increase-indent?
             (iter (for statement :in body)
                   (collect #\Newline)
@@ -205,6 +205,11 @@
                   (collect (recurse statement))
                   (collect #\;)))
         ,@(when wrap? `(#\Newline ,@(make-indent) #\}))))))
+
+(def transform-function transform-implicit-progn (node)
+  (if (typep node 'implicit-progn-mixin)
+      (transform-progn node)
+      `(,(recurse node) #\; #\Newline)))
 
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
   (:method ((node required-function-argument-form))
@@ -221,6 +226,11 @@
     (lisp-name-to-js-name (name-of -node-)))
    (progn-form
     (transform-progn -node-))
+   (if-form
+    `("if(" ,(recurse (condition-of -node-)) ")" #\Newline
+            ,@(transform-implicit-progn (then-of -node-))
+            ,@(awhen (else-of -node-)
+               `("else" #\Newline ,@(transform-implicit-progn it)))))
    (lambda-application-form
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-)))
