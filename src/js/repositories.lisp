@@ -35,7 +35,7 @@
 (def (function io) js-macro-name? (name &optional env)
   (declare (ignore env))
   (and (not (js-special-form? name))
-       (nth-value 1 (gethash name *js-macros*))))
+       (not (null (js-macro-definition name)))))
 
 (def function js-symbol-macro-name? (name &optional env)
   (and (not (js-special-form? name))
@@ -45,10 +45,18 @@
   (declare (ignore env)) ; TODO check the env for macrolets?
   (bind ((name (first form))
          (args (rest form))
-         (expander (gethash name *js-macros*)))
+         (expander (js-macro-definition name)))
     (if expander
         (values (funcall expander args) #t)
         (values form #f))))
+
+(def function js-macro-definition (name)
+  (gethash name *js-macros*))
+
+(def function (setf js-macro-definition) (value name)
+  (when (gethash name *js-macros*)
+    (simple-style-warning "Redefining js macro ~S" name))
+  (setf (gethash name *js-macros*) value))
 
 (def (definer e :available-flags "e") js-macro (name args &rest body)
   "Define a javascript macro, and store it in the toplevel macro environment."
@@ -56,12 +64,16 @@
   (with-unique-names (arg-values)
     (with-standard-definer-options name
       `(progn
-         (when (gethash ',name *js-macros*)
-           (simple-style-warning "Redefining js macro ~S" ',name))
-         (setf (gethash ',name *js-macros*)
+         (setf (js-macro-definition ',name)
                (lambda (,arg-values)
                  (destructuring-bind ,args ,arg-values ,@body)))
          ',name))))
+
+(def (definer e :available-flags "e") js-lisp-macro-alias (lisp-name &optional (js-name (intern (string-downcase lisp-name))))
+  (with-standard-definer-options js-name
+    `(setf (js-macro-definition ',js-name)
+           (lambda (args)
+             (macroexpand `(,',lisp-name ,@args))))))
 
 (def definer js-literal (name string)
   `(progn
