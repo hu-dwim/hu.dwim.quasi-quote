@@ -28,6 +28,9 @@
 (def (function io) js-special-form? (name)
   (nth-value 1 (gethash name *js-special-forms*)))
 
+(def (function io) js-literal-name? (name)
+  (nth-value 1 (gethash name *js-literals*)))
+
 (def (function io) js-function-name? (name)
   (declare (ignore name))
   #t)
@@ -77,7 +80,8 @@
 
 (def definer js-literal (name string)
   `(progn
-     (setf (gethash ',name *js-literals*) ,string)))
+     (setf (gethash ',name *js-literals*) ,string)
+     (setf (gethash ',(intern (string-downcase name)) *js-literals*) ,string)))
 
 (macrolet ((frob (&body entries)
              `(progn
