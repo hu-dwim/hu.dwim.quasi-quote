@@ -23,10 +23,11 @@
           (awhen (ignore-some-conditions (parse-number::invalid-number serious-condition)
                    (parse-number:parse-number result))
             (return it))
+          #+nil
           (switch (result :test #'string=)
             ("true" (return #t))
             ("false" (return #f))
-            ("undefined" (return #f)))
+            ("undefined" (return 'undefined)))
           result)))))
 
 (def special-variable *js-stream*)
@@ -165,11 +166,23 @@
   (42
    ｢`js(let ((a 42))
          (decf a)
-         (print (incf a)))｣)
+         (print (incf a)))｣))
+
+(def js-test test/js/literals ()
   (1.42
-   ｢`js (print 1.42)｣)
+   ｢`js(print 1.42)｣)
+  ("null"
+   ｢`js(print nil)｣)
+  ("undefined"
+   ｢`js(print undefined)｣)
+  ("true"
+   ｢`js(print t)｣)
+  ("true"
+   ｢`js(print true)｣)
+  ("false"
+   ｢`js(print false)｣)
   ((coerce 1/3 'float)
-   ｢`js (print 1/3)｣))
+   ｢`js(print 1/3)｣))
 
 (def js-test test/js/unquote ()
   (42
@@ -200,10 +213,20 @@
    ｢`js(print (.to-string ((lambda (x) (return x)) "foo")))｣))
 
 (def js-test test/js/dotted-call ()
-  (#t
+  ("true"
    ｢`js(let ((x "-"))
          (.to-string (+ "" x))
          (print (not (not (.match (+ "foo" x "bar") "o-b")))))｣))
+
+(def js-test test/js/if ()
+  ("then"
+   ｢`js(if (< 2 3)
+           (print "then")
+           (print "else"))｣)
+  ("else"
+   ｢`js(if (< 3 2)
+           (print "then")
+           (print "else"))｣))
 
 (def js-test test/js/arrays ()
   ("10,20"
