@@ -226,7 +226,44 @@
   ("else"
    ｢`js(if (< 3 2)
            (print "then")
-           (print "else"))｣))
+           (print "else"))｣)
+  ("else"
+   ｢`js(if (< 3 2)
+           (progn
+             (print "multiple statements")
+             (print "then"))
+           (progn
+             (let ((a 42))
+               (print "else"))))｣)
+  ("else"
+   ｢`js(let ((x (if (< 3 2)
+                    "then"
+                    "else")))
+         (print x))｣))
+
+(def js-test test/js/cond ()
+  ("third"
+   ｢`js(cond ((< 3 2)
+              (print "first"))
+             ((< 5 4)
+              (print "second"))
+             ((< 1 2)
+              (print "third"))
+             (t (print "default")))｣)
+  ("second"
+   ｢`js(cond ((< 3 2)
+              (print "more statements")
+              (print "first"))
+             ((< 4 5)
+              (print "second"))
+             (t (print "default")))｣)
+  ("first"
+   ｢`js(cond ((< 2 3)
+              (print "first"))
+             (t (print "default")))｣)
+  ("no default"
+   ｢`js(cond ((< 2 3)
+              (print "no default")))｣))
 
 (def js-test test/js/arrays ()
   ("10,20"
