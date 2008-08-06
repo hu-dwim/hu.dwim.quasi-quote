@@ -108,12 +108,13 @@
      (declare (ignorable #'recurse #'recurse-as-comma-separated))
      ,@body))
 
-(def definer js-special-form (name &body body)
-  `(setf (gethash ',name *js-special-forms*)
-         (named-lambda ,(symbolicate '#:js-special-form/ name) (-node-)
-           (declare (ignorable -node-))
-           (with-lexical-transform-functions
-             ,@body))))
+(def (definer :available-flags "e") js-special-form (name &body body)
+  (with-standard-definer-options name
+    `(setf (gethash ',name *js-special-forms*)
+           (named-lambda ,(symbolicate '#:js-special-form/ name) (-node-)
+             (declare (ignorable -node-))
+             (with-lexical-transform-functions
+               ,@body)))))
 
 (def special-variable *js-operator-name->precedence*
   (bind ((result (make-hash-table :test 'eq)))
