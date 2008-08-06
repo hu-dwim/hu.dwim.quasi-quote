@@ -29,5 +29,5 @@
                        (:file "repositories" :depends-on ("package"))
                        (:file "ast" :depends-on ("package" "repositories"))
                        (:file "syntax" :depends-on ("package" "ast" "repositories"))
-                       (:file "transform" :depends-on ("package" "escaping" "syntax" "ast"))))))))
-
+                       (:file "transform" :depends-on ("package" "escaping" "syntax" "ast"))
+                       (:file "js-utils" :depends-on ("transform"))))))))
