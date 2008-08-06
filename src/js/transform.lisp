@@ -211,7 +211,7 @@
 
 (def transform-function transform-implicit-progn (node)
   (if (typep node 'implicit-progn-mixin)
-      (transform-progn node)
+      (transform-progn node :wrap? #t)
       `(,(recurse node) #\; #\Newline)))
 
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
