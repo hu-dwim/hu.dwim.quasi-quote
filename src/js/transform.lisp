@@ -230,10 +230,22 @@
    (progn-form
     (transform-progn -node-))
    (if-form
-    `("if(" ,(recurse (condition-of -node-)) ")" #\Newline
-            ,@(transform-implicit-progn (then-of -node-))
-            ,@(awhen (else-of -node-)
-               `("else" #\Newline ,@(transform-implicit-progn it)))))
+    (bind ((condition (condition-of -node-))
+           (then (then-of -node-))
+           (else (else-of -node-)))
+      (if (or *in-js-statement-context*
+              (typep then 'progn-form)
+              (typep else 'progn-form))
+          `("if(" ,(recurse condition) ")" #\Newline
+                  ,@(transform-implicit-progn then)
+                  ,@(when else `(#\Newline "else " ,@(transform-implicit-progn else))))
+          `("(" ,(recurse condition) ") ? ("
+                ,(recurse then)
+                ") : ("
+                ,(if else
+                     (recurse else)
+                     "undefined")
+                ")"))))
    (lambda-application-form
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-)))
