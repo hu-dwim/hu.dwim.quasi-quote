@@ -42,7 +42,7 @@
            defun lambda map mapcar map-into
            block return
            create array
-           &optional &key &allow-other-keys &rest)}
+           &optional &key &allow-other-keys &rest &body)}
         :cl-quasi-quote-js)
 
 (defun transform-function-definer-options (options)

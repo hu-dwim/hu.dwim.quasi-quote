@@ -227,6 +227,14 @@
       (setf (type-to-instantiate-of node) type)
       (setf (arguments-of node) (mapcar [walk-form !1 node env] args)))))
 
+(def (js-walker-handler e) |macrolet| (form parent env)
+  ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
+  (funcall (find-walker-handler `(macrolet))
+           `(macrolet (,@(iter (for (name args . body) :in (second form))
+                               (collect `(,name ,(substitute '&body '|&body| args) ,@body))))
+              ,@(rest (rest form)))
+           parent env))
+
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
 (progn

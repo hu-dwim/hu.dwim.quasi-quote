@@ -290,6 +290,8 @@
                                 #\) )))))))
    (constant-form
     (to-js-literal (value-of -node-)))
+   (macrolet-form
+    (transform-implicit-progn -node-))
    (variable-binding-form
     (bind ((indent (make-indent)))
       (within-nested-js-block
