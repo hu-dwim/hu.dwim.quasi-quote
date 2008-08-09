@@ -69,7 +69,8 @@
     (character (concatenate 'string "'" (escape-as-js-string (string value)) "'"))
     (symbol (bind ((js-value (gethash value *js-literals*)))
               (assert js-value () "~S is not a valid js literal" value)
-              js-value))))
+              js-value))
+    (js-unquote (make-string-unquote `(to-js-literal ,(form-of value))))))
 
 (def (function ioe) to-js-boolean (value)
   (if value "true" "false"))
@@ -205,7 +206,8 @@
                   (collect #\Newline)
                   (awhen (make-indent)
                     (collect it))
-                  (collect (recurse statement))
+                  ;; don't use recurse, because it rebinds *in-js-statement-context* to #f
+                  (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
                   (collect #\;)))
         ,@(when wrap? `(#\Newline ,@(make-indent) #\}))))))
 
@@ -298,7 +300,7 @@
         (with-increased-indent
           `(,@(unless (in-toplevel-js-block?) (list "{"))
             ,@(iter (for (name . value) :in (bindings-of -node-))
-                    (collect `(#\Newline ,@(make-indent) ,(lisp-name-to-js-name name) " = " ,(recurse value) ";")))
+                    (collect `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";")))
             ,@(transform-progn -node- :wrap? #f :nest? #f :increase-indent? #f)
             ,@(unless (in-toplevel-js-block?) `(#\Newline ,@indent "}")))))))
    (setq-form
