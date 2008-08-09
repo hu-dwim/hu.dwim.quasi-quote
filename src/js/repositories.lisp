@@ -120,8 +120,8 @@
   (bind ((result (make-hash-table :test 'eq)))
     (iter
       (for precedence :upfrom 1)
-      (for operators :in '((js-aref)
-                           (js-slot-value)
+      (for operators :in '(;;(js-aref)
+                           ;;(js-slot-value)
                            (! not ~)
                            (* / %)
                            (+ -)
@@ -139,6 +139,7 @@
                            (js-assign *= /= %= += -= <<= >>= >>>= \&= ^= \|=)
                            (comma)))
       (dolist (operator operators)
+        (export operator :cl-quasi-quote-js)
         (setf (gethash operator result) precedence)))
     result))
 
