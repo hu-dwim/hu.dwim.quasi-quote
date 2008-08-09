@@ -141,6 +141,8 @@
        #t))
 
 (defun undefined-js-reference-handler (type name)
+  (declare (ignore type name))
+  #+nil ; they are simply too common in js, so just ignore them
   (unless (member name '("document" "debugger") :test #'string=)
     (cl-walker::undefined-reference-handler type name)))
 
