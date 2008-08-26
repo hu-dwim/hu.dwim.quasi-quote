@@ -1,4 +1,3 @@
-
 ;;; -*- encoding: utf-8 -*-
 ;;;
 ;;; Copyright (c) 2008 by the authors.
@@ -134,11 +133,11 @@
 
 (defun cl-quasi-quote-before-sexp-separator-p ()
   (or (bolp)
-      (cl-quasi-quote-sexp-separator-p (char-before))))
+      (cl-quasi-quote-sexp-separator-p (char-after))))
 
 (defun cl-quasi-quote-after-sexp-separator-p ()
   (or (eolp)
-      (cl-quasi-quote-sexp-separator-p (char-after))))
+      (cl-quasi-quote-sexp-separator-p (char-before))))
 
 (defun cl-quasi-quote-wrap-selection-or-sexp (dwim-parens &optional n)
   "If selection is active, then wrap it with parens. If DWIM-PARENS is T, then chose the wrapping parens by looking around in the context."
