@@ -33,7 +33,7 @@
 (def special-variable *js-stream*)
 (def special-variable *xml/js-stream*)
 
-(def function setup-readtable-for-js-test (&key with-inline-emitting indentation-width (binary? #f)
+(def function setup-readtable-for-js-test (&key with-inline-emitting (indentation-width 2) (binary? #f)
                                                 (output-prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
                                                 (output-postfix #.(format nil "~%// ]]>~%</script>~%"))
                                                 (xml? #f) (output-stream-name (if xml? '*xml/js-stream* '*js-stream*)))
@@ -143,10 +143,10 @@
 (def function test-xml/js-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
                          (with-output-to-string (*xml/js-stream*)
-                           (emit ,ast)))))
+                           (emit ,ast))))
+         (actual (funcall (compile nil lambda-form))))
     ;;(print (macroexpand-all lambda-form))
-    (is (string= expected
-                 (funcall (compile nil lambda-form))))))
+    (is (string= expected actual))))
 
 (def function test-xml/js-emitting-forms/binary (expected ast)
   (bind ((lambda-form `(lambda ()
@@ -232,14 +232,19 @@
            (progn
              (print "multiple statements")
              (print "then"))
-           (progn
-             (let ((a 42))
-               (print "else"))))｣)
+           (let ((output "else"))
+             (print output)))｣))
+
+(def js-test test/js/if-as-expression ()
   ("else"
    ｢`js(let ((x (if (< 3 2)
                     "then"
                     "else")))
-         (print x))｣))
+         (print x))｣)
+  ("then"
+   ｢`js(print (if (< 2 3)
+                  "then"
+                  "else"))｣))
 
 (def js-test test/js/cond ()
   ("third"
@@ -265,6 +270,40 @@
    ｢`js(cond ((< 2 3)
               (print "no default")))｣))
 
+(def js-test test/js/unwind-protect ()
+  (45
+   ｢`js(let ((a 42))
+         (unwind-protect
+              (progn
+                (incf a)
+                (incf a))
+           (incf a))
+         (print a))｣))
+
+(def js-test test/js/unwind-protect ()
+  (45
+   ｢`js(let ((a 42))
+         (unwind-protect
+              (progn
+                (incf a)
+                (incf a))
+           (incf a))
+         (print a))｣))
+
+(def js-test test/js/try-catch ()
+  (54
+   ｢`js(let ((a 42))
+         (try
+              (progn
+                (incf a)
+                (throw 10)
+                (setf a 0))
+           (catch (e)
+             (incf a e))
+           (finally
+            (incf a)))
+         (print a))｣))
+
 (def js-test test/js/arrays ()
   ("10,20"
    ｢`js(print (.to-string (vector 10 20)))｣)
@@ -287,6 +326,13 @@
   (2
    ｢`js(let ((a "b"))
          (print (slot-value (create :a 1 :b 2) a)))｣))
+
+(def js-test test/js/macolet ()
+  (42
+   ｢`js(macrolet ((macro (var value &body body)
+                    `(let ((,var ,value))
+                       ,@body)))
+         (macro a 42 (print a)))｣))
 
 (def js-test test/js/defun ()
   (with-expected-failures
@@ -317,16 +363,14 @@
          `str("a = 22")
          (print (+ `str("a") 10 ,10)))｣))
 
-(def xml/js-test test/js/mixed-with-xml ()
-  ("<body>
-<script>
-// <![CDATA[
-\(2 + 2)
-// ]]>
-</script>
-</body>"
-   ｢<body
-      `js(+ 2 2)>｣))
+(def test test/js/mixed-with-xml ()
+  (bind ((emitted (emit-xml/js ｢<body `js(+ 2 2)>｣))
+         (body (parse-xml-into-sxml emitted)))
+    (is (string= (first body) "body"))
+    (bind ((script (third body)))
+      (is (string= (first script) "script"))
+      (is (stringp (third script)))
+      (is (search "2 + 2" (third script))))))
 
 ;; leave it at the end, because it screws up emacs coloring
 (def js-test test/js/string-quoting ()

@@ -71,6 +71,20 @@
                 (octets-to-string (funcall (compile nil lambda-form))
                                   :encoding :utf-8)))))
 
+(def function parse-xml-into-sxml (string)
+  (labels ((drop-whitespace-nodes (node)
+             (etypecase node
+               (cons
+                (list*
+                 (first node)
+                 (second node)
+                 (iter (for child :in (rest (rest node)))
+                       (unless (and (stringp child)
+                                    (every 'cl-ppcre::whitespacep child))
+                         (collect (drop-whitespace-nodes child))))))
+               (string node))))
+    (drop-whitespace-nodes (cxml:parse string (cxml-xmls:make-xmls-builder)))))
+
 (def test test/xml/escaping/1 ()
   (is (string= "&lt;1&quot;2&gt;3&lt;&amp;4&gt;"
                (escape-as-xml "<1\"2>3<&4>")))
