@@ -208,7 +208,7 @@
       (setf wrap? (and (rest statements)
                        (not (in-toplevel-js-block?)))))
     `(,@(when wrap? `(#\Newline ,@(make-indent) "{"))
-      ,@(with-increased-indent* wrap?
+      ,@(with-increased-indent
           (append
            (funcall statement-prefix-generator)
            (iter (for statement :in statements)
@@ -217,7 +217,8 @@
                    (collect it))
                  ;; don't use RECURSE, because it rebinds *in-js-statement-context* to #f
                  (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
-                 (collect #\;))))
+                 (unless (typep statement 'if-form)
+                   (collect #\;)))))
        ,@(when wrap? `(#\Newline ,@(make-indent) "}")))))
 
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
@@ -250,17 +251,19 @@
       (if *in-js-statement-context*
           (flet ((transform-if-block (node)
                    (typecase node
-                     (implicit-progn-mixin (transform-statements node :wrap? #t))
-                     (if-form `(#\Newline
-                                ,@(make-indent)
-                                ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
-                                ,(transform-quasi-quoted-js-to-quasi-quoted-string node)))
+                     (implicit-progn-mixin (transform-statements node))
+                     (if-form (with-increased-indent
+                                `(#\Newline
+                                  ,@(make-indent)
+                                  ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
+                                  ,(transform-quasi-quoted-js-to-quasi-quoted-string node))))
                      (t
-                      `(#\Newline
-                        ,@(make-indent)
-                        ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
-                        ,(transform-quasi-quoted-js-to-quasi-quoted-string node)
-                        #\;)))))
+                      (with-increased-indent
+                        `(#\Newline
+                          ,@(make-indent)
+                          ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
+                          ,(transform-quasi-quoted-js-to-quasi-quoted-string node)
+                          #\;))))))
             `("if (" ,(recurse condition) ")"
                      ,@(transform-if-block then)
                      ,@(if else
