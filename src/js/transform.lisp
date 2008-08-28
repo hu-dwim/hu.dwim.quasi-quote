@@ -74,7 +74,7 @@
 (def transform-function transform-incf-like (node plus-plus plus-equal)
   (bind ((arguments (arguments-of node)))
     (ecase (length arguments)
-      (1 `(,plus-plus ,(recurse (first arguments))))
+      (1 `(,(recurse (first arguments)) " = " ,plus-plus ,(recurse (first arguments))))
       (2 `(,(recurse (first arguments)) " " ,plus-equal " " ,(recurse (second arguments)))))))
 
 (def transform-function transform-vector-like (node)
