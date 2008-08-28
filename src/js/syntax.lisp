@@ -231,7 +231,9 @@
   ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
   (funcall (find-walker-handler `(macrolet))
            `(macrolet (,@(iter (for (name args . body) :in (second form))
-                               (collect `(,name ,(substitute '&body '|&body| args) ,@body))))
+                               (collect `(,name ,(substitute '&key '|&key|
+                                                             (substitute '&body '|&body| args))
+                                                ,@body))))
               ,@(rest (rest form)))
            parent env))
 
