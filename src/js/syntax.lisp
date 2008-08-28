@@ -240,6 +240,41 @@
       (setf (type-to-instantiate-of node) type)
       (setf (arguments-of node) (mapcar [walk-form !1 node env] args)))))
 
+(def class* try-form (walked-form implicit-progn-mixin)
+  ((catch-clauses)
+   (finally-clause)))
+
+(def (js-walker-handler e) |try| (form parent env)
+  (when (< (length (rest form)) 2)
+    (simple-js-compile-error nil "Invalid 'try' form, needs at least two elements: ~S" form))
+  (with-form-object (node try-form :parent parent :source form)
+    (bind ((body (second form))
+           (catch-clauses (copy-list (rest (rest form))))
+           (finally-clause (bind ((finally (assoc '|finally| catch-clauses)))
+                             (when finally
+                               (setf catch-clauses (remove-if [eq (first !1) '|finally|] catch-clauses))
+                               (rest finally)))))
+      (setf (finally-clause-of node) (mapcar [walk-form !1 node env] finally-clause))
+      (setf (catch-clauses-of node)  (mapcar [walk-form !1 node env] catch-clauses))
+      (setf (cl-walker:body-of node) (walk-form body node env)))))
+
+(def class* catch-form (walked-form implicit-progn-mixin)
+  ((variable-name)
+   (condition)))
+
+(def (js-walker-handler e) |catch| (form parent env)
+  (when (< (length (rest form)) 2)
+    (simple-js-compile-error nil "Invalid 'catch' form, needs at least two elements: ~S" form))
+  (bind (((nil (variable-name &rest condition) &body body) form))
+    (unless (and variable-name
+                 (symbolp variable-name))
+      (simple-js-compile-error nil "The condition variable in a 'catch' form must be a symbol. Got ~S instead." variable-name))
+    (with-form-object (node catch-form :parent parent :source form)
+      (setf (variable-name-of node) variable-name)
+      (setf (condition-of node) (when condition
+                                  (walk-form condition node env)))
+      (setf (cl-walker:body-of node) (mapcar [walk-form !1 node env] body)))))
+
 (def (js-walker-handler e) |macrolet| (form parent env)
   ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
   (funcall (find-walker-handler `(macrolet))
@@ -255,7 +290,7 @@
 (progn
   (dolist (symbol {(with-readtable-case :preserve)
                    ;; NOTE lambda needs its own handler, see above
-                   '(progn let let* setf setq defun block return if)})
+                   '(progn let let* setf setq defun block return if unwind-protect)})
     (export symbol :cl-quasi-quote-js)
     (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
       (assert cl-symbol)

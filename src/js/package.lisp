@@ -24,7 +24,11 @@
    #:body-of
    #:parent-of)
 
+  (:shadow
+   #:catch-form)
+
   (:export
+   #:|finally|
    ))
 
 (in-package :cl-quasi-quote-js)

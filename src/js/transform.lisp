@@ -14,6 +14,9 @@
   (awhen (indentation-width-of *transformation*)
     (list (make-string-of-spaces (* it *js-indent-level*)))))
 
+(def function make-newline-and-indent ()
+  (list* #\Newline (make-indent)))
+
 (def with-macro with-increased-indent* (really?)
   (if really?
       (bind ((*js-indent-level* (1+ *js-indent-level*)))
@@ -345,7 +348,26 @@
           `(,(recurse object)
              #\[
              ,(recurse slot-name)
-             #\]))))))
+             #\]))))
+   (unwind-protect-form
+    `(,@(make-newline-and-indent) "try"
+      ,@(recurse (protected-form-of -node-))
+      ,@(make-newline-and-indent) "finally"
+      ,@(transform-statements (cleanup-form-of -node-) :wrap? #t)))
+   (try-form
+    (bind ((catch-clauses (catch-clauses-of -node-))
+           (finally-clause (finally-clause-of -node-)))
+      (awhen (find-if [not (typep !1 'catch-form)] catch-clauses)
+        (simple-js-compile-error -node- "Expecting only catch caluse here, but got ~A" it))
+      (flet ((transform-catch-clause (clause)
+               `(,@(make-newline-and-indent) "catch (" ,(lisp-name-to-js-name (variable-name-of clause)) ")"
+                 ,@(transform-statements clause :wrap? #t))))
+        `(,@(make-newline-and-indent) "try"
+          ,@(transform-statements (cl-walker:body-of -node-) :wrap? #t)
+          ,@(mapcar #'transform-catch-clause catch-clauses)
+          ,@(when finally-clause
+              `(,@(make-newline-and-indent) "finally"
+                ,@(transform-statements finally-clause :wrap? #t)))))))))
 
 (def (transformation e) quasi-quoted-js-to-quasi-quoted-string ()
   ((indentation-width nil)
