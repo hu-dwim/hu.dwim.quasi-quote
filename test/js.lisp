@@ -232,8 +232,16 @@
            (progn
              (print "multiple statements")
              (print "then"))
-           (let ((output "else"))
-             (print output)))｣))
+           (progn
+             (progn
+               (let ((output "else"))
+                 (print output)))))｣)
+  ("ok"
+   ｢`js(if (< 3 2)
+           (if (< 2 3)
+               (print "then")
+               (print "else"))
+           (print "ok"))｣))
 
 (def js-test test/js/if-as-expression ()
   ("else"
