@@ -180,8 +180,18 @@
   (iter (for (name . value) :in (bindings-of node))
         (collect `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))
 
-(def transform-function transform-statements (node &key (wrap? nil wrap-provided?))
-  (bind ((*in-js-statement-context* #t)
+(def transform-function transform-statements (thing &key (wrap? nil wrap-provided?))
+  (bind ((node (labels ((drop-progns (node)
+                          (typecase node
+                            (progn-form (bind ((statements (cl-walker:body-of node)))
+                                          (if (and (length= 1 statements)
+                                                   (typep (first statements) 'implicit-progn-mixin)) ; don't strip the last progn
+                                              (drop-progns (first statements))
+                                              node)))
+                            (t node))))
+                 ;; skip the progn when it's not needed to avoid double {} wrapping
+                 (drop-progns thing)))
+         (*in-js-statement-context* #t)
          (statement-prefix-generator (constantly nil))
          (statements (etypecase node
                        (variable-binding-form
@@ -224,7 +234,12 @@
    (variable-reference-form
     (lisp-name-to-js-name (name-of -node-)))
    (progn-form
-    (transform-statements -node-))
+    (bind ((statements (cl-walker:body-of -node-)))
+      (if (and (length= 1 statements)
+               (typep (first statements) '(or variable-binding-form function-binding-form)))
+          ;; skip the progn when it's not needed to avoid double {} wrapping
+          (recurse (first statements))
+          (transform-statements -node-))))
    (if-form
     (bind ((condition (condition-of -node-))
            (then (then-of -node-))
@@ -236,6 +251,10 @@
           (flet ((transform-if-block (node)
                    (typecase node
                      (implicit-progn-mixin (transform-statements node :wrap? #t))
+                     (if-form `(#\Newline
+                                ,@(make-indent)
+                                ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
+                                ,(transform-quasi-quoted-js-to-quasi-quoted-string node)))
                      (t
                       `(#\Newline
                         ,@(make-indent)
