@@ -6,15 +6,6 @@
 
 (in-package :cl-quasi-quote-js)
 
-(def (condition* e) js-compile-error (error)
-  ((walked-form nil)))
-
-(def condition* simple-js-compile-error (js-compile-error simple-error)
-  ())
-
-(def function simple-js-compile-error (walked-form message &rest args)
-  (error 'simple-js-compile-error :walked-form walked-form :format-control message :format-arguments args))
-
 (def special-variable *js-indent-level* 0)
 
 (def special-variable *in-js-statement-context* #t)

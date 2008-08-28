@@ -158,6 +158,19 @@
     (walk-form form nil (make-walk-environment lexenv))))
 
 
+;;;;;;;;;;;;;;
+;;; conditions
+
+(def (condition* e) js-compile-error (error)
+  ((walked-form nil)))
+
+(def condition* simple-js-compile-error (js-compile-error simple-error)
+  ())
+
+(def function simple-js-compile-error (walked-form message &rest args)
+  (error 'simple-js-compile-error :walked-form walked-form :format-control message :format-arguments args))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; some js specific handlers
 
@@ -193,7 +206,7 @@
 
 (def js-walker-handler |create| (form parent env)
   (unless (evenp (length (rest form)))
-    (simple-js-compile-error "Odd elements in create form ~S" form))
+    (simple-js-compile-error nil "Odd elements in create form ~S" form))
   (let ((elements (rest form)))
     (with-form-object (create-node create-form :parent parent :source form)
       (setf (elements-of create-node)
@@ -206,7 +219,7 @@
 
 (def (js-walker-handler e) |slot-value| (form parent env)
   (unless (length= 2 (rest form))
-    (simple-js-compile-error "Invalid slot-value form" form))
+    (simple-js-compile-error nil "Invalid slot-value form" form))
   (with-form-object (node slot-value-form :parent parent :source form)
     (setf (object-of node) (walk-form (second form) node env))
     (setf (slot-name-of node) (bind ((slot-name (third form)))
@@ -220,7 +233,7 @@
 
 (def (js-walker-handler e) |new| (form parent env)
   (when (< (length (rest form)) 2)
-    (simple-js-compile-error "Invalid 'new' form" form))
+    (simple-js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" form))
   (bind ((type (second form))
          (args (cddr form)))
     (with-form-object (node instantiate-form :parent parent :source form)
