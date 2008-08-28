@@ -42,6 +42,7 @@
   :group 'cl-quasi-quote-faces)
 
 (defun cl-quasi-quote-lisp-mode-hook ()
+  (cl-quasi-quote-install-js-indentations)
   (mapcar (lambda (parens)
             (let ((open (elt parens 0))
                   (close (elt parens 1)))
@@ -87,6 +88,15 @@
                                            (match-end 2))
                                        `(syntax-table nil))
                nil))))))
+
+(defun cl-quasi-quote-install-js-indentations ()
+  (let ((overrides
+         '((try unwind-protect))))
+    (dolist (el overrides)
+      (put (first el) 'common-lisp-indent-function
+           (if (symbolp (second el))
+               (get (second el) 'common-lisp-indent-function)
+               (second el))))))
 
 (add-hook 'lisp-mode-hook 'cl-quasi-quote-lisp-mode-hook)
 
