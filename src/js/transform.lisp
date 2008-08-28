@@ -169,43 +169,43 @@
           (collect ", "))
         (collect (transform-quasi-quoted-js-to-quasi-quoted-string element))))
 
-(def special-variable *js-block-nesting-level* 0)
-
 (def (function i) in-toplevel-js-block? ()
-  (<= *js-block-nesting-level* 1))
+  ;; TODO ?
+  #f)
 
-(def with-macro within-nested-js-block* (really?)
-  (if really?
-      (bind ((*js-block-nesting-level* (1+ *js-block-nesting-level*)))
-        (-body-))
-      (-body-)))
+(def transform-function variable-binding-form-statement-prefix-generator (node)
+  (iter (for (name . value) :in (bindings-of node))
+        (collect `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))
 
-(def with-macro within-nested-js-block ()
-  (within-nested-js-block* #t
-    (-body-)))
-
-(def transform-function transform-progn (node &key (wrap? nil wrap-provided?) (nest? #t) (increase-indent? #f))
-  (within-nested-js-block* nest?
-    (bind ((body (cl-walker:body-of node))
-           (*in-js-statement-context* #t))
-      (unless wrap-provided?
-        (setf wrap? (and (rest body)
-                         (not (in-toplevel-js-block?)))))
-      `(,@(when wrap? '(#\{))
-        ,@(with-increased-indent* increase-indent?
-            (iter (for statement :in body)
-                  (collect #\Newline)
-                  (awhen (make-indent)
-                    (collect it))
-                  ;; don't use recurse, because it rebinds *in-js-statement-context* to #f
-                  (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
-                  (collect #\;)))
-        ,@(when wrap? `(#\Newline ,@(make-indent) #\}))))))
-
-(def transform-function transform-implicit-progn (node)
-  (if (typep node 'implicit-progn-mixin)
-      (transform-progn node :wrap? #t)
-      `(,(recurse node) #\; #\Newline)))
+(def transform-function transform-statements (node &key (wrap? nil wrap-provided?))
+  (bind ((*in-js-statement-context* #t)
+         (statement-prefix-generator (constantly nil))
+         (statements (etypecase node
+                       (variable-binding-form
+                        (setf statement-prefix-generator (lambda ()
+                                                           (variable-binding-form-statement-prefix-generator node)))
+                        (setf wrap? (not (in-toplevel-js-block?)))
+                        (setf wrap-provided? #t)
+                        (cl-walker:body-of node))
+                       (implicit-progn-mixin
+                        (cl-walker:body-of node))
+                       (list
+                        node))))
+    (unless wrap-provided?
+      (setf wrap? (and (rest statements)
+                       (not (in-toplevel-js-block?)))))
+    `(,@(when wrap? `(#\Newline ,@(make-indent) "{"))
+      ,@(with-increased-indent* wrap?
+          (append
+           (funcall statement-prefix-generator)
+           (iter (for statement :in statements)
+                 (collect #\Newline)
+                 (awhen (make-indent)
+                   (collect it))
+                 ;; don't use RECURSE, because it rebinds *in-js-statement-context* to #f
+                 (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
+                 (collect #\;))))
+       ,@(when wrap? `(#\Newline ,@(make-indent) "}")))))
 
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
   (:method ((node required-function-argument-form))
@@ -221,24 +221,40 @@
    (variable-reference-form
     (lisp-name-to-js-name (name-of -node-)))
    (progn-form
-    (transform-progn -node-))
+    (transform-statements -node-))
    (if-form
     (bind ((condition (condition-of -node-))
            (then (then-of -node-))
            (else (else-of -node-)))
-      (if (or *in-js-statement-context*
-              (typep then 'progn-form)
-              (typep else 'progn-form))
-          `("if(" ,(recurse condition) ")" #\Newline
-                  ,@(transform-implicit-progn then)
-                  ,@(when else `(#\Newline "else " ,@(transform-implicit-progn else))))
-          `("(" ,(recurse condition) ") ? ("
-                ,(recurse then)
-                ") : ("
-                ,(if else
-                     (recurse else)
-                     "undefined")
-                ")"))))
+      (when (and (typep else 'constant-form)
+                 (eq nil (value-of else)))
+        (setf else nil))
+      (if *in-js-statement-context*
+          (flet ((transform-if-block (node)
+                   (typecase node
+                     (implicit-progn-mixin (transform-statements node :wrap? #t))
+                     (t
+                      `(#\Newline
+                        ,@(make-indent)
+                        ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
+                        ,(transform-quasi-quoted-js-to-quasi-quoted-string node)
+                        #\;)))))
+            `("if (" ,(recurse condition) ")"
+                     ,@(transform-if-block then)
+                     ,@(if else
+                           `(#\Newline ,@(make-indent) "else"
+                                       ,@(transform-if-block else)))))
+          (progn
+            (when (or (typep then 'implicit-progn-mixin)
+                      (typep else 'implicit-progn-mixin))
+              (simple-js-compile-error -node- "if's may not have multiple statements in their then/else branch when they are used in expression context"))
+            `("(" ,(recurse condition) ") ? ("
+                  ,(recurse then)
+                  ") : ("
+                  ,(if else
+                       (recurse else)
+                       "undefined")
+                  ")")))))
    (lambda-application-form
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-)))
@@ -250,10 +266,8 @@
    (lambda-function-form
     `("function ("
       ,@(recurse-as-comma-separated (arguments-of -node-) 'transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument)
-      ") {"
-      ,@(transform-progn -node- :wrap? #f)
-      #\Newline
-      "}"))
+      ")"
+      ,@(transform-statements -node- :wrap? #t)))
    (application-form
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-))
@@ -284,16 +298,9 @@
    (constant-form
     (to-js-literal (value-of -node-)))
    (macrolet-form
-    (transform-implicit-progn -node-))
+    (transform-statements -node-))
    (variable-binding-form
-    (bind ((indent (make-indent)))
-      (within-nested-js-block
-        (with-increased-indent
-          `(,@(unless (in-toplevel-js-block?) (list "{"))
-            ,@(iter (for (name . value) :in (bindings-of -node-))
-                    (collect `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";")))
-            ,@(transform-progn -node- :wrap? #f :nest? #f :increase-indent? #f)
-            ,@(unless (in-toplevel-js-block?) `(#\Newline ,@indent "}")))))))
+    (transform-statements -node-))
    (setq-form
     `(,(recurse (variable-of -node-)) " = " ,(recurse (value-of -node-))))
    (function-definition-form
@@ -301,10 +308,8 @@
                   "("
                   ,@(iter (for argument :in (arguments-of -node-))
                           (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
-                  ") {"
-                  ,@(transform-progn -node- :wrap? #f :increase-indent? #t)
-                  #\Newline
-                  "}"))
+                  ")"
+                  ,@(transform-statements -node- :wrap? #t)))
    (return-from-form
     `("return" ,@(awhen (result-of -node-)
                         (list #\space (recurse it)))))
