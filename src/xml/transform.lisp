@@ -120,23 +120,13 @@
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
   (transformation-typecase node
     (xml-attribute
-     (bind ((name (name-of node))
-            (value (value-of node)))
+     (bind ((name (name-of node)))
        `(,(etypecase name
                      (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute name))
                      (unquote name)
                      (string name))
           "=\""
-          ,(transformation-typecase value
-             (xml-unquote (make-string-unquote
-                           (wrap-runtime-delayed-transformation-form
-                            `(locally
-                                 (declare #+sbcl(sb-ext:muffle-conditions sb-ext:compiler-note))
-                               (awhen ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
-                                        value #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)
-                                 (escape-as-xml (princ-to-string it)))))))
-             (string-quasi-quote value) ;; TODO what about xml escaping?
-             (string (escape-as-xml value)))
+          ,(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value (value-of node))
           "\"")))
     (xml-quasi-quote
      (make-string-quasi-quote (rest (transformation-pipeline-of node))
@@ -157,3 +147,14 @@
         spliced?)))
     (string-quasi-quote node)))
 
+(def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value (node)
+  (transformation-typecase node
+    (xml-unquote (make-string-unquote
+                  (wrap-runtime-delayed-transformation-form
+                   `(locally
+                        (declare #+sbcl(sb-ext:muffle-conditions sb-ext:compiler-note))
+                      (awhen ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
+                               node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value)
+                        (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value it))))))
+    (string-quasi-quote node) ;; TODO what about xml escaping?
+    (string (escape-as-xml node))))
