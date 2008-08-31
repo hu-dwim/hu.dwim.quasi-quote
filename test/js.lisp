@@ -288,16 +288,6 @@
            (incf a))
          (print a))｣))
 
-(def js-test test/js/unwind-protect ()
-  (45
-   ｢`js(let ((a 42))
-         (unwind-protect
-              (progn
-                (incf a)
-                (incf a))
-           (incf a))
-         (print a))｣))
-
 (def js-test test/js/try-catch ()
   (54
    ｢`js(let ((a 42))

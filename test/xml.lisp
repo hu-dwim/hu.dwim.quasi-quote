@@ -168,6 +168,10 @@
    ｢<element (,@(list (make-xml-attribute "attribute" "1")))>｣)
   (｢<element attribute=""/>｣
    ｢<element (:attribute ,nil)>｣)
+  (｢<element attribute="42"/>｣
+   ;; this one is testing that in inline emitting the returned +void+ is not princ-to-string'ed as before.
+   ;; the bug was triggered in a <foo (:bar ,`js-inline(42))> situation
+   ｢<element (:attribute ,`xml ,42)>｣)
   (｢<element attribute1="1" attribute2="2" attribute3="3" attribute4="4" aTTriUte5="5" attribute6="6"/>｣
    ｢<element (attribute1 1
               ,(make-xml-attribute "attribute2" "2")
