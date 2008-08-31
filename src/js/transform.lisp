@@ -217,9 +217,12 @@
                    (collect it))
                  ;; don't use RECURSE, because it rebinds *in-js-statement-context* to #f
                  (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
-                 (unless (typep statement 'if-form)
+                 (when (requres-semicolon-postfix? statement)
                    (collect #\;)))))
        ,@(when wrap? `(#\Newline ,@(make-indent) "}")))))
+
+(def function requres-semicolon-postfix? (statement)
+  (not (typep statement '(or if-form try-form))))
 
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
   (:method ((node required-function-argument-form))
@@ -263,7 +266,8 @@
                           ,@(make-indent)
                           ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
                           ,(transform-quasi-quoted-js-to-quasi-quoted-string node)
-                          #\;))))))
+                          ,(when (requres-semicolon-postfix? node)
+                             #\;)))))))
             `("if (" ,(recurse condition) ")"
                      ,@(transform-if-block then)
                      ,@(if else
