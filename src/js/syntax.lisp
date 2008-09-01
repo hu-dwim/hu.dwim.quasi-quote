@@ -201,6 +201,32 @@
       (setf (result-of return-from-node) (when value
                                            (walk-form value return-from-node env))))))
 
+(def class* for-form (walked-form)
+  ((variables)
+   (steps)
+   (looping-condition)
+   (body)))
+
+(def js-walker-handler |do| (form parent env)
+  (with-form-object (for-node for-form :parent parent :source form)
+    (bind (((raw-variables (raw-end-test &optional result) &rest raw-body) (rest form)))
+      (when result
+        (simple-js-compile-error for-node "DO can't handle a result expression"))
+      (setf (values (variables-of for-node) (steps-of for-node))
+            (iter (for entry :in raw-variables)
+                  (for (var init step) = (ensure-list entry))
+                  (collect (make-instance 'setq-form
+                                          :parent for-node
+                                          :source form
+                                          :variable (walk-form var for-node env)
+                                          :value (walk-form init for-node env))
+                    :into variables)
+                  (when step
+                    (collect (walk-form `(setq ,var ,step) for-node env) :into steps))
+                  (finally (return (values variables steps)))))
+      (setf (looping-condition-of for-node) (walk-form `(|not| ,raw-end-test) for-node env))
+      (setf (body-of for-node) (mapcar [walk-form !1 for-node env] raw-body)))))
+
 (def class* create-form (walked-form)
   ((elements)))
 

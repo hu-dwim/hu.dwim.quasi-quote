@@ -258,7 +258,7 @@
                    (typecase node
                      (implicit-progn-mixin
                       (transform-statements node))
-                     ((or if-form try-form)
+                     ((or if-form try-form for-form)
                       (with-increased-indent
                         `(#\Newline
                           ,@(make-indent)
@@ -369,6 +369,15 @@
                  (collect ": ")
                  (collect (recurse value))))
         "}")))
+   (for-form
+    `("for ("
+      ,@(recurse-as-comma-separated (variables-of -node-))
+      "; "
+      ,(recurse (looping-condition-of -node-))
+      "; "
+      ,@(recurse-as-comma-separated (steps-of -node-))
+      ")"
+      ,@(transform-statements (body-of -node-) :wrap? #t)))
    (slot-value-form
     (bind ((object (object-of -node-))
            (slot-name (slot-name-of -node-)))

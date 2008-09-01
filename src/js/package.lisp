@@ -46,6 +46,7 @@
            defun lambda map mapcar map-into
            block return
            create array
+           do
            &optional &key &allow-other-keys &rest &body)}
         :cl-quasi-quote-js)
 
