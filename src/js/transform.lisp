@@ -256,12 +256,14 @@
       (if *in-js-statement-context*
           (flet ((transform-if-block (node)
                    (typecase node
-                     (implicit-progn-mixin (transform-statements node))
-                     (if-form (with-increased-indent
-                                `(#\Newline
-                                  ,@(make-indent)
-                                  ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
-                                  ,(transform-quasi-quoted-js-to-quasi-quoted-string node))))
+                     (implicit-progn-mixin
+                      (transform-statements node))
+                     ((or if-form try-form)
+                      (with-increased-indent
+                        `(#\Newline
+                          ,@(make-indent)
+                          ;; don't use RECURSE here, because it rebinds *in-js-statement-context* to #f
+                          ,(transform-quasi-quoted-js-to-quasi-quoted-string node))))
                      (t
                       (with-increased-indent
                         `(#\Newline
@@ -392,7 +394,7 @@
                `(,@(make-newline-and-indent) "catch (" ,(lisp-name-to-js-name (variable-name-of clause)) ")"
                  ,@(transform-statements clause :wrap? #t))))
         `(,@(make-newline-and-indent) "try"
-          ,@(transform-statements (cl-walker:body-of -node-) :wrap? #t)
+          ,@(transform-statements (protected-form-of -node-) :wrap? #t)
           ,@(mapcar #'transform-catch-clause catch-clauses)
           ,@(when finally-clause
               `(,@(make-newline-and-indent) "finally"

@@ -240,8 +240,9 @@
       (setf (type-to-instantiate-of node) type)
       (setf (arguments-of node) (mapcar [walk-form !1 node env] args)))))
 
-(def class* try-form (walked-form implicit-progn-mixin)
-  ((catch-clauses)
+(def class* try-form (walked-form)
+  ((protected-form)
+   (catch-clauses)
    (finally-clause)))
 
 (def (js-walker-handler e) |try| (form parent env)
@@ -256,7 +257,7 @@
                                (rest finally)))))
       (setf (finally-clause-of node) (mapcar [walk-form !1 node env] finally-clause))
       (setf (catch-clauses-of node)  (mapcar [walk-form !1 node env] catch-clauses))
-      (setf (cl-walker:body-of node) (walk-form body node env)))))
+      (setf (protected-form-of node) (walk-form body node env)))))
 
 (def class* catch-form (walked-form implicit-progn-mixin)
   ((variable-name)
