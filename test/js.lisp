@@ -121,7 +121,7 @@
       (< (abs (- a b)) 0.0000001)
       (equal a b)))
 
-(def function test-js-emitting-forms (expected ast)
+(def (function d) test-js-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
                          (with-output-to-string (*js-stream*)
                            (emit ,ast)))))
@@ -277,6 +277,23 @@
   ("no default"
    ｢`js(cond ((< 2 3)
               (print "no default")))｣))
+
+(def js-test test/js/conditionals ()
+  ("ok"
+   ｢`js(if (and (or (not true) true)
+                (not false))
+           (print "ok")
+           (print "wrong"))｣))
+
+(def js-test test/js/do ()
+  (15
+   ｢`js(let* ((vector #(1 2 3 4 5))
+              (length (slot-value vector 'length))
+              (sum 0))
+         (do ((idx 0 (1+ idx)))
+             ((>= idx length))
+           (incf sum (aref vector idx)))
+         (print sum))｣))
 
 (def js-test test/js/unwind-protect ()
   (45
