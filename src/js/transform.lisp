@@ -55,7 +55,7 @@
     (=   '\=\=)
     (t op)))
 
-(def (function oie) to-js-literal (value)
+(def (function oe) to-js-literal (value)
   (etypecase value
     (string (concatenate 'string "'" (escape-as-js-string value) "'"))
     (integer (princ-to-string value))
@@ -65,6 +65,12 @@
     (symbol (bind ((js-value (gethash value *js-literals*)))
               (assert js-value () "~S is not a valid js literal" value)
               js-value))
+    (vector `("["
+              ,@(iter (for element :in-vector value)
+                      (unless (first-time-p)
+                        (collect ", "))
+                      (collect (to-js-literal element)))
+              "]"))
     (js-unquote (make-string-unquote `(to-js-literal ,(form-of value))))))
 
 (def (function ioe) to-js-boolean (value)
