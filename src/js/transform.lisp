@@ -47,10 +47,11 @@
 
 (def (function o) lisp-operator-name-to-js-operator-name (op)
   (case op
-    (and '\&\&)
-    (or '\|\|)
-    (not '!)
-    (eql '\=\=)
+    (|and| '\&\&)
+    (|or| '\|\|)
+    (|not| '!)
+    (|eql| '\=\=)
+    (|eq| '\=\=)
     (=   '\=\=)
     (t op)))
 
@@ -136,6 +137,7 @@
    (|vector| (transform-vector-like -node-))
    (|list|   (transform-vector-like -node-))
    (|map|    (transform-map-like -node-))
+   ;; KLUDGE need to handle not specially, because the one at application-form can only handle infix operators
    (|not|    (unless (length= 1 (arguments-of -node-))
                (simple-js-compile-error -node- "The not operator expects exactly one argument!"))
              `("!(" ,(recurse (first (arguments-of -node-))) ")"))
@@ -306,6 +308,7 @@
          (bind ((handler (gethash operator *js-special-forms*)))
            (funcall handler -node-)))
         ((js-operator-name? operator)
+         ;; TODO it can only handle infix operators, due to this |not| needs its own special-form handler
          `("("
            ,@(iter (for el :in arguments)
                    (unless (first-time-p)
