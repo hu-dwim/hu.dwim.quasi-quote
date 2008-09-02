@@ -156,5 +156,7 @@
                       (awhen ,(transform-quasi-quoted-xml-to-quasi-quoted-string/process-unquoted-form
                                node #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value)
                         (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value it))))))
+    (integer (princ-to-string node))
+    (float (format nil "~F" node))
     (string-quasi-quote node) ;; TODO what about xml escaping?
     (string (escape-as-xml node))))
