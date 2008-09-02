@@ -175,12 +175,17 @@
                                                      (recurse node))))
                  #\])))
    ((1+ 1-)  (bind ((arguments (arguments-of -node-))
+                    (argument (first arguments))
                     (operator (operator-of -node-)))
                (unless (length= 1 arguments)
                  (simple-js-compile-error -node- "More than one argument to ~S?" operator))
-               (ecase operator
-                 (1+ `("++" ,(recurse (first arguments))))
-                 (1- `("--" ,(recurse (first arguments)))))))))
+               (if (typep argument 'variable-reference-form)
+                   (ecase operator
+                     (1+ `("++" ,(recurse argument)))
+                     (1- `("--" ,(recurse argument))))
+                   (ecase operator
+                     (1+ `("(1 + " ,(recurse argument) ")"))
+                     (1- `("(1 + " ,(recurse argument) ")"))))))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
   (iter (for element :in-sequence elements)
