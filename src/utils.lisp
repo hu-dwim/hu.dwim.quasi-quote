@@ -37,7 +37,7 @@
           :into result)
         (finally (return (values result completely-reduced?)))))
 
-(def (function e) map-tree (form map-function &optional (process-cons #f))
+(def function map-tree (form map-function &optional (process-cons #f))
   (labels ((process (form)
              (cond ((null form)
                     nil)
@@ -51,7 +51,7 @@
                    (t (funcall map-function form)))))
     (process form)))
 
-(def (function e) map-filtered-tree (form type map-function)
+(def function map-filtered-tree (form type map-function)
   (map-tree form
             (lambda (form)
               (if (typep form type)

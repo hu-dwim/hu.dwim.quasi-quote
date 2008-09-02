@@ -42,6 +42,7 @@
      vector-extend
      wrap-forms-with-bindings
      quoted-symbol?
+     map-tree map-filtered-tree
      princ-to-string-unless-nil
      reader-stub
      delayed-emitting
