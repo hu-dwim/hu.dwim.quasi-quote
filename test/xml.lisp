@@ -169,6 +169,10 @@
   (｢<element attribute=""/>｣
    ｢<element (:attribute ,nil)>｣)
   (｢<element attribute="42"/>｣
+   ｢<element (:attribute ,42)>｣)
+  (｢<element attribute="42.42"/>｣
+   ｢<element (:attribute ,42.42)>｣)
+  (｢<element attribute="42"/>｣
    ;; this one is testing that in inline emitting the returned +void+ is not princ-to-string'ed as before.
    ;; the bug was triggered in a <foo (:bar ,`js-inline(42))> situation
    ｢<element (:attribute ,`xml ,42)>｣)
