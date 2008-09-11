@@ -7,8 +7,8 @@
 (in-package :cl-quasi-quote-js)
 
 (def special-variable *js-indent-level* 0)
-
 (def special-variable *in-js-statement-context* #t)
+(def special-variable *js-operator-precedence* 0)
 
 (def function make-indent ()
   (awhen (indentation-width-of *transformation*)
@@ -202,7 +202,8 @@
         (collect `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))
 
 (def transform-function transform-statements (thing &key (wrap? nil wrap-provided?))
-  (bind ((node (labels ((drop-progns (node)
+  (bind ((*js-operator-precedence* 0)
+         (node (labels ((drop-progns (node)
                           (typecase node
                             (progn-form (bind ((statements (cl-walker:body-of node)))
                                           (if (and (length= 1 statements)
@@ -249,6 +250,21 @@
   (:method ((node required-function-argument-form))
     (lisp-name-to-js-name (name-of node))))
 
+(def macro with-operator-precedence (operator &body body)
+  (with-unique-names (needs-parens? result parent-operator-precedence)
+    `(bind ((js-operator (lisp-operator-name-to-js-operator-name ,operator))
+            (js-operator-name (lisp-name-to-js-name js-operator))
+            (,parent-operator-precedence *js-operator-precedence*)
+            (*js-operator-precedence* (or (operator-precedence js-operator)
+                                          *js-operator-precedence*))
+            (,needs-parens? (> *js-operator-precedence* ,parent-operator-precedence))
+            (,result (progn ,@body)))
+       (declare (ignorable js-operator-name))
+       ;; (format *debug-io* "operator: ~S, precedence ~A -> ~A~%" js-operator ,parent-operator-precedence *js-operator-precedence*)
+       (if ,needs-parens?
+           `("(" ,@,result ")")
+           ,result))))
+
 (macrolet ((frob (&rest entries)
              `(with-lexical-transform-functions
                 (defgeneric transform-quasi-quoted-js-to-quasi-quoted-string* (form)
@@ -291,22 +307,22 @@
                           ,(transform-quasi-quoted-js-to-quasi-quoted-string node)
                           ,(when (requres-semicolon-postfix? node)
                              #\;)))))))
-            `("if (" ,(recurse condition) ")"
-                     ,@(transform-if-block then)
-                     ,@(if else
-                           `(#\Newline ,@(make-indent) "else"
-                                       ,@(transform-if-block else)))))
-          (progn
+            (bind ((*js-operator-precedence* 0))
+              `("if (" ,(recurse condition) ")"
+                       ,@(transform-if-block then)
+                       ,@(if else
+                             `(#\Newline ,@(make-indent) "else"
+                                         ,@(transform-if-block else))))))
+          (with-operator-precedence '|if|
             (when (or (typep then 'implicit-progn-mixin)
                       (typep else 'implicit-progn-mixin))
               (simple-js-compile-error -node- "if's may not have multiple statements in their then/else branch when they are used in expression context"))
-            `("(" ,(recurse condition) ") ? ("
+            `(,(recurse condition) " ? "
                   ,(recurse then)
-                  ") : ("
-                  ,(if else
-                       (recurse else)
-                       "undefined")
-                  ")")))))
+               " : "
+               ,(if else
+                    (recurse else)
+                    "undefined"))))))
    (lambda-application-form
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-)))
@@ -321,33 +337,29 @@
       ")"
       ,@(transform-statements -node- :wrap? #t)))
    (application-form
-    (bind ((operator (operator-of -node-))
-           (arguments (arguments-of -node-))
-           (operator-name (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name operator))))
-      (cond
-        ((js-special-form? operator)
-         (bind ((handler (gethash operator *js-special-forms*)))
-           (funcall handler -node-)))
-        ((js-operator-name? operator)
-         ;; TODO it can only handle infix operators, due to this |not| needs its own special-form handler
-         `("("
-           ,@(iter (for el :in arguments)
-                   (unless (first-time-p)
-                     (collect " ")
-                     (collect operator-name)
-                     (collect " "))
-                   (collect (recurse el)))
-           ")"))
-        (t
-         (bind ((dotted? (starts-with #\. operator-name)))
-           (if dotted?
-               `(,(recurse (first arguments))
-                  ,operator-name #\(
-                  ,@(recurse-as-comma-separated (rest arguments))
-                  #\) )
-               `(,operator-name #\(
-                                ,@(recurse-as-comma-separated arguments)
-                                #\) )))))))
+    (bind ((arguments (arguments-of -node-))
+           (operator (operator-of -node-)))
+      (if (js-special-form? operator)
+          (bind ((handler (gethash operator *js-special-forms*)))
+            (funcall handler -node-))
+          (with-operator-precedence operator
+            (if (js-operator-name? operator)
+                ;; TODO it can only handle infix operators. due to this |not| needs its own special-form handler
+                (iter (for el :in arguments)
+                      (unless (first-time-p)
+                        (collect " ")
+                        (collect js-operator-name)
+                        (collect " "))
+                      (collect (recurse el)))
+                (bind ((dotted? (starts-with #\. js-operator-name)))
+                  (if dotted?
+                      `(,(recurse (first arguments))
+                         ,js-operator-name #\(
+                         ,@(recurse-as-comma-separated (rest arguments))
+                         #\) )
+                      `(,js-operator-name #\(
+                                          ,@(recurse-as-comma-separated arguments)
+                                          #\) ))))))))
    (constant-form
     (to-js-literal (value-of -node-)))
    (macrolet-form
