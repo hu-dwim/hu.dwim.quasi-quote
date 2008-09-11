@@ -449,7 +449,7 @@
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string (node)
   (transformation-typecase node
-    ((or number string character) (to-js-literal node))
+    ((or number string character symbol) (to-js-literal node))
     (walked-form    (transform-quasi-quoted-js-to-quasi-quoted-string* node))
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
     (js-quasi-quote (if (compatible-transformation-pipelines? *transformation-pipeline*
