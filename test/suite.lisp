@@ -6,9 +6,7 @@
 
 (in-package :cl-quasi-quote-test)
 
-(in-root-suite)
-
-(defsuite* test)
+(defsuite* (test :in root-suite))
 
 (def (definer e) syntax-test-definer (test-definer-name &body setup-forms)
   `(def definer ,test-definer-name (name args &body forms)

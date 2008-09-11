@@ -252,7 +252,13 @@
   ("then"
    ｢`js(print (if (< 2 3)
                   "then"
-                  "else"))｣))
+                  "else"))｣)
+  ("alma-barack"
+   ｢`js(print (+ "alma"
+                 (if (< 2 3)
+                     "-"
+                     "zork")
+                 "barack"))｣))
 
 (def js-test test/js/cond ()
   ("third"
