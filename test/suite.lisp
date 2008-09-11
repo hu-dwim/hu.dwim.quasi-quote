@@ -30,5 +30,6 @@
                                             (process-test-entry test-function form))
                                           forms)))))))))
 
-
-
+(defun downcased-pretty-print (thing)
+  (bind ((*print-case* :downcase))
+    (pprint thing)))

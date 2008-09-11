@@ -107,7 +107,7 @@
     (read-from-string string)))
 
 (def function pprint-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
-  (pprint (macroexpand (read-from-string-with-xml/js-syntax string with-inline-emitting binary?))))
+  (downcased-pretty-print (macroexpand (read-from-string-with-xml/js-syntax string with-inline-emitting binary?))))
 
 (def function emit-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
   (with-output-to-string (*xml/js-stream*)

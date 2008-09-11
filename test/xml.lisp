@@ -60,7 +60,7 @@
     (read-from-string string)))
 
 (def function pprint-xml (string &key (indentation-width 2))
-  (pprint (macroexpand (read-from-string-with-xml-syntax string :indentation-width indentation-width))))
+  (downcased-pretty-print (macroexpand (read-from-string-with-xml-syntax string :indentation-width indentation-width))))
 
 (def function test-xml-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
