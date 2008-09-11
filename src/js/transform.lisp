@@ -327,10 +327,8 @@
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-)))
       (assert (typep operator 'lambda-function-form))
-      `(,(recurse operator)
-         #\(
-         ,@(recurse-as-comma-separated arguments)
-         #\) )))
+      `("(" ,(recurse operator) ")"
+        "(" ,@(recurse-as-comma-separated arguments) ")" )))
    (lambda-function-form
     `("function ("
       ,@(recurse-as-comma-separated (arguments-of -node-) 'transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument)
