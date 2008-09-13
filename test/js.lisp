@@ -171,6 +171,8 @@
 (def js-test test/js/literals ()
   (1.42
    ｢`js(print 1.42)｣)
+  ((coerce 1/3 'float)
+   ｢`js(print 1/3)｣)
   ("null"
    ｢`js(print nil)｣)
   ("undefined"
@@ -180,9 +182,23 @@
   ("true"
    ｢`js(print true)｣)
   ("false"
-   ｢`js(print false)｣)
+   ｢`js(print false)｣))
+
+(def js-test test/js/unquoted-literals ()
+  (1.42
+   ｢`js(print ,1.42)｣)
   ((coerce 1/3 'float)
-   ｢`js(print 1/3)｣))
+   ｢`js(print ,1/3)｣)
+  ("null"
+   ｢`js(print ,nil)｣)
+  ("true"
+   ｢`js(print ,t)｣)
+  ("undefined"
+   ｢`js(print ,'undefined)｣)
+  ("true"
+   ｢`js(print ,'true)｣)
+  ("false"
+   ｢`js(print ,'false)｣))
 
 (def js-test test/js/unquote ()
   (42
