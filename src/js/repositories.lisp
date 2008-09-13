@@ -22,7 +22,7 @@
 
 (def (macro e) with-unique-js-names (names &body body)
   `(bind (,@(iter (for name :in names)
-                  (collect `(,name ,(make-symbol (unique-js-name (string name)))))))
+                  (collect `(,name (quote ,(make-symbol (unique-js-name (string name))))))))
      ,@body))
 
 (def (function io) js-special-form? (name)
@@ -78,15 +78,18 @@
            (lambda (args)
              (macroexpand `(,',lisp-name ,@args))))))
 
-(def definer js-literal (name string)
-  `(progn
-     (setf (gethash ',name *js-literals*) ,string)
-     (setf (gethash ',(intern (string-downcase name)) *js-literals*) ,string)))
+(def (definer :available-flags "e") js-literal (name string)
+  (bind ((lowercase-name (intern (string-downcase name))))
+    `(progn
+       (setf (gethash ',name *js-literals*) ,string)
+       (setf (gethash ',lowercase-name *js-literals*) ,string)
+       ,@(when (getf -options- :export)
+           `((export '(,name ,lowercase-name)))))))
 
 (macrolet ((frob (&body entries)
              `(progn
                 ,@(iter (for (name js-name) :in entries)
-                        (collect `(def js-literal ,name ,js-name))))))
+                        (collect `(def (js-literal e) ,name ,js-name))))))
   (frob
    (this      "this")
    (t         "true")
