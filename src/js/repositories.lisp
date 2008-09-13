@@ -22,7 +22,7 @@
 
 (def (macro e) with-unique-js-names (names &body body)
   `(bind (,@(iter (for name :in names)
-                  (collect `(,name ,(unique-js-name (string name))))))
+                  (collect `(,name ,(make-symbol (unique-js-name (string name)))))))
      ,@body))
 
 (def (function io) js-special-form? (name)
