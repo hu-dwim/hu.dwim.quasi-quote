@@ -37,7 +37,7 @@
 
 (enable-readtime-wrapper-syntax)
 
-(export {(with-readtable-case :preserve)
+(export {with-preserved-readtable-case
          '(nil t and or not
            if when unless cond
            progn let let*

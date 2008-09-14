@@ -315,7 +315,7 @@
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
 (progn
-  (dolist (symbol {(with-readtable-case :preserve)
+  (dolist (symbol {with-preserved-readtable-case
                    ;; NOTE lambda needs its own handler, see above
                    '(progn let let* setf setq defun block return if unwind-protect)})
     (export symbol :cl-quasi-quote-js)

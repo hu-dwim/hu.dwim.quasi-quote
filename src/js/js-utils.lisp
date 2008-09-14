@@ -15,15 +15,15 @@
                   (forms (rest clause)))
               (if (endp forms)
                   (with-unique-names (n-result)
-                    {(with-readtable-case :preserve)
+                    {with-preserved-readtable-case
                      `(let ((,N-RESULT ,TEST))
                         (if ,N-RESULT
                             ,N-RESULT
                             ,@(WHEN MORE `((cond ,@MORE)))))})
                   (if (member test '(t |t|))
-                      {(with-readtable-case :preserve)
+                      {with-preserved-readtable-case
                        `(progn ,@FORMS)}
-                      {(with-readtable-case :preserve)
+                      {with-preserved-readtable-case
                        `(if ,TEST
                             (progn ,@FORMS)
                             ,@(WHEN MORE `((cond ,@MORE))))})))))))
