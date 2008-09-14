@@ -29,6 +29,10 @@
                             ,@(WHEN MORE `((cond ,@MORE))))})))))))
 
 (def (js-macro e) |dolist| ((var list) &body body)
-  {(with-readtable-case :preserve)
-   `(.for-each ,LIST (lambda (,VAR)
-                       ,@BODY))})
+  (with-unique-js-names (idx)
+    (once-only (list)
+      {with-preserved-readtable-case
+        `(do ((,IDX 0 (1+ ,IDX)))
+             ((>= ,IDX (slot-value ,LIST 'length)))
+           (let ((,VAR (aref ,LIST ,IDX)))
+             ,@BODY))})))
