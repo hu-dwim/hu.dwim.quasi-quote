@@ -168,6 +168,8 @@
   ())
 
 (def function simple-js-compile-error (walked-form message &rest args)
+  (declare (type string message)
+           (type (or null syntax-node walked-form) walked-form))
   (error 'simple-js-compile-error :walked-form walked-form :format-control message :format-arguments args))
 
 
@@ -230,14 +232,10 @@
 (def class* create-form (walked-form)
   ((elements)))
 
-(def js-walker-handler |create| (form parent env)
-  (unless (evenp (length (rest form)))
-    (simple-js-compile-error nil "Odd elements in create form ~S" form))
+(def (js-walker-handler e) |create| (form parent env)
   (let ((elements (rest form)))
     (with-form-object (create-node create-form :parent parent :source form)
-      (setf (elements-of create-node)
-            (iter (for (name value) :on elements :by #'cddr)
-                  (collect (cons name (walk-form value create-node env))))))))
+      (setf (elements-of create-node) (mapcar [walk-form !1 create-node env] elements)))))
 
 (def class* slot-value-form (walked-form)
   ((object)

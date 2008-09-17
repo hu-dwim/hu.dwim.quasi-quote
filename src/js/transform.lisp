@@ -27,10 +27,18 @@
   (with-increased-indent* #t
     (-body-)))
 
+(def function wrap-runtime-delayed-js-transformation-form (form)
+  (wrap-runtime-delayed-transformation-form
+   (wrap-forms-with-bindings
+    (when (indentation-width-of *transformation*)
+      `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*))))
+    form)))
+
 (def (function io) lisp-name-to-js-name (symbol)
   (etypecase symbol
     (js-unquote
-     (make-string-unquote `(lisp-name-to-js-name ,(form-of symbol))))
+     (make-string-unquote (wrap-runtime-delayed-js-transformation-form
+                           `(lisp-name-to-js-name ,(form-of symbol)))))
     (symbol
      (bind ((name (symbol-name symbol))
             (pieces (cl-ppcre:split "-" name)))
@@ -71,7 +79,9 @@
                         (collect ", "))
                       (collect (to-js-literal element)))
               "]"))
-    (js-unquote (make-string-unquote `(to-js-literal ,(form-of value))))))
+    (js-unquote (make-string-unquote
+                 (wrap-runtime-delayed-js-transformation-form
+                  `(to-js-literal ,(form-of value)))))))
 
 (def (function ioe) to-js-boolean (value)
   (if value "true" "false"))
@@ -170,8 +180,9 @@
                                                  (if (and (typep node 'js-unquote)
                                                           (spliced-p node))
                                                      (make-string-unquote
-                                                      `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
-                                                        ,(form-of node)))
+                                                      (wrap-runtime-delayed-js-transformation-form
+                                                       `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
+                                                         ,(form-of node))))
                                                      (recurse node))))
                  #\])))
    ((1+ 1-)  (bind ((arguments (arguments-of -node-))
@@ -249,6 +260,55 @@
 (def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
   (:method ((node required-function-argument-form))
     (lisp-name-to-js-name (name-of node))))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs (input-elements)
+  (iter (with indent = `(#\, #\Newline ,@(make-indent)))
+        (with elements = input-elements)
+
+        (for name = (pop elements))
+        (while name)
+        (unless (first-time-p)
+          (collect indent))
+        (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name name))
+        (if (and (typep name 'js-unquote)
+                 (spliced-p name))
+            (when elements
+              (simple-js-compile-error nil "Unexpected element(s) after a spliced unquote in a create form: ~S" elements))
+            (collect ": "))
+
+        (for value = (pop elements))
+        (while value)
+        (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value value))))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (name)
+  (typecase name
+    (string        name)
+    (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (value-of name)))
+    (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (name-of name)))
+    (keyword       (lisp-name-to-js-name name))
+    (integer       (princ-to-string name))
+    (walked-form   (transform-quasi-quoted-js-to-quasi-quoted-string* name))
+    (js-unquote    (make-string-unquote
+                    (wrap-runtime-delayed-js-transformation-form
+                     (if (spliced-p name)
+                         `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs ,(form-of name))
+                         `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name             ,(form-of name))))))
+    (t (simple-js-compile-error nil "Don't know how to deal with ~S as a name in create form" name))))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value)
+  (typecase value
+    (string        value)
+    (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value-of value)))
+    (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (name-of value)))
+    (keyword       (lisp-name-to-js-name value))
+    (integer       (princ-to-string value))
+    (walked-form   (transform-quasi-quoted-js-to-quasi-quoted-string* value))
+    (js-unquote    (if (spliced-p value)
+                       (simple-js-compile-error nil "Spliced unquoting is not supported at value position in create forms")
+                       (make-string-unquote
+                        (wrap-runtime-delayed-js-transformation-form
+                         `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value ,(form-of value))))))
+    (t (simple-js-compile-error nil "Don't know how to deal with ~S as a value in create form" value))))
 
 (def macro with-operator-precedence (operator &body body)
   (with-unique-names (needs-parens? result parent-operator-precedence)
@@ -382,22 +442,10 @@
              ,@(recurse-as-comma-separated (arguments-of -node-))
              ")"))
    (create-form
-    (bind ((elements (elements-of -node-)))
-      `("{ "
-        ,@(with-increased-indent
-           (iter (with indent = `(#\, #\Newline ,@(make-indent)))
-                 (for (name . value) :in elements)
-                 (unless (first-time-p)
-                   (collect indent))
-                 (collect (typecase name
-                            (string name)
-                            (keyword (lisp-name-to-js-name name))
-                            (integer (princ-to-string name))
-                            (t (simple-js-compile-error "Don't know how to deal with ~S as a name in create form ~S"
-                                                        name (source-of -node-)))))
-                 (collect ": ")
-                 (collect (recurse value))))
-        "}")))
+    `("{ "
+      ,@(with-increased-indent
+         (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs (elements-of -node-)))
+      "}"))
    (for-form
     `("for ("
       ,@(recurse-as-comma-separated (variables-of -node-))
@@ -465,15 +513,12 @@
   (assert (typep node 'js-unquote))
   (bind ((spliced? (spliced-p node)))
     (make-string-unquote
-     (wrap-runtime-delayed-transformation-form
-      (wrap-forms-with-bindings
-       (when (indentation-width-of *transformation*)
-         `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*))))
-       (if spliced?
-           `(mapcar 'transform-quasi-quoted-js-to-quasi-quoted-string
-                    ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
-                      node 'transform-quasi-quoted-js-to-quasi-quoted-string))
-           `(transform-quasi-quoted-js-to-quasi-quoted-string
-             ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
-               node 'transform-quasi-quoted-js-to-quasi-quoted-string)))))
+     (wrap-runtime-delayed-js-transformation-form
+      (if spliced?
+          `(mapcar 'transform-quasi-quoted-js-to-quasi-quoted-string
+                   ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
+                     node 'transform-quasi-quoted-js-to-quasi-quoted-string))
+          `(transform-quasi-quoted-js-to-quasi-quoted-string
+            ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
+              node 'transform-quasi-quoted-js-to-quasi-quoted-string))))
      spliced?)))
