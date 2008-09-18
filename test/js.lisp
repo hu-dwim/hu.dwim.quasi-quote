@@ -33,53 +33,51 @@
 (def special-variable *js-stream*)
 (def special-variable *xml/js-stream*)
 
-(def function setup-readtable-for-js-test (&key with-inline-emitting (indentation-width 2) (binary? #f)
-                                                (output-prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
-                                                (output-postfix #.(format nil "~%// ]]>~%</script>~%"))
-                                                (xml? #f) (output-stream-name (if xml? '*xml/js-stream* '*js-stream*)))
-  (if binary?
-      (progn
-        (enable-quasi-quoted-js-syntax
-         :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                   output-stream-name :binary #t :with-inline-emitting with-inline-emitting
-                                   :indentation-width indentation-width)
-         :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                          output-stream-name :binary #t :with-inline-emitting with-inline-emitting
-                                          :indentation-width indentation-width
-                                          :output-prefix output-prefix
-                                          :output-postfix output-postfix))
-        (when xml?
-          (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (def function setup-readtable-for-js-test (&key with-inline-emitting (indentation-width 2) (binary? #f)
+                                                  (output-prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
+                                                  (output-postfix #.(format nil "~%// ]]>~%</script>~%"))
+                                                  (xml? #f) (output-stream-name (if xml? '*xml/js-stream* '*js-stream*)))
+    (enable-quasi-quoted-js-syntax
+     :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                               output-stream-name
+                               :binary binary?
+                               :with-inline-emitting with-inline-emitting
+                               :indentation-width indentation-width)
+     :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                      output-stream-name
+                                      :binary binary?
+                                      :with-inline-emitting with-inline-emitting
+                                      :indentation-width indentation-width
+                                      :output-prefix output-prefix
+                                      :output-postfix output-postfix)
+     :dispatched-quasi-quote-name 'js)
+    (enable-quasi-quoted-js-syntax
+     :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                               output-stream-name :binary binary? :with-inline-emitting with-inline-emitting
+                               :indentation-width indentation-width)
+     :dispatched-quasi-quote-name 'js-inline)
+    (if binary?
+        (progn
+          (when xml?
+            (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
+             output-stream-name
+             :encoding :utf-8
+             :indentation-width indentation-width
+             :with-inline-emitting with-inline-emitting))
+          (enable-quasi-quoted-string-to-binary-emitting-form-syntax
            output-stream-name
            :encoding :utf-8
-           :indentation-width indentation-width
            :with-inline-emitting with-inline-emitting))
-        (enable-quasi-quoted-string-to-binary-emitting-form-syntax
-         output-stream-name
-         :encoding :utf-8
-         :with-inline-emitting with-inline-emitting))
-      (progn
-        (enable-quasi-quoted-js-syntax
-         :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                   output-stream-name
-                                   :binary #f
-                                   :with-inline-emitting with-inline-emitting
-                                   :indentation-width indentation-width)
-         :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                          output-stream-name
-                                          :binary #f
-                                          :with-inline-emitting with-inline-emitting
-                                          :indentation-width indentation-width
-                                          :output-prefix output-prefix
-                                          :output-postfix output-postfix))
-        (when xml?
-          (enable-quasi-quoted-xml-to-string-emitting-form-syntax
+        (progn
+          (when xml?
+            (enable-quasi-quoted-xml-to-string-emitting-form-syntax
+             output-stream-name
+             :indentation-width indentation-width
+             :with-inline-emitting with-inline-emitting))
+          (enable-quasi-quoted-string-to-string-emitting-form-syntax
            output-stream-name
-           :indentation-width indentation-width
-           :with-inline-emitting with-inline-emitting))
-        (enable-quasi-quoted-string-to-string-emitting-form-syntax
-         output-stream-name
-         :with-inline-emitting with-inline-emitting))))
+           :with-inline-emitting with-inline-emitting)))))
 
 (def syntax-test-definer js-test
   (:test-function   test-js-emitting-forms
@@ -110,10 +108,9 @@
   (downcased-pretty-print (macroexpand (read-from-string-with-xml/js-syntax string with-inline-emitting binary?))))
 
 (def function emit-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
-  (with-output-to-string (*xml/js-stream*)
-    (emit
-     (eval
-      (read-from-string-with-xml/js-syntax string with-inline-emitting binary?)))))
+  (bind ((form (read-from-string-with-xml/js-syntax string with-inline-emitting binary?)))
+    (with-output-to-string (*xml/js-stream*)
+      (emit (eval form)))))
 
 (def function js-result-equal (a b)
   (if (and (typep a 'float)
@@ -143,19 +140,19 @@
 (def function test-xml/js-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
                          (with-output-to-string (*xml/js-stream*)
-                           (emit ,ast))))
-         (actual (funcall (compile nil lambda-form))))
-    ;;(print (macroexpand-all lambda-form))
-    (is (string= expected actual))))
+                           (emit ,ast)))))
+    (is (js-result-equal expected (eval-js
+                                   (funcall (compile nil lambda-form)))))))
 
 (def function test-xml/js-emitting-forms/binary (expected ast)
   (bind ((lambda-form `(lambda ()
                          (with-output-to-sequence (*xml/js-stream* :element-type '(unsigned-byte 8))
                            (emit ,ast)))))
     ;;(print (macroexpand-all lambda-form))
-    (is (string= expected
-                 (octets-to-string (funcall (compile nil lambda-form))
-                                   :encoding :utf-8)))))
+    (is (js-result-equal expected
+                         (eval-js
+                          (octets-to-string (funcall (compile nil lambda-form))
+                                            :encoding :utf-8))))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; the tests finally
@@ -364,12 +361,89 @@
    ｢`js(let ((a "b"))
          (print (slot-value (create :a 1 :b 2) a)))｣))
 
-(def js-test test/js/macolet ()
+(def js-test test/js/create ()
+  (1
+   ｢`js(print (slot-value (slot-value (create "a" (create "b" ,1)) 'a) 'b))｣))
+
+(def js-test test/js/create-unquote ()
+  (1
+   ｢`js(print (slot-value (create ,@(list "a" 1 "b" 2)) 'a))｣)
+  (2
+   ｢`js(let ((a "b"))
+         (print (slot-value (create ,"a" ,1 "b" ,2) a)))｣))
+
+(def test test/js/create-unquote/errors ()
+  (flet ((transform (string)
+           (transform (macroexpand (read-from-string-with-xml/js-syntax string)))))
+    (signals js-compile-error
+      (transform ｢`js(create "a" ,@1)｣))
+    (signals js-compile-error
+      (transform ｢`js(create ,@1 "b")｣))))
+
+(def xml/js-test test/js/macrolet ()
   (42
    ｢`js(macrolet ((macro (var value &body body)
                     `(let ((,var ,value))
                        ,@body)))
-         (macro a 42 (print a)))｣))
+         (macro a 42 (print a)))｣)
+  (with-expected-failures
+    (3
+     ｢(macrolet ((macro (properties)
+                   `(progn
+                      `js-inline(create "a"
+                                        (create ,@(list ,@(iter (for (name value) :on properties :by #'cddr)
+                                                                (collect `(quote ,name))
+                                                                (collect (bind ((value value))
+                                                                           ;; TODO this could work if `str was not in inline-emitting mode
+                                                                           ;; or if list quasi quoting were used on the ` character (because
+                                                                           ;; then this `str were not a toplevel qq, so it would not turn
+                                                                           ;; into code that tries to emit stuff at macroexpand time)
+                                                                           `str ,(princ-to-string (1+ value)))))))))))
+        `js(print (slot-value (slot-value ,(macro ("a" 1 "b" 2 "c" 3))
+                                          "a")
+                              "b")))｣)))
+
+(def macro test/js/complex-macros/test-macro (properties)
+  {(lambda (reader)
+     (with-local-readtable
+       (setup-readtable-for-js-test :xml? #t :with-inline-emitting #t)
+       (first (funcall reader))))
+   `(progn
+      `js-inline(slot-value
+                 (slot-value
+                  (create "a"
+                          (create ,@(list ,@(iter (for (name value) :on properties :by #'cddr)
+                                                  (collect `(quote ,name))
+                                                  (collect (bind ((value value))
+                                                             `str ,(princ-to-string (1+ value))))))))
+                  "a")
+                 "b"))})
+
+(def test test/js/complex-macros ()
+  (with-expected-failures
+    (bind ((result (parse-xml-into-sxml
+                    (emit-xml/js
+                     ｢<div `js(print ,(test/js/complex-macros/test-macro ("a" 1 "b" 2 "c" 3)))>｣
+                     #t))))
+      (is (string= (first result) "div"))
+      (bind ((js (third (third result))))
+        (is (js-result-equal (eval-js js) 3)))))
+  (is (js-result-equal
+       (eval-js
+        (emit-xml/js
+         ｢(macrolet ((macro (properties)
+                       `(progn
+                          `js-inline(slot-value
+                                     (slot-value
+                                      (create "a"
+                                              (create ,@(quote ,(iter (for (name value) :on properties :by #'cddr)
+                                                                      (collect name)
+                                                                      (collect (bind ((value value))
+                                                                                 `str ,(princ-to-string (1+ value))))))))
+                                      "a")
+                                     "b"))))
+            `js(print ,(macro ("a" 1 "b" 2 "c" 3))))｣))
+       3)))
 
 (def js-test test/js/defun ()
   (with-expected-failures
