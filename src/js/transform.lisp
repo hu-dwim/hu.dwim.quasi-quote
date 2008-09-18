@@ -34,24 +34,27 @@
       `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*))))
     form)))
 
-(def (function io) lisp-name-to-js-name (symbol)
+(def (function ioe) hyphened-to-camel-case (input)
+  (declare (type string input))
+  (bind ((pieces (cl-ppcre:split "-" input)))
+    (if (rest pieces)
+        (bind ((*print-pretty* #f))
+          (with-output-to-string (str)
+            (iter (for piece :in pieces)
+                  (write-string (if (first-time-p)
+                                    piece
+                                    (capitalize-first-letter! piece))
+                                str)
+                  (collect piece))))
+        input)))
+
+(def (function ioe) lisp-name-to-js-name (symbol)
   (etypecase symbol
     (js-unquote
      (make-string-unquote (wrap-runtime-delayed-js-transformation-form
                            `(lisp-name-to-js-name ,(form-of symbol)))))
     (symbol
-     (bind ((name (symbol-name symbol))
-            (pieces (cl-ppcre:split "-" name)))
-       (if (rest pieces)
-           (bind ((*print-pretty* #f))
-             (with-output-to-string (str)
-               (iter (for piece :in pieces)
-                     (write-string (if (first-time-p)
-                                       piece
-                                       (capitalize-first-letter! piece))
-                                   str)
-                     (collect piece))))
-           name)))))
+     (hyphened-to-camel-case (symbol-name symbol)))))
 
 (def (function o) lisp-operator-name-to-js-operator-name (op)
   (case op
