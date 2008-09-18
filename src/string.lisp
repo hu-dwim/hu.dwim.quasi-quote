@@ -47,18 +47,32 @@
                                                                :end-character end-character
                                                                :unquote-character unquote-character
                                                                :splice-character splice-character)))))
-  (x string-emitting-form        (list (make-instance 'quasi-quoted-string-to-string-emitting-form
-                                                      :stream-variable-name stream-variable-name
-                                                      :with-inline-emitting with-inline-emitting
-                                                      :declarations declarations))
+  (x string-emitting-form (make-quasi-quoted-string-to-form-emitting-transformation-pipeline
+                           stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations)
      (stream-variable-name))
-  (x binary-emitting-form        (list (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                                                      :encoding encoding)
-                                       (make-instance 'quasi-quoted-binary-to-binary-emitting-form
-                                                      :stream-variable-name stream-variable-name
-                                                      :with-inline-emitting with-inline-emitting
-                                                      :declarations declarations))
+  (x binary-emitting-form (make-quasi-quoted-string-to-form-emitting-transformation-pipeline
+                           stream-variable-name
+                           :binary t
+                           :encoding encoding
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations)
      (stream-variable-name &key (encoding *default-character-encoding*))))
+
+(def (function e) make-quasi-quoted-string-to-form-emitting-transformation-pipeline
+    (stream-variable-name &key binary with-inline-emitting (encoding :utf-8) declarations)
+  (if binary
+      (list (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
+                           :encoding encoding)
+            (make-instance 'quasi-quoted-binary-to-binary-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))
+      (list (make-instance 'quasi-quoted-string-to-string-emitting-form
+                           :stream-variable-name stream-variable-name
+                           :with-inline-emitting with-inline-emitting
+                           :declarations declarations))))
 
 (def reader-stub string-quasi-quote (toplevel? body transformation-pipeline)
   (bind ((expanded-body (recursively-macroexpand-reader-stubs body -environment-))

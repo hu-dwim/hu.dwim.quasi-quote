@@ -286,32 +286,27 @@
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (name)
   (typecase name
     (string        name)
+    (symbol        (lisp-name-to-js-name name))
     (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (value-of name)))
     (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (name-of name)))
-    (keyword       (lisp-name-to-js-name name))
-    (integer       (princ-to-string name))
-    (walked-form   (transform-quasi-quoted-js-to-quasi-quoted-string* name))
     (js-unquote    (make-string-unquote
                     (wrap-runtime-delayed-js-transformation-form
                      (if (spliced-p name)
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs ,(form-of name))
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name             ,(form-of name))))))
-    (t (simple-js-compile-error nil "Don't know how to deal with ~S as a name in create form" name))))
+    (t (transform-quasi-quoted-js-to-quasi-quoted-string name))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value)
   (typecase value
-    (string        value)
+    (symbol        (lisp-name-to-js-name value))
     (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value-of value)))
     (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (name-of value)))
-    (keyword       (lisp-name-to-js-name value))
-    (integer       (princ-to-string value))
-    (walked-form   (transform-quasi-quoted-js-to-quasi-quoted-string* value))
     (js-unquote    (if (spliced-p value)
                        (simple-js-compile-error nil "Spliced unquoting is not supported at value position in create forms")
                        (make-string-unquote
                         (wrap-runtime-delayed-js-transformation-form
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value ,(form-of value))))))
-    (t (simple-js-compile-error nil "Don't know how to deal with ~S as a value in create form" value))))
+    (t (transform-quasi-quoted-js-to-quasi-quoted-string value))))
 
 (def macro with-operator-precedence (operator &body body)
   (with-unique-names (needs-parens? result parent-operator-precedence)
