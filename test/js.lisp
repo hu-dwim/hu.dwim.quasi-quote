@@ -55,7 +55,11 @@
     (enable-quasi-quoted-js-syntax
      :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
                                output-stream-name :binary binary? :with-inline-emitting with-inline-emitting
-                               :indentation-width indentation-width)
+                               :indentation-width indentation-width
+                               ;; FIXME this blows up everything because it makes this transformation
+                               ;; incompatible with the others and fires up undeveloped parts of the lib.
+                               ;; :string-escape-function 'escape-as-xml
+                               )
      :dispatched-quasi-quote-name 'js-inline)
     (if binary?
         (progn
@@ -474,14 +478,26 @@
          `str("a = 22")
          (print (+ `str("a") 10 ,10)))｣))
 
-(def test test/js/mixed-with-xml ()
-  (bind ((emitted (emit-xml/js ｢<body `js(+ 2 2)>｣))
+(def test test/js/mixed-with-xml/simple ()
+  (bind ((emitted (emit-xml/js ｢ <body `js(+ 2 2)>｣))
          (body (parse-xml-into-sxml emitted)))
     (is (string= (first body) "body"))
     (bind ((script (third body)))
       (is (string= (first script) "script"))
       (is (stringp (third script)))
       (is (search "2 + 2" (third script))))))
+
+(def test test/js/mixed-with-xml/escaping ()
+  (with-expected-failures
+    ;; FIXME see :string-escape-function 'escape-as-xml in the reader config
+    (bind ((emitted (emit-xml/js ｢ <body `js-inline "&< >" >｣))
+           (body (parse-xml-into-sxml emitted)))
+      (print body)
+      (is (string= (first body) "body"))
+      (bind ((script (third body)))
+        (is (string= (first script) "script"))
+        (is (stringp (third script)))
+        (is (search "&<>" (third script)))))))
 
 ;; leave it at the end, because it screws up emacs coloring
 (def js-test test/js/string-quoting ()
