@@ -111,7 +111,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to binary-emitting-form
 
-(def (transformation e) quasi-quoted-string-to-string-emitting-form (lisp-form-emitting-transformation)
+(def class* quasi-quoted-string-transformation-mixin ()
+  ((escape-function nil)))
+
+(def method compatible-transformations? and ((a quasi-quoted-string-transformation-mixin)
+                                             (b quasi-quoted-string-transformation-mixin))
+  (eql (escape-function-of a) (escape-function-of b)))
+
+(def (transformation e) quasi-quoted-string-to-string-emitting-form (quasi-quoted-string-transformation-mixin
+                                                                     lisp-form-emitting-transformation)
   ()
   'transform-quasi-quoted-string-to-string-emitting-form)
 
@@ -124,25 +132,38 @@
           (string (write-string el stream))
           (character (write-char el stream)))))))
 
-(def function write-quasi-quoted-string (node stream)
-  (etypecase node
-    (character (write-char node stream))
-    (string (write-string node stream))
-    (list (mapc (lambda (node) (write-quasi-quoted-string node stream)) node))
-    (delayed-emitting (funcall node)))
+(def function write-quasi-quoted-string (node stream &optional escape-function)
+  (if escape-function
+      (etypecase node
+        (character (write-string (funcall escape-function (string node)) stream))
+        (string (write-string (funcall escape-function node) stream))
+        (list (mapc (lambda (sub-node)
+                      (write-quasi-quoted-string sub-node stream))
+                    node))
+        (delayed-emitting (funcall node)))
+      (etypecase node
+        (character (write-char node stream))
+        (string (write-string node stream))
+        (list (mapc (lambda (sub-node)
+                      (write-quasi-quoted-string sub-node stream))
+                    node))
+        (delayed-emitting (funcall node))))
   (values))
 
 (def function make-quasi-quoted-string-emitting-form (node)
-  (bind ((stream (stream-variable-name-of *transformation*)))
+  (bind ((stream (stream-variable-name-of *transformation*))
+         (runtime-escape-function (awhen (escape-function-of *transformation*)
+                                    (ensure-function it)))
+         (compile-time-escape-function (or (escape-function-of *transformation*)
+                                           #'identity)))
     (etypecase node
-      (character `(write-char ,node ,stream))
-      (string
-       (if (= 1 (length node))
-           `(write-char ,(char node 0) ,stream)
-           `(write-string ,node ,stream)))
+      (character `(write-string ,(funcall compile-time-escape-function (string node)) ,stream))
+      (string `(write-string ,(funcall compile-time-escape-function node) ,stream))
       (string-unquote
        `(write-quasi-quoted-string
-         ,(transform-quasi-quoted-string-to-string-emitting-form node) ,stream))
+         ,(transform-quasi-quoted-string-to-string-emitting-form node)
+         ,stream
+         ,runtime-escape-function))
       (side-effect (form-of node)))))
 
 (def function reduce-string-subsequences (sequence)
@@ -185,7 +206,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to binary-quasi-quote
 
-(def (transformation e) quasi-quoted-string-to-quasi-quoted-binary ()
+(def (transformation e) quasi-quoted-string-to-quasi-quoted-binary (quasi-quoted-string-transformation-mixin)
   ((encoding *default-character-encoding*))
   'transform-quasi-quoted-string-to-quasi-quoted-binary)
 
@@ -194,14 +215,16 @@
   (eql (encoding-of a) (encoding-of b)))
 
 (def function transform-quasi-quoted-string-to-quasi-quoted-binary (node)
-  (bind ((encoding (encoding-of *transformation*)))
+  (bind ((encoding (encoding-of *transformation*))
+         (compiletime-escape-function (or (escape-function-of *transformation*)
+                                          #'identity)))
     (transformation-typecase node
       (list
        (mapcar (lambda (child)
                  (transform-quasi-quoted-string-to-quasi-quoted-binary child))
                node))
-      (character (babel:string-to-octets (string node) :encoding encoding)) ;; TODO: more efficient way
-      (string (babel:string-to-octets node :encoding encoding))
+      (character (babel:string-to-octets (funcall compiletime-escape-function (string node)) :encoding encoding))
+      (string (babel:string-to-octets (funcall compiletime-escape-function node) :encoding encoding))
       (string-quasi-quote
        (make-binary-quasi-quote (rest (transformation-pipeline-of node))
                                 (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))

@@ -80,14 +80,15 @@
                            (encoding *default-character-encoding*))))
 
 (def (function e) make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-    (stream-variable-name &key binary with-inline-emitting indentation-width (encoding :utf-8) output-prefix output-postfix declarations)
+    (stream-variable-name &key binary with-inline-emitting indentation-width (encoding :utf-8)
+                          output-prefix output-postfix declarations string-escape-function)
   (if binary
       (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
                            :output-prefix output-prefix
                            :output-postfix output-postfix
                            :indentation-width indentation-width)
             (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                           :encoding encoding)
+                           :encoding encoding :escape-function string-escape-function)
             (make-instance 'quasi-quoted-binary-to-binary-emitting-form
                            :stream-variable-name stream-variable-name
                            :with-inline-emitting with-inline-emitting
@@ -98,6 +99,7 @@
                            :indentation-width indentation-width)
             (make-instance 'quasi-quoted-string-to-string-emitting-form
                            :stream-variable-name stream-variable-name
+                           :escape-function string-escape-function
                            :with-inline-emitting with-inline-emitting
                            :declarations declarations))))
 

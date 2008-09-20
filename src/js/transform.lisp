@@ -504,7 +504,12 @@
                                                  `(,(output-prefix-of *transformation*)
                                                    ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
                                                    ,(output-postfix-of *transformation*)))
-                        (transform node)))
+                        ;; FIXME major confusion: RUN-TRANSFORMATION-PIPELINE will return lisp forms here
+                        ;; which will blow up the rest of the transformation pipeline.
+                        ;; the solution is probably to add an AST node that encapsulates lisp forms.
+                        ;; unquote's would use that, too and they would be stripped down in a final transformation.
+                        ;; am i talking about list quasi quote here?
+                        (run-transformation-pipeline node)))
     (string-quasi-quote node)))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/unquote (node)
