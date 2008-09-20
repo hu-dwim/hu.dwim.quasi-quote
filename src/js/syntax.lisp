@@ -312,6 +312,17 @@
               ,@(rest (rest form)))
            parent env))
 
+(def class* type-of-form (walked-form)
+  ((object)))
+
+(def (js-walker-handler e) |type-of| (form parent env)
+  (unless (= (length form) 2)
+    (simple-js-compile-error nil "Invalid 'type-of' form, needs at exactly two elements: ~S" form))
+  (bind (((nil object) form))
+    (with-form-object (node type-of-form :parent parent :source form)
+      (setf (object-of node) (walk-form object node env)))))
+
+
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js
 ;; because `js is case sensitive...
 (progn
@@ -324,4 +335,13 @@
       (awhen (gethash cl-symbol cl-walker::*walker-handlers*)
         (setf (gethash symbol *js-walker-handlers*) it))))
 
-  (setf (gethash '|setf| *js-walker-handlers*) (gethash 'setq cl-walker::*walker-handlers*)))
+  (macrolet ((js-to-lisp-handler-alias (new existing)
+               `(setf (gethash ',new *js-walker-handlers*) (gethash ',existing cl-walker::*walker-handlers*))))
+    (js-to-lisp-handler-alias |setf| setq))
+
+  (macrolet ((js-handler-alias (new existing)
+               `(progn
+                  (setf (gethash ',new *js-walker-handlers*) (gethash ',existing *js-walker-handlers*))
+                  (export ',new))))
+    (js-handler-alias |typeof| |type-of|)
+    (js-handler-alias |typeof| type-of)))

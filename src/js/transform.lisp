@@ -464,6 +464,9 @@
              #\[
              ,(recurse slot-name)
              #\]))))
+   (type-of-form
+    (bind ((object (object-of -node-)))
+      `("typeof " ,(recurse object))))
    (unwind-protect-form
     `(,@(make-newline-and-indent) "try"
       ,@(recurse (protected-form-of -node-))
