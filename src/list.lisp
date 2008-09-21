@@ -97,34 +97,121 @@
 
 (def special-variable *quasi-quoted-list-nesting-level*)
 
-(def function wrap-form-using (form operator level)
-  (iter (repeat level)
-        (setf form (list operator form)))
-  form)
-
 (def function transform-quasi-quoted-list-to-list-emitting-form (input)
   (transformation-typecase input
     (list-quasi-quote
      (bind ((*quasi-quoted-list-nesting-level* 0))
        (transform-quasi-quoted-list-to-list-emitting-form/quasi-quote input)))))
 
-(def function bq (&rest args)
+(def function bql (&rest args)
   ;; TODO only for readability while testing
   (apply #'list args))
 
+(def function bqnc (&rest args)
+  ;; TODO only for readability while testing
+  (apply #'nconc args))
+
+;; `(,x)
+;; (BQL X)
+
+;; ``(,,x)
+;; (BQL X)
+
+;; ``(,x)
+;; (BQL 'BQL 'X)
+
+;; `(a (b c) ,(list 1 2))
+;; (bql 'a '(b c) (list 1 2))
+
+;; `(a (b) ,(list 1) `(b ,(list 2 ,3)) c)
+;; (BQL 'A (BQL 'B) (LIST 1) (BQL 'BQL ''B '(LIST '2 3)) 'C)
+
+;; `(a (b) ,(list 1) `(b ,@(list 2 ,3)) c)
+;; (BQL 'A (BQL 'B) (LIST 1) (BQL 'BQNC '(list 'B) (BQL 'LIST '2 3)) 'C)
+
 (def function transform-quasi-quoted-list-to-list-emitting-form/quasi-quote (input)
-  (assert (typep input 'list-quasi-quote))
+  (labels ((unquote (node)
+             (bind ((*quasi-quoted-list-nesting-level* (1- *quasi-quoted-list-nesting-level*)))
+               (assert (<= 0 *quasi-quoted-list-nesting-level*) ()
+                       "Nesting error in list quasi quoting, too many unquotes")
+               (process-unquoted-form (form-of node))))
+           (process-unquoted-form (node)
+             (typecase node
+               (list-unquote (unquote node))
+               (list (if (zerop *quasi-quoted-list-nesting-level*)
+                         (mapcar #'recurse node)
+                         `(bql ,@(mapcar #'recurse node))))
+               (t node)))
+           (lift-quoted-form (node)
+             (bind ((original-nodes node)
+                    (spliced-count 0)
+                    (unquote-count 0)
+                    (prcessed-nodes (iter (for node :in original-nodes)
+                                          (when (typep node 'list-unquote)
+                                            (incf unquote-count)
+                                            (when (spliced-p node)
+                                              (incf spliced-count)))
+                                          (collect (recurse node)))))
+               (cond ((zerop unquote-count)
+                      `(bql ,@prcessed-nodes))
+                     ((not (zerop spliced-count))
+                      `(,(wrap-form-using 'bqnc 'quote (1- *quasi-quoted-list-nesting-level*))
+                        ,@(mapcar (lambda (original-node processed-node)
+                                    (if (and (typep original-node 'list-unquote)
+                                             (spliced-p original-node))
+                                        processed-node
+                                        `(,@(iter (for idx :from 0 :below (1- *quasi-quoted-list-nesting-level*))
+                                                  (collect (wrap-form-using 'bql 'quote idx)))
+                                          ,processed-node)))
+                                   original-nodes prcessed-nodes)))
+                     (t
+                      `(bql ,@prcessed-nodes)))))
+           (recurse (node)
+             (typecase node
+               (list-unquote (unquote node))
+               (list-quasi-quote (if (compatible-transformation-pipelines?
+                                      (transformation-pipeline-of input)
+                                      (transformation-pipeline-of node))
+                                     (bind ((*quasi-quoted-list-nesting-level* (1+ *quasi-quoted-list-nesting-level*)))
+                                       `(,@(iter (for idx :from 0 :below (1- *quasi-quoted-list-nesting-level*))
+                                                 (collect (wrap-form-using 'bql 'quote idx)))
+                                         ,@(lift-quoted-form (body-of node))))
+                                     (progn
+                                       (break "This should not happen! Probably your reader setup is incorrect... otherwise send a mail to the list!")
+                                       (transform node))))
+               (list (lift-quoted-form node))
+               (t (wrap-form-using node 'quote *quasi-quoted-list-nesting-level*)))))
+    (recurse input)))
+
+(def function wrap-form-using (form operator level)
+  (iter (repeat level)
+        (setf form (list operator form)))
+  form)
+
+
+#|
+
+TODO delme, kept for reference
+
+(def function transform-quasi-quoted-list-to-list-emitting-form/quasi-quote (input)
   (labels ((recurse (node)
              (typecase node
                (list-unquote (bind ((*quasi-quoted-list-nesting-level* (1- *quasi-quoted-list-nesting-level*)))
+                               (assert (<= 0 *quasi-quoted-list-nesting-level*) ()
+                                       "Nesting error in list quasi quoting, too many unquotes")
                                (recurse (form-of node))))
                (list-quasi-quote (if (compatible-transformation-pipelines?
                                       (transformation-pipeline-of input)
                                       (transformation-pipeline-of node))
                                      (bind ((*quasi-quoted-list-nesting-level* (1+ *quasi-quoted-list-nesting-level*)))
                                        (recurse (body-of node)))
-                                     (transform node)))
-               (list (list* (wrap-form-using 'bq 'quote (1- *quasi-quoted-list-nesting-level*))
-                            (mapcar #'recurse node)))
+                                     (progn
+                                       (break "This should not happen! Probably your reader setup is incorrect... otherwise send a mail to the list!")
+                                       (transform node))))
+               (list `(,@(iter (for idx :from 0 :below *quasi-quoted-list-nesting-level*)
+                               (collect (wrap-form-using 'bql 'quote idx)))
+                       ,@(mapcar #'recurse node)))
                (t (wrap-form-using node 'quote *quasi-quoted-list-nesting-level*)))))
     (recurse input)))
+
+|#
