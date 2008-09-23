@@ -183,8 +183,7 @@
 
 (def js-walker-handler |defun| (form parent env)
   (bind (((name args &rest body) (rest form)))
-    (with-form-object (result function-definition-form
-                              :parent parent
+    (with-form-object (result 'function-definition-form parent
                               :source form)
       (walk-lambda-like result
                         (nsubstitute '&optional '|&optional|
@@ -201,7 +200,8 @@
   (unless (<= 1 (length form) 2)
     (simple-walker-error "Illegal return form: ~S" form))
   (let ((value (second form)))
-    (with-form-object (return-from-node return-from-form :parent parent :source form)
+    (with-form-object (return-from-node 'return-from-form parent
+                                        :source form)
       (setf (result-of return-from-node) (when value
                                            (walk-form value return-from-node env))))))
 
@@ -212,7 +212,8 @@
    (body)))
 
 (def js-walker-handler |do| (form parent env)
-  (with-form-object (for-node for-form :parent parent :source form)
+  (with-form-object (for-node 'for-form parent
+                              :source form)
     (bind (((raw-variables (raw-end-test &optional result) &rest raw-body) (rest form)))
       (when result
         (simple-js-compile-error for-node "DO can't handle a result expression"))
@@ -236,7 +237,8 @@
 
 (def (js-walker-handler e) |create| (form parent env)
   (let ((elements (rest form)))
-    (with-form-object (create-node create-form :parent parent :source form)
+    (with-form-object (create-node 'create-form parent
+                                   :source form)
       (setf (elements-of create-node) (mapcar [walk-form !1 create-node env] elements)))))
 
 (def class* slot-value-form (walked-form)
@@ -246,7 +248,8 @@
 (def (js-walker-handler e) |slot-value| (form parent env)
   (unless (length= 2 (rest form))
     (simple-js-compile-error nil "Invalid slot-value form" form))
-  (with-form-object (node slot-value-form :parent parent :source form)
+  (with-form-object (node 'slot-value-form parent
+                          :source form)
     (setf (object-of node) (walk-form (second form) node env))
     (setf (slot-name-of node) (bind ((slot-name (third form)))
                                 (if (quoted-symbol? slot-name)
@@ -262,7 +265,8 @@
     (simple-js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" form))
   (bind ((type (second form))
          (args (cddr form)))
-    (with-form-object (node instantiate-form :parent parent :source form)
+    (with-form-object (node 'instantiate-form parent
+                            :source form)
       (setf (type-to-instantiate-of node) type)
       (setf (arguments-of node) (mapcar [walk-form !1 node env] args)))))
 
@@ -274,7 +278,8 @@
 (def (js-walker-handler e) |try| (form parent env)
   (when (< (length (rest form)) 2)
     (simple-js-compile-error nil "Invalid 'try' form, needs at least two elements: ~S" form))
-  (with-form-object (node try-form :parent parent :source form)
+  (with-form-object (node 'try-form parent
+                          :source form)
     (bind ((body (second form))
            (catch-clauses (copy-list (rest (rest form))))
            (finally-clause (bind ((finally (assoc '|finally| catch-clauses)))
@@ -296,7 +301,8 @@
     (unless (and variable-name
                  (symbolp variable-name))
       (simple-js-compile-error nil "The condition variable in a 'catch' form must be a symbol. Got ~S instead." variable-name))
-    (with-form-object (node catch-form :parent parent :source form)
+    (with-form-object (node 'catch-form parent
+                            :source form)
       (setf (variable-name-of node) variable-name)
       (setf (condition-of node) (when condition
                                   (walk-form condition node env)))
@@ -319,7 +325,8 @@
   (unless (= (length form) 2)
     (simple-js-compile-error nil "Invalid 'type-of' form, needs at exactly two elements: ~S" form))
   (bind (((nil object) form))
-    (with-form-object (node type-of-form :parent parent :source form)
+    (with-form-object (node 'type-of-form parent
+                            :source form)
       (setf (object-of node) (walk-form object node env)))))
 
 
