@@ -139,7 +139,7 @@
       (list ?\( ?\)))))
 
 (defun cl-quasi-quote-sexp-separator-p (char)
-  (member char (list ?\, ?\' ?\` ?\t ?\  ?\( ?\) ?\[ ?\] ?\< ?\>)))
+  (member char (list ?\n ?\, ?\' ?\` ?\t ?\  ?\( ?\) ?\[ ?\] ?\< ?\>)))
 
 (defun cl-quasi-quote-before-sexp-separator-p ()
   (or (bolp)
