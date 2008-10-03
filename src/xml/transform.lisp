@@ -41,6 +41,7 @@
                 (:per-character (escape-as-xml node))))
       (integer (princ-to-string node))
       (float (format nil "~F" node))
+      (ratio (format nil "~D" node))
       (xml-element
        (bind ((attributes (attributes-of node))
               (name (name-of node))
