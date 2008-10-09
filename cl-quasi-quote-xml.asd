@@ -26,3 +26,11 @@
                        (:file "escaping" :depends-on ("package"))
                        (:file "transform" :depends-on ("package" "escaping" "syntax" "ast"))))))))
 
+(defsystem-connection :cl-quasi-quote-xml-and-cxml
+  :requires (:cl-quasi-quote-xml :cxml)
+  :components
+  ((:module "src"
+            :components
+            ((:module "xml"
+                      :components
+                      ((:file "cxml-integration")))))))
