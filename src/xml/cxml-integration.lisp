@@ -23,8 +23,11 @@ Same as Perl's [\\s]."))
   (locally (declare (special *indent*))
     (format *standard-output* (concatenate 'string "~%~" (format nil "~A" *indent*) "@T<~A") qname )
     (incf *indent*)
+    (and (plusp (length attributes)) (format *standard-output* " ("))
     (iter (for attribute :in attributes)
-          (format *standard-output* " (~A \"~A\")" (sax:attribute-qname attribute) (sax:attribute-value attribute)))))
+          (if-first-time () (format *standard-output* " "))
+          (format *standard-output* "~A \"~A\"" (sax:attribute-qname attribute) (sax:attribute-value attribute)))
+    (and (plusp (length attributes)) (format *standard-output* ")"))))
 
 
 (defmethod sax:end-element ((builder sax-handler) namespace-uri local-name qname)
@@ -33,8 +36,8 @@ Same as Perl's [\\s]."))
     (decf *indent*)))
 
 (defmethod sax:characters ((builder sax-handler) data)
-  (bind ((chars (string-right-trim +whitespace-char-string+
-                          (string-left-trim +whitespace-char-string+ data))))
+  (bind ((chars (escape-as-xml (string-right-trim +whitespace-char-string+
+                                    (string-left-trim +whitespace-char-string+ data)))))
     (and (plusp (length chars)) (format *standard-output* " \"~A\"" chars))))
 
 (def function print-quasi-quoted-xml (input)
