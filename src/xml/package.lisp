@@ -20,7 +20,7 @@
         )
 
   (:export
-   ))
+   #:print-quasi-quoted-xml))
 
 (in-package :cl-quasi-quote-xml)
 

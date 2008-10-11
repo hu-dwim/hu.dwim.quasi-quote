@@ -33,4 +33,5 @@
             :components
             ((:module "xml"
                       :components
-                      ((:file "cxml-integration")))))))
+                      ((:file "cxml-integration"))))))
+  :depends-on (:cxml))
