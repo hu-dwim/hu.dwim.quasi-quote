@@ -6,7 +6,7 @@
 
 (in-package :cl-quasi-quote-xml)
 
-(defparameter +xml-namespace-uri+ "http://www.w3.org/XML/1998/namespace")
+(define-constant +xml-namespace-uri+ "http://www.w3.org/XML/1998/namespace" :test #'string=)
 
 (unless (boundp '+whitespace-char-string+)
     (defconstant +whitespace-char-string+
@@ -40,7 +40,7 @@ Same as Perl's [\\s]."))
                                     (string-left-trim +whitespace-char-string+ data)))))
     (and (plusp (length chars)) (format *standard-output* " \"~A\"" chars))))
 
-(def function print-quasi-quoted-xml (input)
+(def (function e) print-quasi-quoted-xml (input)
   "Emit an xml input as quasi quoted string. Input can be anything acceptable by cxml:parse."
   (flet ((resolver (pubid sysid)
 	 (declare (ignore pubid sysid))
@@ -48,5 +48,3 @@ Same as Perl's [\\s]."))
     (let ((*indent* 0))
       (declare (special *indent*))
       (cxml:parse input (make-instance 'sax-handler) :entity-resolver #'resolver))))
-
-
