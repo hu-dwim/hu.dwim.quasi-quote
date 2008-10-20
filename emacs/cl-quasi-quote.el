@@ -71,7 +71,7 @@
                nil))
           (1 'cl-quasi-quote-xml-element-face)
           (2 'cl-quasi-quote-xml-element-face))
-         ("[^-=/<(]\\(>+\\)"
+         ("[^'-=/<(]\\(>+\\)[\n 	)]"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
