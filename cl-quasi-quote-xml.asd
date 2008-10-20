@@ -11,7 +11,7 @@
 
 (in-package #:cl-quasi-quote-system)
 
-(defsubsystem :cl-quasi-quote-xml
+(define-qq-subsystem :cl-quasi-quote-xml
   :version "0.1"
   :description "Quasi quote transformations for emitting XML"
   :setup-readtable-function "cl-quasi-quote-xml::setup-readtable"
@@ -26,12 +26,12 @@
                        (:file "escaping" :depends-on ("package"))
                        (:file "transform" :depends-on ("package" "escaping" "syntax" "ast"))))))))
 
-(defsystem-connection :cl-quasi-quote-xml-and-cxml
+(define-qq-system-connection :cl-quasi-quote-xml-and-cxml
   :requires (:cl-quasi-quote-xml :cxml)
+  :setup-readtable-function "cl-quasi-quote::setup-readtable"
   :components
   ((:module "src"
             :components
             ((:module "xml"
                       :components
-                      ((:file "cxml-integration"))))))
-  :depends-on (:cxml))
+                      ((:file "cxml-integration")))))))

@@ -11,7 +11,7 @@
 
 (in-package #:cl-quasi-quote-system)
 
-(defsubsystem :cl-quasi-quote-pdf
+(define-qq-subsystem :cl-quasi-quote-pdf
   :version "0.1"
   :description "Quasi quote transformations for emitting PDF"
   :setup-readtable-function "cl-quasi-quote-pdf::setup-readtable"

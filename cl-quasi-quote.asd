@@ -79,12 +79,6 @@
              (:file "binary" :depends-on ("transformation" "syntax" "utils"))
              (:file "string" :depends-on ("transformation" "syntax" "binary" "utils" ))))))
 
-(defsystem-connection cl-quasi-quote-and-swank
-  :requires (:cl-quasi-quote :swank #:cl-syntax-sugar-and-swank)
-  :components
-  ((:module "src"
-            :components ((:file "swank-integration")))))
-
 (defmethod perform ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   (operate 'load-op :cl-quasi-quote-test)
   (in-package :cl-quasi-quote-test)
@@ -101,8 +95,8 @@
 (defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-quasi-quote))))
   nil)
 
-(defmacro defsubsystem (name &key components version author maintainer description
-                        setup-readtable-function depends-on)
+(defmacro define-qq-subsystem (name &key components version author maintainer description
+                               setup-readtable-function depends-on)
   `(progn
      (defsystem ,name
        :version ,version
@@ -124,14 +118,35 @@
                           ))
        :components ,components)
 
-     (defsystem-connection ,(symbolicate name '#:-and-swank)
-       :requires (,name :swank #:cl-syntax-sugar-and-swank)
-       :components
-       ((:module "src"
-                 :components ((:file "swank-integration")))))
-
      (defmethod perform ((op test-op) (system (eql (find-system ,name))))
        (operate 'test-op :cl-quasi-quote))
 
      (defmethod operation-done-p ((op test-op) (system (eql (find-system ,name))))
        nil)))
+
+(defmacro define-qq-system-connection (name &key requires components author maintainer description
+                                       setup-readtable-function)
+  `(defsystem-connection ,name
+     :requires ,requires
+     :author ,(or author
+                  '("Attila Lendvai <attila.lendvai@gmail.com>"
+                    "Tamás Borbély <tomi.borbely@gmail.com>"
+                    "Levente Mészáros <levente.meszaros@gmail.com>"))
+     :maintainer ,(or maintainer
+                      '("Attila Lendvai <attila.lendvai@gmail.com>"
+                        "Tamás Borbély <tomi.borbely@gmail.com>"
+                        "Levente Mészáros <levente.meszaros@gmail.com>"))
+     :licence "BSD / Public domain"
+     :description ,description
+     :default-component-class cl-source-file-with-readtable
+     :class system-connection-with-readtable
+     :setup-readtable-function ,setup-readtable-function
+     :components ,components))
+
+(define-qq-system-connection cl-quasi-quote-and-swank
+  :requires (:cl-quasi-quote :swank #:cl-syntax-sugar-and-swank)
+  :setup-readtable-function "cl-quasi-quote::setup-readtable"
+  :components
+  ((:module "src"
+            :components ((:file "swank-integration")))))
+

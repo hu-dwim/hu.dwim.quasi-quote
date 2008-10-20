@@ -11,7 +11,7 @@
 
 (in-package #:cl-quasi-quote-system)
 
-(defsubsystem :cl-quasi-quote-js
+(define-qq-subsystem :cl-quasi-quote-js
   :version "0.1"
   :description "Quasi quote transformations for emitting JavaScript"
   :setup-readtable-function "cl-quasi-quote-js::setup-readtable"
