@@ -78,9 +78,46 @@
   ((transformation-pipeline)
    (body)))
 
+(def special-variable *print-ast-node-stack* nil)
+
+(def method print-object :around ((self quasi-quote) *standard-output*)
+  (bind ((*print-case* :downcase))
+    (when (and *print-ast-node-stack*
+               (not (compatible-transformation-pipelines?
+                     (transformation-pipeline-of self)
+                     (transformation-pipeline-of (first *print-ast-node-stack*)))))
+      (write-string "!"))
+    (bind ((*print-ast-node-stack* (cons self *print-ast-node-stack*)))
+      (call-next-method))))
+
 (def (class* e) unquote (syntax-node)
   ((form)
-   (spliced #f :type boolean)))
+   (modifier nil)))
+
+;; TODO get rid of this and cleanup the call sites
+(def constructor (unquote spliced dotted)
+  (assert (not (and spliced dotted)))
+  (cond
+    (spliced
+     (setf (modifier-of -self-) :splice))
+    (dotted
+     (setf (modifier-of -self-) :dot))))
+
+(def generic spliced-p (unquote)
+  (:method ((self unquote))
+    (eq (modifier-of self) :splice)))
+
+(def generic dotted-p (unquote)
+  (:method ((self unquote))
+    (eq (modifier-of self) :dot)))
+
+(def method print-object ((self unquote) *standard-output*)
+  (write-string "_,")
+  (when (spliced-p self)
+    ;; TODO FIXME ,.
+    (write-string "@"))
+  (princ (form-of self))
+  self)
 
 ;; TODO: eliminate side effect and check for returning (values) from unqutes
 ;; TODO: what if the unquote returns with another function

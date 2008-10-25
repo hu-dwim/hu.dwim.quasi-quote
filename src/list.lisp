@@ -65,6 +65,11 @@
 (def (function e) make-list-unquote (form &optional (spliced? #f))
   (make-instance 'list-unquote :form form :spliced spliced?))
 
+(def method print-object ((self list-quasi-quote) *standard-output*)
+  (write-string "`list")
+  (princ (body-of self))
+  self)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to list emitting form
