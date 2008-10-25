@@ -26,7 +26,6 @@
    :asdf
    :alexandria
    :cl-syntax-sugar
-   :asdf-system-connections
    )
 
   (:export
