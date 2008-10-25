@@ -56,6 +56,7 @@
      transformation-pipeline-of
      *transformation*
      *transformation-pipeline*
+     *disable-run-transformation-pipeline*
      compatible-transformation-pipelines?
      compatible-transformations?
      run-transformation-pipeline

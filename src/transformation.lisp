@@ -8,6 +8,8 @@
 
 (def special-variable *transformation-pipeline*)
 (def special-variable *transformation*)
+(def special-variable *disable-run-transformation-pipeline* #f
+  "For debugging purposes. When T then RUN-TRANSFORMATION-PIPELINE simply returns its argument.")
 
 (def function wrap-runtime-delayed-transformation-form (form)
   `(bind ((*transformation* ,*transformation*))
@@ -37,7 +39,9 @@
     #t)
   (:method :around (a b)
     (or (eq a b)
-        (call-next-method))))
+        (and (or (typep a (type-of b))
+                 (typep b (type-of a)))
+             (call-next-method)))))
 
 (def function compatible-transformation-pipelines? (a b)
   (every (lambda (a b)
@@ -106,9 +110,10 @@
 
 (def function run-transformation-pipeline (node)
   (assert (typep node 'quasi-quote))
-  (bind ((*transformation-pipeline* (transformation-pipeline-of node)))
-    (iter (setf node (transform node))
-          (while (typep node 'quasi-quote))))
+  (unless *disable-run-transformation-pipeline*
+    (bind ((*transformation-pipeline* (transformation-pipeline-of node)))
+      (iter (setf node (transform node))
+            (while (typep node 'quasi-quote)))))
   node)
 
 (def function transform (node)
