@@ -21,7 +21,7 @@
 (def definer simple-list-test (name &body strings)
   (assert (every #'stringp strings))
   `(def test ,name ()
-     (map nil 'test-with-standard
+     (map nil 'compare-with-standard-backquote
           '(,@strings))))
 
 (def function test-list-emitting-forms (expected ast)
@@ -33,9 +33,9 @@
     (read-from-string string)))
 
 (def function pprint-list (string &optional (with-inline-emitting :as-is))
-  (downcased-pretty-print (macroexpand (read-from-string-with-list-syntax string with-inline-emitting))))
+  (downcased-pretty-print (read-from-string-with-list-syntax string with-inline-emitting)))
 
-(def function test-with-standard (string)
+(def function compare-with-standard-backquote (string)
   (bind ((expected (eval (read-from-string string)))
          (forms (read-from-string-with-list-syntax string))
          (actual (eval forms)))
@@ -61,9 +61,9 @@
                             ｢`(let ((a 42))
                                 `(let ((x 44))
                                    (list x ,a ,,b)))｣)))))
-    (break "~S" stage1)
+    ;;(break "~S" stage1)
     (bind ((stage2 (eval stage1)))
-      (break "~S" stage2)
+      ;;(break "~S" stage2)
       (bind ((stage3 (eval stage2)))
         (is (equal (list 44 42 43) stage3))))))
 
@@ -105,7 +105,8 @@
     (is (equal (eval (eval forms))
                value))))
 
-(def test sbcl-backq-tests ()
+(def test test/list/sbcl-backq-tests ()
   (mapc (lambda (test)
           (test-double-backquote (car test) (cdr test)))
-        *backquote-tests*))
+        *backquote-tests*)
+  (values))
