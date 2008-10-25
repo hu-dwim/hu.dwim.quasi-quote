@@ -82,16 +82,16 @@
   ((transformation-pipeline)
    (body)))
 
-(def special-variable *print-ast-node-stack* nil)
+(def special-variable *print-quasi-quote-stack* nil)
 
 (def method print-object :around ((self quasi-quote) *standard-output*)
   (bind ((*print-case* :downcase))
-    (when (and *print-ast-node-stack*
+    (when (and *print-quasi-quote-stack*
                (not (compatible-transformation-pipelines?
                      (transformation-pipeline-of self)
-                     (transformation-pipeline-of (first *print-ast-node-stack*)))))
+                     (transformation-pipeline-of (first *print-quasi-quote-stack*)))))
       (write-string "!"))
-    (bind ((*print-ast-node-stack* (cons self *print-ast-node-stack*)))
+    (bind ((*print-quasi-quote-stack* (cons self *print-quasi-quote-stack*)))
       (call-next-method))))
 
 (def (class* e) unquote (syntax-node)
