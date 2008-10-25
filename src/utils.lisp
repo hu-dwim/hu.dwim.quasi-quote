@@ -58,10 +58,15 @@
                   (funcall map-function form)
                   form))))
 
+(def function quoted-form? (form)
+  (and (consp form)
+       (eq (car form) 'quote)
+       (progn
+         (assert (length= 2 form))
+         t)))
+
 (def function quoted-symbol? (thing)
-  (and (consp thing)
-       (eq 'quote (first thing))
-       (length= 2 thing)
+  (and (quoted-form? thing)
        (not (null (second thing)))
        (symbolp (second thing))))
 

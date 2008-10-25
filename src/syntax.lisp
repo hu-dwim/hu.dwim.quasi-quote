@@ -70,6 +70,10 @@
 (def (class* e) syntax-node ()
   ())
 
+(def function non-syntax-node-atom? (x)
+  (and (atom x)
+       (not (typep x 'syntax-node))))
+
 ;; TODO ? maybe it's just a thinko that it's needed
 (def method cl-walker:unwalk-form ((self syntax-node))
   self)
