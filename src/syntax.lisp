@@ -98,28 +98,19 @@
   ((form)
    (modifier nil)))
 
-;; TODO get rid of this and cleanup the call sites
-(def constructor (unquote spliced dotted)
-  (assert (not (and spliced dotted)))
-  (cond
-    (spliced
-     (setf (modifier-of -self-) :splice))
-    (dotted
-     (setf (modifier-of -self-) :dot))))
+(def function spliced? (unquote)
+  (assert (member (modifier-of unquote) '(nil :splice :destructive-splice) :test #'eq))
+  (not (null (modifier-of unquote))))
 
-(def generic spliced-p (unquote)
-  (:method ((self unquote))
-    (eq (modifier-of self) :splice)))
-
-(def generic dotted-p (unquote)
-  (:method ((self unquote))
-    (eq (modifier-of self) :dot)))
+(def function destructively-spliced? (unquote)
+  (assert (member (modifier-of unquote) '(nil :splice :destructive-splice) :test #'eq))
+  (eq (modifier-of unquote) :destructive-splice))
 
 (def method print-object ((self unquote) *standard-output*)
   (write-string "_,")
-  (when (spliced-p self)
-    ;; TODO FIXME ,.
-    (write-string "@"))
+  (cond
+    ((destructively-spliced? self) (write-string "."))
+    ((spliced? self)               (write-string "@")))
   (princ (form-of self))
   self)
 

@@ -16,6 +16,7 @@
                                          end-character
                                          (unquote-character #\,)
                                          (splice-character #\@)
+                                         (destructive-splice-character #\.)
                                          (dispatched-quasi-quote-name "bin")
                                          (transformation-pipeline nil))
   (set-quasi-quote-syntax-in-readtable
@@ -23,12 +24,13 @@
      (declare (ignore dispatched?))
      (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
        `(,(if toplevel? 'binary-quasi-quote/toplevel 'binary-quasi-quote) ,toplevel? ,body ,transformation-pipeline)))
-   (lambda (form spliced?)
-     `(binary-unquote ,form ,spliced?))
+   (lambda (form modifier)
+     `(binary-unquote ,form ,modifier))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
+   :destructive-splice-character destructive-splice-character
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
 (macrolet ((x (name transformation-pipeline &optional args)
@@ -40,13 +42,15 @@
                                                     end-character
                                                     (unquote-character #\,)
                                                     (splice-character #\@)
+                                                    (destructive-splice-character #\.)
                                                     (dispatched-quasi-quote-name "bin"))
                   (set-quasi-quoted-binary-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                                :dispatched-quasi-quote-name dispatched-quasi-quote-name
                                                                :start-character start-character
                                                                :end-character end-character
                                                                :unquote-character unquote-character
-                                                               :splice-character splice-character)))))
+                                                               :splice-character splice-character
+                                                               :destructive-splice-character destructive-splice-character)))))
   (x binary-emitting-form        (list (make-instance 'quasi-quoted-binary-to-binary-emitting-form
                                                       :stream-variable-name stream-variable-name
                                                       :with-inline-emitting with-inline-emitting
@@ -133,8 +137,8 @@
 (def (class* e) binary-unquote (unquote binary-syntax-node)
   ())
 
-(def (function e) make-binary-unquote (form &optional (spliced? #f))
-  (make-instance 'binary-unquote :form form :spliced spliced?))
+(def (function e) make-binary-unquote (form &optional modifier)
+  (make-instance 'binary-unquote :form form :modifier modifier))
 
 
 ;;;;;;;;;;;;;

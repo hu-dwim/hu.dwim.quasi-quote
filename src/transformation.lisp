@@ -157,7 +157,8 @@
   (:method ((node list))
     (iter (for element :in node)
           (collect (when (typep element 'unquote)
-                     (spliced-p element)) :into spliced-elements)
+                     ;; TODO FIXME destructively-spliced?
+                     (spliced? element)) :into spliced-elements)
           (collect (make-syntax-node-emitting-form element) :into transformed-elements)
           (finally (return
                      (cond ((every #'identity spliced-elements)

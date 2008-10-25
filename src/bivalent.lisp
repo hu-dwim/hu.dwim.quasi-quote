@@ -13,6 +13,7 @@
                                            end-character
                                            (unquote-character #\,)
                                            (splice-character #\@)
+                                           (destructive-splice-character #\.)
                                            (transformation-pipeline nil)
                                            (dispatched-quasi-quote-name "biv"))
   (set-quasi-quote-syntax-in-readtable
@@ -20,12 +21,13 @@
      (declare (ignore dispatched?))
      (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
        `(,(if toplevel? 'bivalent-quasi-quote/toplevel 'bivalent-quasi-quote) ,toplevel? ,body ,transformation-pipeline)))
-   (lambda (form spliced)
-     `(bivalent-unquote ,form ,spliced))
+   (lambda (form modifier)
+     `(bivalent-unquote ,form ,modifier))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
+   :destructive-splice-character destructive-splice-character
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
 (macrolet ((x (name transformation-pipeline &optional args)
@@ -39,6 +41,7 @@
                                                end-character
                                                (unquote-character #\,)
                                                (splice-character #\@)
+                                               (destructive-splice-character #\.)
                                                (dispatched-quasi-quote-name "biv")
                                                ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-bivalent-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
@@ -46,7 +49,8 @@
                                                                  :start-character start-character
                                                                  :end-character end-character
                                                                  :unquote-character unquote-character
-                                                                 :splice-character splice-character)))))
+                                                                 :splice-character splice-character
+                                                                 :destructive-splice-character destructive-splice-character)))))
   (x bivalent-emitting-form (list (make-instance 'quasi-quoted-bivalent-to-bivalent-emitting-form
                                                  :stream-variable-name stream-variable-name
                                                  :with-inline-emitting with-inline-emitting
@@ -90,8 +94,8 @@
 (def (class* e) bivalent-unquote (unquote bivalent-syntax-node)
   ())
 
-(def (function e) make-bivalent-unquote (form &optional (spliced? #f))
-  (make-instance 'bivalent-unquote :form form :spliced spliced?))
+(def (function e) make-bivalent-unquote (form &optional modifier)
+  (make-instance 'bivalent-unquote :form form :modifier modifier))
 
 
 ;;;;;;;;;;;;;

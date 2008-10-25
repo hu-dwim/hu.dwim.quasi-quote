@@ -11,6 +11,7 @@
                                      dispatch-character
                                      (unquote-character #\,)
                                      (splice-character #\@)
+                                     (destructive-splice-character #\.)
                                      (transformation-pipeline nil)
                                      (nested-transformation-pipeline nil)
                                      (dispatched-quasi-quote-name "js"))
@@ -25,13 +26,14 @@
                transformation-pipeline
                (or nested-transformation-pipeline
                    transformation-pipeline)))))
-   (lambda (body spliced?)
-     `(js-unquote ,body ,spliced?))
+   (lambda (body modifier)
+     `(js-unquote ,body ,modifier))
    :start-character start-character
    :dispatch-character dispatch-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
+   :destructive-splice-character destructive-splice-character
    :readtable-case :preserve
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
@@ -49,6 +51,7 @@
                                                (end-character #\>)
                                                (unquote-character #\,)
                                                (splice-character #\@)
+                                               (destructive-splice-character #\.)
                                                (dispatched-quasi-quote-name "js")
                                                ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-js-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
@@ -56,6 +59,7 @@
                                                            :end-character end-character
                                                            :unquote-character unquote-character
                                                            :splice-character splice-character
+                                                           :destructive-splice-character destructive-splice-character
                                                            :dispatched-quasi-quote-name dispatched-quasi-quote-name)))))
   ;; TODO ? (x js-emitting-form            '(js-emitting-form))
   (x string-emitting-form (make-quasi-quoted-js-to-form-emitting-transformation-pipeline

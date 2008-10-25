@@ -31,7 +31,8 @@
   (import
    '(form-of
      parent-of
-     spliced-p
+     spliced?
+     destructively-spliced?
      body-of
      syntax-node
      make-string-of-spaces

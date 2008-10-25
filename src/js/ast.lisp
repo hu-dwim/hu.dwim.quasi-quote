@@ -25,5 +25,5 @@
 (def (class* e) js-unquote (unquote js-syntax-node)
   ())
 
-(def (function e) make-js-unquote (form &optional (spliced? #f))
-  (make-instance 'js-unquote :form form :spliced spliced?))
+(def (function e) make-js-unquote (form &optional modifier)
+  (make-instance 'js-unquote :form form :modifier modifier))

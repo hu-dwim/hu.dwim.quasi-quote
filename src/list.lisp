@@ -10,6 +10,7 @@
                                        end-character
                                        (unquote-character #\,)
                                        (splice-character #\@)
+                                       (destructive-splice-character #\.)
                                        transformation-pipeline
                                        dispatched-quasi-quote-name)
   (set-quasi-quote-syntax-in-readtable
@@ -20,12 +21,13 @@
        (if toplevel?
            (run-transformation-pipeline result)
            result)))
-   (lambda (form spliced)
-     (make-list-unquote form spliced))
+   (lambda (form modifier)
+     (make-list-unquote form modifier))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
+   :destructive-splice-character destructive-splice-character
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
 (define-syntax quasi-quoted-list-to-list-emitting-form (&key (with-inline-emitting :as-is)
@@ -33,6 +35,7 @@
                                                              end-character
                                                              (unquote-character #\,)
                                                              (splice-character #\@)
+                                                             (destructive-splice-character #\.)
                                                              dispatched-quasi-quote-name)
   (set-quasi-quoted-list-syntax-in-readtable
    :transformation-pipeline (list (make-instance 'quasi-quoted-list-to-list-emitting-form
@@ -41,7 +44,8 @@
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
-   :splice-character splice-character))
+   :splice-character splice-character
+   :destructive-splice-character destructive-splice-character))
 
 ;;;;;;;
 ;;; AST
@@ -62,8 +66,8 @@
 (def (class* e) list-unquote (unquote list-syntax-node)
   ())
 
-(def (function e) make-list-unquote (form &optional (spliced? #f))
-  (make-instance 'list-unquote :form form :spliced spliced?))
+(def (function e) make-list-unquote (form &optional modifier)
+  (make-instance 'list-unquote :form form :modifier modifier))
 
 (def method print-object ((self list-quasi-quote) *standard-output*)
   (write-string "`list")
@@ -158,10 +162,8 @@
          (bq-process (bq-completely-process (body-of x))))
         ((typep x 'unquote)             ; (eq (car x) *comma*)
          (cond
-           ((spliced-p x)
-            (error ",@~S after `" (form-of x)))
-           ((dotted-p x)
-            (error ",.~S after `" (form-of x)))
+           ((destructively-spliced? x) (error ",.~S after `" (form-of x)))
+           ((spliced? x)               (error ",@~S after `" (form-of x)))
            (t
             (form-of x))))
         (t (do ((p x (cdr p))
@@ -171,8 +173,8 @@
                       (nreconc q (list (list *bq-quote* p)))))
              (when (typep p 'unquote) ; (eq (car p) *comma*)
                (cond
-                 ((spliced-p p) (error "Dotted ,@~S" (form-of p)))
-                 ((dotted-p p)  (error "Dotted ,.~S" (form-of p))))
+                 ((destructively-spliced? p) (error "Dotted ,.~S" (form-of p)))
+                 ((spliced? p)               (error "Dotted ,@~S" (form-of p))))
                (return (cons *bq-append*
                              (nreconc q (list (form-of p))))))))))
 
@@ -184,10 +186,10 @@
      (list *bq-list* (bq-process x)))
     ((typep x 'unquote)                 ; (eq (car x) *comma*)
      (cond
-       ((spliced-p x)                   ; (eq (car x) *comma-atsign*)
-        (form-of x))
-       ((dotted-p x)                    ; (eq (car x) *comma-dot*)
+       ((destructively-spliced? x)      ; (eq (car x) *comma-dot*)
         (list *bq-clobberable* (form-of x)))
+       ((spliced? x)                   ; (eq (car x) *comma-atsign*)
+        (form-of x))
        (t
         (list *bq-list* (form-of x)))))
     (t
@@ -211,8 +213,7 @@
 
 (defun bq-splicing-frob (x)
   (and (typep x 'unquote)
-       (or (spliced-p x)
-           (dotted-p x))))
+       (spliced? x)))
 
 ;;; This predicate is true of a form that when read
 ;;; looked like ,@foo or just plain ,foo.

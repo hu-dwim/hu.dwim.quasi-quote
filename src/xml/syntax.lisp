@@ -15,6 +15,7 @@
           (end-character #\>)
           (unquote-character #\,)
           (splice-character #\@)
+          (destructive-splice-character #\.)
           (transformation-pipeline nil)
           (dispatched-quasi-quote-name "xml"))
   (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character* start-character *readtable*)))
@@ -29,10 +30,10 @@
          (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
        (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
          `(,(if toplevel? 'xml-quasi-quote/toplevel 'xml-quasi-quote) ,toplevel? ,dispatched? ,body ,transformation-pipeline)))
-     (lambda (body spliced?)
+     (lambda (body modifier)
        ;; that progn is for helping on `<foo ,,@body> not turning into (xml-unquote ,@body nil/t).
        ;; see test test/xml/nested-through-macro-using-lisp-quasi-quote2 for a reproduction of it.
-       `(xml-unquote (progn ,body) ,spliced?))
+       `(xml-unquote (progn ,body) ,modifier))
      :nested-quasi-quote-wrapper (lambda (body dispatched?)
                                    (when (< (length body) 1)
                                      (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
@@ -43,6 +44,7 @@
      :end-character end-character
      :unquote-character unquote-character
      :splice-character splice-character
+     :destructive-splice-character destructive-splice-character
      :readtable-case :preserve
      :dispatched-quasi-quote-name dispatched-quasi-quote-name
      :body-reader (make-quasi-quoted-xml-body-reader start-character end-character unquote-character)
@@ -130,12 +132,14 @@
                                                (end-character #\>)
                                                (unquote-character #\,)
                                                (splice-character #\@)
+                                               (destructive-splice-character #\.)
                                                ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-xml-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                             :start-character start-character
                                                             :end-character end-character
                                                             :unquote-character unquote-character
-                                                            :splice-character splice-character)))))
+                                                            :splice-character splice-character
+                                                            :destructive-splice-character destructive-splice-character)))))
   ;; TODO ? (x xml-emitting-form           '(xml-emitting-form))
   (x string-emitting-form (make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
                            stream-variable-name

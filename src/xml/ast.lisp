@@ -25,8 +25,8 @@
 (def (class* e) xml-unquote (unquote xml-syntax-node)
   ())
 
-(def (function e) make-xml-unquote (form &optional (spliced? #f))
-  (make-instance 'xml-unquote :form form :spliced spliced?))
+(def (function e) make-xml-unquote (form &optional modifier)
+  (make-instance 'xml-unquote :form form :modifier modifier))
 
 (def (class* e) xml-element (xml-syntax-node)
   ((name)

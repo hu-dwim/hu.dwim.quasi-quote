@@ -14,13 +14,14 @@
                                       (end-character #\])
                                       (unquote-character #\,)
                                       (splice-character #\@)
+                                      (destructive-splice-character #\.)
                                       (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
      (readtime-chain-transform transformation (make-pdf-quasi-quote (parse-pdf-reader-body body))))
-   (lambda (body spliced?)
-     (make-pdf-unquote body spliced?))
+   (lambda (body modifier)
+     (make-pdf-unquote body modifier))
    :nested-quasi-quote-wrapper (lambda (body dispatched?)
                                  (declare (ignore dispatched?))
                                  (parse-pdf-reader-body body))
@@ -28,6 +29,7 @@
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
+   :destructive-splice-character destructive-splice-character
    ;;:readtable-case :preserve
    ))
 

@@ -24,8 +24,8 @@
 (def (class* e) pdf-unquote (unquote pdf-syntax-node)
   ())
 
-(def (function e) make-pdf-unquote (form &optional (spliced? #f))
-  (make-instance 'pdf-unquote :form form :spliced spliced?))
+(def (function e) make-pdf-unquote (form &optional modifier)
+  (make-instance 'pdf-unquote :form form :modifier modifier))
 
 (def special-variable *compile-time-pdf-node-identity-counter* 0
   "This is a monotonically increasing integer which is, at runtime, used to represent the identity of AST nodes that were created and thrown away at compile time.")

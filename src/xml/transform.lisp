@@ -98,7 +98,7 @@
                                     (transform-quasi-quoted-xml-to-quasi-quoted-string/element (body-of node)))
            (transform node)))
       (xml-unquote
-       (bind ((spliced? (spliced-p node)))
+       (bind ((spliced? (spliced? node)))
          (make-string-unquote
           (wrap-runtime-delayed-transformation-form
            (if spliced?
@@ -133,7 +133,7 @@
      (make-string-quasi-quote (rest (transformation-pipeline-of node))
                               (map-tree (body-of node) #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))
     (xml-unquote
-     (bind ((spliced? (spliced-p node)))
+     (bind ((spliced? (spliced? node)))
        (make-string-unquote
         (wrap-runtime-delayed-transformation-form
          (if spliced?

@@ -181,7 +181,7 @@
                  ,@(recurse-as-comma-separated arguments
                                                (lambda (node)
                                                  (if (and (typep node 'js-unquote)
-                                                          (spliced-p node))
+                                                          (spliced? node))
                                                      (make-string-unquote
                                                       (wrap-runtime-delayed-js-transformation-form
                                                        `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
@@ -274,7 +274,7 @@
           (collect indent))
         (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name name))
         (if (and (typep name 'js-unquote)
-                 (spliced-p name))
+                 (spliced? name))
             (when elements
               (simple-js-compile-error nil "Unexpected element(s) after a spliced unquote in a create form: ~S" elements))
             (collect ": "))
@@ -291,7 +291,7 @@
     (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (name-of name)))
     (js-unquote    (make-string-unquote
                     (wrap-runtime-delayed-js-transformation-form
-                     (if (spliced-p name)
+                     (if (spliced? name)
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs ,(form-of name))
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name             ,(form-of name))))))
     (t (transform-quasi-quoted-js-to-quasi-quoted-string name))))
@@ -301,7 +301,7 @@
     (symbol        (lisp-name-to-js-name value))
     (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value-of value)))
     (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (name-of value)))
-    (js-unquote    (if (spliced-p value)
+    (js-unquote    (if (spliced? value)
                        (simple-js-compile-error nil "Spliced unquoting is not supported at value position in create forms")
                        (make-string-unquote
                         (wrap-runtime-delayed-js-transformation-form
@@ -517,7 +517,7 @@
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/unquote (node)
   (assert (typep node 'js-unquote))
-  (bind ((spliced? (spliced-p node)))
+  (bind ((spliced? (spliced? node)))
     (make-string-unquote
      (wrap-runtime-delayed-js-transformation-form
       (if spliced?
