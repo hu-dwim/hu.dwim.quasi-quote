@@ -8,8 +8,8 @@
 
 (defsuite* (test/list :in test))
 
-(def function setup-readtable-for-list-test (&optional (inline? #t))
-  (enable-quasi-quoted-list-to-list-emitting-form-syntax :with-inline-emitting inline?))
+(def function setup-readtable-for-list-test ()
+  (enable-quasi-quoted-list-to-list-emitting-form-syntax))
 
 #+nil ; TODO delme?
 (def syntax-test-definer list-test
@@ -27,13 +27,13 @@
 (def function test-list-emitting-forms (expected ast)
   (is (equalp expected (eval ast))))
 
-(def function read-from-string-with-list-syntax (string &optional (with-inline-emitting :as-is))
+(def function read-from-string-with-list-syntax (string)
   (with-local-readtable
-    (enable-quasi-quoted-list-to-list-emitting-form-syntax :with-inline-emitting with-inline-emitting)
+    (enable-quasi-quoted-list-to-list-emitting-form-syntax)
     (read-from-string string)))
 
-(def function pprint-list (string &optional (with-inline-emitting :as-is))
-  (downcased-pretty-print (read-from-string-with-list-syntax string with-inline-emitting)))
+(def function pprint-list (string)
+  (downcased-pretty-print (read-from-string-with-list-syntax string)))
 
 (def function compare-with-standard-backquote (string)
   (bind ((expected (eval (read-from-string string)))
