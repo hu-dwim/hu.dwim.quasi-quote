@@ -107,7 +107,7 @@
   (eq (modifier-of unquote) :destructive-splice))
 
 (def method print-object ((self unquote) *standard-output*)
-  (write-string "_,")
+  (write-string ",")
   (cond
     ((destructively-spliced? self) (write-string "."))
     ((spliced? self)               (write-string "@")))

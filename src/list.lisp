@@ -17,10 +17,10 @@
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
      (bind ((toplevel? (= 1 *quasi-quote-nesting-level*))
-            (result (make-list-quasi-quote transformation-pipeline body)))
+            (quasi-quote-node (make-list-quasi-quote transformation-pipeline body)))
        (if toplevel?
-           (run-transformation-pipeline result)
-           result)))
+           (run-transformation-pipeline quasi-quote-node)
+           quasi-quote-node)))
    (lambda (form modifier)
      (make-list-unquote form modifier))
    :start-character start-character
