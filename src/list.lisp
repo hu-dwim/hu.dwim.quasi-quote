@@ -30,16 +30,14 @@
    :destructive-splice-character destructive-splice-character
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
-(define-syntax quasi-quoted-list-to-list-emitting-form (&key (with-inline-emitting :as-is)
-                                                             (start-character #\`)
+(define-syntax quasi-quoted-list-to-list-emitting-form (&key (start-character #\`)
                                                              end-character
                                                              (unquote-character #\,)
                                                              (splice-character #\@)
                                                              (destructive-splice-character #\.)
                                                              dispatched-quasi-quote-name)
   (set-quasi-quoted-list-syntax-in-readtable
-   :transformation-pipeline (list (make-instance 'quasi-quoted-list-to-list-emitting-form
-                                                 :with-inline-emitting with-inline-emitting))
+   :transformation-pipeline (list (make-instance 'quasi-quoted-list-to-list-emitting-form))
    :dispatched-quasi-quote-name dispatched-quasi-quote-name
    :start-character start-character
    :end-character end-character
@@ -80,8 +78,7 @@
 
 (def (transformation e) quasi-quoted-list-to-list-emitting-form (lisp-form-emitting-transformation)
   ()
-  'transform-quasi-quoted-list-to-list-emitting-form
-  (:default-initargs :with-inline-emitting :as-is))
+  'transform-quasi-quoted-list-to-list-emitting-form)
 
 (def function transform-quasi-quoted-list-to-list-emitting-form (input)
   (transformation-typecase input
