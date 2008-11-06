@@ -39,9 +39,7 @@
     #t)
   (:method :around (a b)
     (or (eq a b)
-        (and (or (typep a (type-of b))
-                 (typep b (type-of a)))
-             (call-next-method)))))
+        (call-next-method))))
 
 (def function compatible-transformation-pipelines? (a b)
   (every (lambda (a b)
