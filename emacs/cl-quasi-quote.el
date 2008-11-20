@@ -80,7 +80,7 @@
    t)
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
-   nil `(("\\w\\([<>]+\\)\\|(\\([<>]+\\)"
+   nil `(("\\w\\([<>]+\\)"
           (0 (progn
                (remove-text-properties (or (match-beginning 1)
                                            (match-beginning 2))
