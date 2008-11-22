@@ -36,6 +36,11 @@
   "Face for the start syntax of the cl-quasi-quote stuff."
   :group 'cl-quasi-quote-faces)
 
+(defface cl-quasi-quote-xml-paren-face
+   '((((class color) (background light)) (:foreground "#444")))
+  "Face for the <> parens in the <element ()> syntax."
+  :group 'cl-quasi-quote-faces)
+
 (defface cl-quasi-quote-xml-element-face
    '((((class color) (background light)) (:foreground "#888")))
   "Face for the element name in the <element ()> syntax."
@@ -68,24 +73,22 @@
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
-               nil))
-          (1 'cl-quasi-quote-xml-element-face)
+               nil)
+             prepend)
+          (1 'cl-quasi-quote-xml-paren-face)
           (2 'cl-quasi-quote-xml-element-face))
-         ("[^'-=/<(]\\(>+\\)[\n 	)]"
+         ("[^'-=/<(]??\\(>+\\)[\] 	)}]*$"
           (0 (progn
                (add-text-properties (match-beginning 1) (match-end 1)
                                     `(syntax-table ,cl-quasi-quote-xml-syntax-table))
                nil))
-          (1 'cl-quasi-quote-xml-element-face)))
-   t)
+          (1 'cl-quasi-quote-xml-paren-face)))
+   'append)
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
-   nil `(("\\w\\([<>]+\\)"
+   nil `(("\\w\\([<>]\\)[^>]"
           (0 (progn
-               (remove-text-properties (or (match-beginning 1)
-                                           (match-beginning 2))
-                                       (or (match-end 1)
-                                           (match-end 2))
+               (remove-text-properties (match-beginning 1) (match-end 1)
                                        `(syntax-table nil))
                nil))))))
 
