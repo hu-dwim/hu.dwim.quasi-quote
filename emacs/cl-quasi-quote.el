@@ -46,6 +46,11 @@
   "Face for the element name in the <element ()> syntax."
   :group 'cl-quasi-quote-faces)
 
+(defun cl-quasi-quote-mark-text-as-xml-paren (start end)
+  (add-text-properties start end
+                       `(face cl-quasi-quote-xml-paren-face
+                         syntax-table ,cl-quasi-quote-xml-syntax-table)))
+
 (defun cl-quasi-quote-lisp-mode-hook ()
   (cl-quasi-quote-install-js-indentations)
   (mapcar (lambda (parens)
@@ -71,18 +76,21 @@
    nil `(("\\(`ui\\|`xml\\|`js-inline\\|`js\\|`str\\|`\\|,\\)" 1 'cl-quasi-quote-quasi-quote-face)
          ("[ 	\n`]\\(<\\)\\(\\w+\\|,\\)"
           (0 (progn
-               (add-text-properties (match-beginning 1) (match-end 1)
-                                    `(syntax-table ,cl-quasi-quote-xml-syntax-table))
+               (cl-quasi-quote-mark-text-as-xml-paren (match-beginning 1) (match-end 1))
                nil)
              prepend)
-          (1 'cl-quasi-quote-xml-paren-face)
           (2 'cl-quasi-quote-xml-element-face))
-         ("[^'-=/<(]??\\(>+\\)[\] 	)}]*$"
+         ("[^'-=/<(]??\\(>+\\)[\] 	)}>]*$"
           (0 (progn
-               (add-text-properties (match-beginning 1) (match-end 1)
-                                    `(syntax-table ,cl-quasi-quote-xml-syntax-table))
-               nil))
-          (1 'cl-quasi-quote-xml-paren-face)))
+               (cl-quasi-quote-mark-text-as-xml-paren (match-beginning 1) (match-end 1))
+               ;; ok, and now let's go until the end of line and while we only see close parens
+               ;; and mark all >'s as an xml close paren
+               (let ((index (match-end 1)))
+                 (while (find (char-after index) cl-quasi-quote-paren-pairs :key 'second)
+                   (when (equal (char-after index) ?> )
+                     (cl-quasi-quote-mark-text-as-xml-paren index (1+ index)))
+                   (incf index)))
+               nil))))
    'append)
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
