@@ -80,13 +80,15 @@
                nil)
              prepend)
           (2 'cl-quasi-quote-xml-element-face))
-         ("[^'-=/<(]??\\(>+\\)[\] 	)}>]*$"
+         ;; TODO broken for #'>
+         ("[^'-=/<(]??\\(>+\\)[\]\" 	)}>]*$"
           (0 (progn
                (cl-quasi-quote-mark-text-as-xml-paren (match-beginning 1) (match-end 1))
                ;; ok, and now let's go until the end of line and while we only see close parens
                ;; and mark all >'s as an xml close paren
                (let ((index (match-end 1)))
-                 (while (find (char-after index) cl-quasi-quote-paren-pairs :key 'second)
+                 (while (or (member (char-after index) '(?\  ?\"))
+                            (find (char-after index) cl-quasi-quote-paren-pairs :key 'second))
                    (when (equal (char-after index) ?> )
                      (cl-quasi-quote-mark-text-as-xml-paren index (1+ index)))
                    (incf index)))
