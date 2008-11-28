@@ -121,14 +121,31 @@
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute (node)
   (transformation-typecase node
     (xml-attribute
-     (bind ((name (name-of node)))
-       `(,(etypecase name
-                     (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute name))
-                     (unquote name)
-                     (string name))
-          "=\""
-          ,(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value (value-of node))
-          "\"")))
+     (bind ((name (name-of node))
+            (transformed-name (etypecase name
+                                (xml-unquote (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute name))
+                                (unquote name)
+                                (string name)))
+            (value (value-of node)))
+       (if (and (typep value 'xml-unquote)
+                ;; NOTE: checks if the the form refers to a variable only otherwise due to inline emitting we cannot evaluate the value out of order
+                (bind ((form (form-of value)))
+                  (length= 2 form)
+                  (eq 'progn (first form))
+                  (symbolp (second form))))
+           (when-bind form (form-of value)
+             (make-string-unquote
+              (with-unique-names (value-variable)
+                `(when-bind ,value-variable ,form
+                   ,(make-string-quasi-quote (rest *transformation-pipeline*)
+                                             `(,transformed-name
+                                               "=\""
+                                               ,(make-string-unquote `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value ,value-variable))
+                                               "\""))))))
+           `(,transformed-name
+             "=\""
+             ,(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value value)
+             "\""))))
     (xml-quasi-quote
      (make-string-quasi-quote (rest (transformation-pipeline-of node))
                               (map-tree (body-of node) #'transform-quasi-quoted-xml-to-quasi-quoted-string/attribute)))

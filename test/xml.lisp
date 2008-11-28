@@ -166,7 +166,7 @@
 (def xml-test test/xml/attribute-unquoting ()
   (｢<element attribute="1"/>｣
    ｢<element (,@(list (make-xml-attribute "attribute" "1")))>｣)
-  (｢<element attribute=""/>｣
+  (｢<element />｣
    ｢<element (:attribute ,nil)>｣)
   (｢<element attribute="42"/>｣
    ｢<element (:attribute ,42)>｣)
