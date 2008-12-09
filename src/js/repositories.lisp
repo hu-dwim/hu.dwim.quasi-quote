@@ -16,6 +16,15 @@
                                                     ;; protect it from being reseted at an accidental reload
                                                     0))
 ;;(def special-variable *js-operator-name->arity* (make-hash-table :test 'eq))
+(def special-variable *js-reserved-keywords*
+    (bind ((table (make-hash-table :test #'equal)))
+      (dolist (name '(break case catch continue default delete do else false finally for function if in instanceof new
+                      null return switch this throw true try typeof var void while with
+                      class ; this is not reserver, buf screws up IE...
+                      ))
+        (setf name (string-downcase name))
+        (setf (gethash name table) t))
+      table))
 
 (def (function ie) unique-js-name (&optional (prefix "g"))
   (concatenate 'string prefix (princ-to-string (incf *js-unique-counter*))))

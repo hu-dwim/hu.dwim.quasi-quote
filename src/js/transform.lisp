@@ -34,7 +34,7 @@
       `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*))))
     form)))
 
-(def (function ioe) hyphened-to-camel-case (input)
+(def (function oe) hyphened-to-camel-case (input)
   (declare (type string input))
   (bind ((pieces (cl-ppcre:split "-" input)))
     (if (rest pieces)
@@ -48,13 +48,17 @@
                   (collect piece))))
         input)))
 
-(def (function ioe) lisp-name-to-js-name (symbol)
+(def (function oe) lisp-name-to-js-name (symbol &key operator)
   (etypecase symbol
     (js-unquote
      (make-string-unquote (wrap-runtime-delayed-js-transformation-form
                            `(lisp-name-to-js-name ,(form-of symbol)))))
     (symbol
-     (hyphened-to-camel-case (symbol-name symbol)))))
+     (if (and (not operator)
+              (gethash (string-downcase symbol) *js-reserved-keywords*))
+         (bind ((name (symbol-name symbol)))
+           (concatenate 'string name (princ-to-string (mod (sxhash name) 10000))))
+         (hyphened-to-camel-case (symbol-name symbol))))))
 
 (def (function o) lisp-operator-name-to-js-operator-name (op)
   (case op
@@ -311,7 +315,7 @@
 (def macro with-operator-precedence (operator &body body)
   (with-unique-names (needs-parens? result parent-operator-precedence)
     `(bind ((js-operator (lisp-operator-name-to-js-operator-name ,operator))
-            (js-operator-name (lisp-name-to-js-name js-operator))
+            (js-operator-name (lisp-name-to-js-name js-operator :operator #t))
             (,parent-operator-precedence *js-operator-precedence*)
             (*js-operator-precedence* (or (operator-precedence js-operator)
                                           *js-operator-precedence*))
