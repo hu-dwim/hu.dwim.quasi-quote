@@ -10,57 +10,74 @@
 
 (def special-variable *xml-stream*)
 
-(def function setup-readtable-for-xml-test (inline? &key (binary? #t) indentation-width)
-  (if binary?
+(def function setup-readtable-for-xml-test (&key with-inline-emitting (binary #t) indentation-width)
+  (enable-quasi-quoted-list-to-list-emitting-form-syntax)
+  (if binary
       (progn
         (enable-quasi-quoted-string-to-binary-emitting-form-syntax
          '*xml-stream*
          :encoding :utf-8
-         :with-inline-emitting inline?)
+         :with-inline-emitting with-inline-emitting)
         (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
          '*xml-stream*
          :encoding :utf-8
          :text-node-escaping-method :per-character
          :indentation-width indentation-width
-         :with-inline-emitting inline?)
+         :with-inline-emitting with-inline-emitting)
         (enable-quasi-quoted-string-to-binary-emitting-form-syntax
          '*xml-stream*
          :encoding :utf-8
-         :with-inline-emitting inline?))
+         :with-inline-emitting with-inline-emitting))
       (progn
         (enable-quasi-quoted-string-to-string-emitting-form-syntax
          '*xml-stream*
-         :with-inline-emitting inline?)
+         :with-inline-emitting with-inline-emitting)
         (enable-quasi-quoted-xml-to-string-emitting-form-syntax
          '*xml-stream*
          :text-node-escaping-method :per-character
          :indentation-width indentation-width
-         :with-inline-emitting inline?)
+         :with-inline-emitting with-inline-emitting)
         (enable-quasi-quoted-string-to-string-emitting-form-syntax
          '*xml-stream*
-         :with-inline-emitting inline?))))
+         :with-inline-emitting with-inline-emitting))))
 
 (def syntax-test-definer xml-test
   (:test-function   test-xml-emitting-forms
-   :readtable-setup (setup-readtable-for-xml-test #f))
+   :readtable-setup (setup-readtable-for-xml-test :with-inline-emitting #f))
   (:test-function   test-xml-emitting-forms
-   :readtable-setup (setup-readtable-for-xml-test #t)))
+   :readtable-setup (setup-readtable-for-xml-test :with-inline-emitting #t)))
 
 (def syntax-test-definer xml-test/inline
   (:test-function   test-xml-emitting-forms
-   :readtable-setup (setup-readtable-for-xml-test #t)))
+   :readtable-setup (setup-readtable-for-xml-test :with-inline-emitting #t)))
 
 (def syntax-test-definer xml-test/normal
   (:test-function   test-xml-emitting-forms
-   :readtable-setup (setup-readtable-for-xml-test #f)))
+   :readtable-setup (setup-readtable-for-xml-test :with-inline-emitting #f)))
 
-(def function read-from-string-with-xml-syntax (string &key indentation-width)
+(def function read-from-string-with-xml-syntax (string &key (with-inline-emitting #f) (binary #f) (indentation-width 2))
   (with-local-readtable
-    (setup-readtable-for-xml-test #t :binary? #f :indentation-width indentation-width)
+    (setup-readtable-for-xml-test :with-inline-emitting with-inline-emitting :binary binary :indentation-width indentation-width)
     (read-from-string string)))
 
-(def function pprint-xml (string &key (indentation-width 2))
-  (downcased-pretty-print (macroexpand (read-from-string-with-xml-syntax string :indentation-width indentation-width))))
+(def function pprint-xml (string &key (with-inline-emitting #f) (binary #f) (indentation-width 2))
+  (downcased-pretty-print
+   (macroexpand-all
+    (read-from-string-with-xml-syntax string
+                                      :with-inline-emitting with-inline-emitting
+                                      :binary binary
+                                      :indentation-width indentation-width))))
+
+(def function emit/xml (string &key (with-inline-emitting #f) (binary #f) (indentation-width 2))
+  (bind ((form (read-from-string-with-xml-syntax string
+                                                 :with-inline-emitting with-inline-emitting
+                                                 :binary binary
+                                                 :indentation-width indentation-width)))
+    (if binary
+        (with-output-to-sequence (*xml-stream* :element-type '(unsigned-byte 8))
+          (emit (eval form)))
+        (with-output-to-string (*xml-stream*)
+          (emit (eval form))))))
 
 (def function test-xml-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
@@ -196,7 +213,7 @@
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote1 ()
   (｢<taggg attribute="atttr"><foo/></taggg>｣
    ｢(macrolet ((nester (tag-name attribute-value &body body)
-                 `<,,tag-name (attribute ,,attribute-value) ,,@body>))
+                 `<,,tag-name (attribute ,,attribute-value) ,(progn ,@body) >))
       (nester "taggg" "atttr" <foo>))｣))
 
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
@@ -218,6 +235,17 @@
                      (x "tag1" "value1")
                      (x "tag2" "value2")))>
        <last>))｣))
+
+(def xml-test test/xml/binary-bug-trigger ()
+  (｢<wrapper><element><tag1>value1</tag1><tag2>value2</tag2></element><last/></wrapper>｣
+   ｢(macrolet ((render-dojo-widget (id &body body)
+                 (once-only (id)
+                   `(progn
+                      ,@body
+                      (null ,id)))))
+      (render-dojo-widget id
+        <div (:id ,id)
+             ,"alma">))｣))
 
 (def test test/xml/sharp-plus-works ()
   (enable-quasi-quoted-xml-syntax)

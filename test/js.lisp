@@ -31,22 +31,23 @@
           result)))))
 
 (def special-variable *js-stream*)
-(def special-variable *xml/js-stream*)
+(def special-variable *xml+js-stream*)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (def function setup-readtable-for-js-test (&key with-inline-emitting (indentation-width 2) (binary? #f)
+  (def function setup-readtable-for-js-test (&key with-inline-emitting (indentation-width 2) (binary #f)
                                                   (output-prefix #.(format nil "~%<script>~%// <![CDATA[~%"))
                                                   (output-postfix #.(format nil "~%// ]]>~%</script>~%"))
-                                                  (xml? #f) (output-stream-name (if xml? '*xml/js-stream* '*js-stream*)))
+                                                  (xml? #f) (output-stream-name (if xml? '*xml+js-stream* '*js-stream*)))
+    (enable-quasi-quoted-list-to-list-emitting-form-syntax)
     (enable-quasi-quoted-js-syntax
      :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
                                output-stream-name
-                               :binary binary?
+                               :binary binary
                                :with-inline-emitting with-inline-emitting
                                :indentation-width indentation-width)
      :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
                                       output-stream-name
-                                      :binary binary?
+                                      :binary binary
                                       :with-inline-emitting with-inline-emitting
                                       :indentation-width indentation-width
                                       :output-prefix output-prefix
@@ -54,14 +55,11 @@
      :dispatched-quasi-quote-name 'js)
     (enable-quasi-quoted-js-syntax
      :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                               output-stream-name :binary binary? :with-inline-emitting with-inline-emitting
+                               output-stream-name :binary binary :with-inline-emitting with-inline-emitting
                                :indentation-width indentation-width
-                               ;; FIXME this blows up everything because it makes this transformation
-                               ;; incompatible with the others and fires up undeveloped parts of the lib.
-                               ;; :string-escape-function 'escape-as-xml
-                               )
+                               :escape-as-xml #t)
      :dispatched-quasi-quote-name 'js-inline)
-    (if binary?
+    (if binary
         (progn
           (when xml?
             (enable-quasi-quoted-xml-to-binary-emitting-form-syntax
@@ -87,33 +85,33 @@
   (:test-function   test-js-emitting-forms
    :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f))
   (:test-function   test-js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :binary? #t))
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :binary #t))
   (:test-function   test-js-emitting-forms
    :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t))
   (:test-function   test-js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :binary? #t)))
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :binary #t)))
 
-(def syntax-test-definer xml/js-test
-  (:test-function   test-xml/js-emitting-forms
+(def syntax-test-definer xml+js-test
+  (:test-function   test-xml+js-emitting-forms
    :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :xml? #t))
-  (:test-function   test-xml/js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :xml? #t :binary? #t))
-  (:test-function   test-xml/js-emitting-forms
+  (:test-function   test-xml+js-emitting-forms/binary
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #f :xml? #t :binary #t))
+  (:test-function   test-xml+js-emitting-forms
    :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :xml? #t))
-  (:test-function   test-xml/js-emitting-forms/binary
-   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :xml? #t :binary? #t)))
+  (:test-function   test-xml+js-emitting-forms/binary
+   :readtable-setup (setup-readtable-for-js-test :with-inline-emitting #t :xml? #t :binary #t)))
 
-(def function read-from-string-with-xml/js-syntax (string &optional (with-inline-emitting #f) (binary? #f))
+(def function read-from-string-with-xml+js-syntax (string &optional (with-inline-emitting #f) (binary #f))
   (with-local-readtable
-    (setup-readtable-for-js-test :with-inline-emitting with-inline-emitting :xml? #t :binary? binary?)
+    (setup-readtable-for-js-test :with-inline-emitting with-inline-emitting :xml? #t :binary binary)
     (read-from-string string)))
 
-(def function pprint-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
-  (downcased-pretty-print (macroexpand (read-from-string-with-xml/js-syntax string with-inline-emitting binary?))))
+(def function pprint/xml+js (string &optional (with-inline-emitting #f) (binary #f))
+  (downcased-pretty-print (macroexpand (read-from-string-with-xml+js-syntax string with-inline-emitting binary))))
 
-(def function emit-xml/js (string &optional (with-inline-emitting #f) (binary? #f))
-  (bind ((form (read-from-string-with-xml/js-syntax string with-inline-emitting binary?)))
-    (with-output-to-string (*xml/js-stream*)
+(def function emit-xml+js (string &optional (with-inline-emitting #f) (binary #f))
+  (bind ((form (read-from-string-with-xml+js-syntax string with-inline-emitting binary)))
+    (with-output-to-string (*xml+js-stream*)
       (emit (eval form)))))
 
 (def function js-result-equal (a b)
@@ -141,16 +139,16 @@
                           (octets-to-string (funcall (compile nil lambda-form))
                                             :encoding :utf-8))))))
 
-(def function test-xml/js-emitting-forms (expected ast)
+(def function test-xml+js-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
-                         (with-output-to-string (*xml/js-stream*)
+                         (with-output-to-string (*xml+js-stream*)
                            (emit ,ast)))))
     (is (js-result-equal expected (eval-js
                                    (funcall (compile nil lambda-form)))))))
 
-(def function test-xml/js-emitting-forms/binary (expected ast)
+(def function test-xml+js-emitting-forms/binary (expected ast)
   (bind ((lambda-form `(lambda ()
-                         (with-output-to-sequence (*xml/js-stream* :element-type '(unsigned-byte 8))
+                         (with-output-to-sequence (*xml+js-stream* :element-type '(unsigned-byte 8))
                            (emit ,ast)))))
     ;;(print (macroexpand-all lambda-form))
     (is (js-result-equal expected
@@ -234,6 +232,13 @@
    ｢`js(let ((x "-"))
          (.to-string (+ "" x))
          (print (not (not (.match (+ "foo" x "bar") "o-b")))))｣))
+
+(def js-test test/js/precedence1 ()
+  ("ok"
+   ｢`js(print (if (and t
+                       (> 3 4))
+                  "wrong"
+                  "ok"))｣))
 
 (def js-test test/js/if ()
   ("then"
@@ -352,7 +357,7 @@
 
 (def test test/js/array-errors ()
   (flet ((transform (string)
-           (transform (macroexpand (read-from-string-with-xml/js-syntax string)))))
+           (transform (macroexpand (read-from-string-with-xml+js-syntax string)))))
     (signals js-compile-error
       (transform ｢`js(elt (vector 10 20) 1 2 3 4 5)｣))
     (signals js-compile-error
@@ -378,18 +383,21 @@
 
 (def test test/js/create-unquote/errors ()
   (flet ((transform (string)
-           (transform (macroexpand (read-from-string-with-xml/js-syntax string)))))
+           (transform (macroexpand (read-from-string-with-xml+js-syntax string)))))
     (signals js-compile-error
       (transform ｢`js(create "a" ,@1)｣))
     (signals js-compile-error
       (transform ｢`js(create ,@1 "b")｣))))
 
-(def xml/js-test test/js/macrolet ()
+(def xml+js-test test/js/macrolet/1 ()
   (42
    ｢`js(macrolet ((macro (var value &body body)
                     `(let ((,var ,value))
                        ,@body)))
-         (macro a 42 (print a)))｣)
+         (macro a 42 (print a)))｣))
+
+#+nil ; TODO this test is too convoluted, check if it is valid at all...
+(def xml+js-test test/js/macrolet/2 ()
   (with-expected-failures
     (3
      ｢(macrolet ((macro (properties)
@@ -407,6 +415,10 @@
                                           "a")
                               "b")))｣)))
 
+#|
+
+;; this is badly broken
+
 (def macro test/js/complex-macros/test-macro (properties)
   {(lambda (reader)
      (with-local-readtable
@@ -423,18 +435,21 @@
                   "a")
                  "b"))})
 
-(def test test/js/complex-macros ()
+(def test test/js/complex-macros/1 ()
   (with-expected-failures
     (bind ((result (parse-xml-into-sxml
-                    (emit-xml/js
+                    (emit-xml+js
                      ｢<div `js(print ,(test/js/complex-macros/test-macro ("a" 1 "b" 2 "c" 3)))>｣
                      #t))))
       (is (string= (first result) "div"))
       (bind ((js (third (third result))))
-        (is (js-result-equal (eval-js js) 3)))))
+        (is (js-result-equal (eval-js js) 3))))))
+|#
+
+(def test test/js/complex-macros/2 ()
   (is (js-result-equal
        (eval-js
-        (emit-xml/js
+        (emit-xml+js
          ｢(macrolet ((macro (properties)
                        `(progn
                           `js-inline(slot-value
@@ -479,7 +494,7 @@
          (print (+ `str("a") 10 ,10)))｣))
 
 (def test test/js/mixed-with-xml/simple ()
-  (bind ((emitted (emit-xml/js ｢ <body `js(+ 2 2)>｣))
+  (bind ((emitted (emit-xml+js ｢<body `js(+ 2 2)>｣))
          (body (parse-xml-into-sxml emitted)))
     (is (string= (first body) "body"))
     (bind ((script (third body)))
@@ -489,15 +504,12 @@
 
 (def test test/js/mixed-with-xml/escaping ()
   (with-expected-failures
-    ;; FIXME see :string-escape-function 'escape-as-xml in the reader config
-    (bind ((emitted (emit-xml/js ｢ <body `js-inline "&< >" >｣))
+    (bind ((emitted (emit-xml+js ｢<body `js-inline "&<>" >｣))
            (body (parse-xml-into-sxml emitted)))
-      (print body)
       (is (string= (first body) "body"))
       (bind ((script (third body)))
-        (is (string= (first script) "script"))
-        (is (stringp (third script)))
-        (is (search "&<>" (third script)))))))
+        (is (stringp script))
+        (is (search "&<>" script))))))
 
 ;; leave it at the end, because it screws up emacs coloring
 (def js-test test/js/string-quoting ()
@@ -516,7 +528,7 @@ REPL demos
          ;; let's insert some JavaScript here, with some unquoted runtime part:
          `js(print (+ 2 ,(+ 20 20))
              `str(#\Newline "***<put one more unescaped text here!>***"))>｣))
-  (pprint-xml/js code-as-string t)
-  (emit-xml/js code-as-string))
+  (pprint-xml+js code-as-string t)
+  (emit-xml+js code-as-string))
 
 |#

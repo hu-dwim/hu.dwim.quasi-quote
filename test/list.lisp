@@ -35,6 +35,10 @@
 (def function pprint-list (string)
   (downcased-pretty-print (read-from-string-with-list-syntax string)))
 
+(def function emit-list (string)
+  (bind ((form (read-from-string-with-list-syntax string)))
+    (eval form)))
+
 (def function compare-with-standard-backquote (string)
   (bind ((expected (eval (read-from-string string)))
          (forms (read-from-string-with-list-syntax string))
@@ -66,6 +70,9 @@
       ;;(break "~S" stage2)
       (bind ((stage3 (eval stage2)))
         (is (equal (list 44 42 43) stage3))))))
+
+(def test test/list/errors ()
+  (signals error (read-from-string-with-list-syntax ｢`(bar `(foo x ,a ,,b ,,,c))｣)))
 
 ;;; this is adapted from sbcl's test suite
 
