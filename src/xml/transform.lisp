@@ -203,6 +203,16 @@
 (defmethod print-object ((self quasi-quoted-string-to-xml-escaped-quasi-quoted-string) *standard-output*)
   (princ "[String->XML-Escaped-String]"))
 
+(def function make-quasi-quoted-string-to-xml-escaped-quasi-quoted-string-transformation (&key output-prefix output-postfix)
+  (make-instance 'quasi-quoted-string-to-xml-escaped-quasi-quoted-string
+                 :output-transformer (lambda (node)
+                                       (assert (typep node 'string-quasi-quote))
+                                       (awhen output-prefix
+                                         (push it (body-of node)))
+                                       (awhen output-postfix
+                                         (appendf (body-of node) (list it)))
+                                       node)))
+
 (def function xml-escape-unquote-transformer (node)
   (check-type node string-unquote)
   (setf (form-of node) `(awhen ,(form-of node)

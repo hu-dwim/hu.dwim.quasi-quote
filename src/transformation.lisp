@@ -50,10 +50,7 @@
   (:method ((a null) (a-next null) (a-rest null) (b null) (b-next null) (b-rest null))
     #t)
   (:method (a a-next a-rest b b-next b-rest)
-    (if (and a-next b-next)
-        (compatible-transformations? a-next (first a-rest) (rest a-rest)
-                                     b-next (first b-rest) (rest b-rest))
-        #f))
+    #f)
   (:method :around (a a-next a-rest b b-next b-rest)
     (or (and (eq a b)
              (eq a-next b-next)
@@ -148,6 +145,7 @@
 (def generic transform* (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
   (:method (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
     (assert (typep node 'quasi-quote))
+    (assert (eq *transformation* tr))
     (funcall (transformer-of *transformation*) node)))
 
 (def function transform (node)
@@ -242,7 +240,8 @@
 
 (def (transformation e) generic-transformation ()
   ((quasi-quote-transformer)
-   (unquote-transformer))
+   (unquote-transformer)
+   (output-transformer nil))
   'transform-with-generic-transformation)
 
 (def function transform-with-generic-transformation (input)
@@ -255,7 +254,10 @@
                  (cons (cons (recurse (car node))
                              (recurse (cdr node))))
                  (null nil))))
-      (recurse input))))
+      (bind ((result (recurse input)))
+        (aif (output-transformer-of *transformation*)
+             (funcall it result)
+             result)))))
 
 ;;;;;;;;
 ;;; Emit

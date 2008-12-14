@@ -170,7 +170,7 @@
      (transform-quasi-quoted-s-to-s-emitting-form/unquote node))
     (side-effect (form-of node))))
 
-(defun transform-quasi-quoted-string-to-string-emitting-form/flatten-body (node)
+(defun transform-quasi-quoted-string-to-string-emitting-form/flatten-body (input)
   (let (flattened-elements)
     (labels ((traverse (node)
                (when node
@@ -181,14 +181,14 @@
                    (string (push node flattened-elements))
                    (string-quasi-quote (bind ((nested-node node))
                                          (if (compatible-transformation-pipelines?
-                                              (transformation-pipeline-of node)
+                                              (transformation-pipeline-of input)
                                               (transformation-pipeline-of nested-node))
                                              ;; if the pipelines are compatible, then just skip over the qq node
                                              ;; and descend into its body as if it never was there...
                                              (traverse (body-of nested-node))
                                              (push (transform nested-node) flattened-elements))))
                    (syntax-node (push node flattened-elements))))))
-      (traverse (body-of node)))
+      (traverse (body-of input)))
     (nreversef flattened-elements)
     (bind ((*print-pretty* #f))
       (iter outer
@@ -239,8 +239,11 @@
       (character (babel:string-to-octets (string node) :encoding encoding))
       (string (babel:string-to-octets node :encoding encoding))
       (string-quasi-quote
-       (make-binary-quasi-quote (rest (transformation-pipeline-of node))
-                                (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node))))
+       (if (compatible-transformation-pipelines? *transformation-pipeline*
+                                                 (transformation-pipeline-of node))
+           (make-binary-quasi-quote (rest (transformation-pipeline-of node))
+                                    (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node)))
+           (transform node)))
       (string-unquote
        (make-binary-unquote
         (wrap-runtime-delayed-transformation-form

@@ -105,7 +105,7 @@
   ()
   'transform-quasi-quoted-bivalent-to-bivalent-emitting-form)
 
-(defmethod print-object ((self quasi-quoted-bivalent-to-binary-emitting-form) *standard-output*)
+(defmethod print-object ((self quasi-quoted-bivalent-to-bivalent-emitting-form) *standard-output*)
   (princ "[Bivalent->Forms]"))
 
 (def function write-quasi-quoted-bivalent (node stream)
