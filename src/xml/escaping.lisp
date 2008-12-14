@@ -15,15 +15,19 @@
           (setf (aref result (char-code character)) (coerce entity 'simple-base-string)))
     result))
 
+(def (function eo) xml-escaped-entity-for-character (character)
+  (declare (type character character))
+  (bind ((character-code (char-code character)))
+    (when (< character-code #.(length +character-code->xml-escaped-entity+))
+      (aref #.+character-code->xml-escaped-entity+ character-code))))
+
 (def (function eo) escape-as-xml (string &optional destination)
   (declare (type string string)
            (type (or null (array character (*))) destination))
   (bind ((result destination))
     (iter (for index :from 0 :below (length string))
           (for character = (aref string index))
-          (for character-code = (char-code character))
-          (for entity = (when (< character-code #.(length +character-code->xml-escaped-entity+))
-                          (aref #.+character-code->xml-escaped-entity+ character-code)))
+          (for entity = (xml-escaped-entity-for-character character))
           (declare (type fixnum index))
           (if entity
               (progn

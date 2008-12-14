@@ -17,8 +17,7 @@
   ())
 
 (def method print-object ((self xml-quasi-quote) *standard-output*)
-  (format t "`xml~A" (body-of self))
-  self)
+  (print-object/quasi-quote self "xml"))
 
 (def (function e) make-xml-quasi-quote (transformation-pipeline body)
   (assert (not (typep body 'quasi-quote)))
@@ -86,3 +85,48 @@
 
 (def (function e) make-xml-text (content)
   (make-instance 'xml-text :content content))
+
+(def methods map-ast
+  (:method (fn (x xml-quasi-quote))
+    (bind ((new (funcall fn x)))
+      (if (eq x new)
+          (progn
+            (setf (body-of x) (funcall fn (body-of x)))
+            x)
+          new)))
+  (:method (fn (x xml-element))
+    (bind ((new (funcall fn x)))
+      (if (eq new x)
+          (progn
+            (setf (name-of x)       (funcall fn (name-of x)))
+            (setf (attributes-of x) (funcall fn (attributes-of x)))
+            (setf (children-of x)   (funcall fn (children-of x)))
+            x)
+          new)))
+  (:method (fn (x xml-attribute))
+    (bind ((new (funcall fn x)))
+      (if (eq x new)
+          (progn
+            (setf (name-of x)  (funcall fn (name-of x)))
+            (setf (value-of x) (funcall fn (value-of x)))
+            x)
+          new))))
+
+(def methods bq-process
+  (:method ((x xml-quasi-quote))
+    `(list 'toplevel-quasi-quote-macro
+           (make-xml-quasi-quote (quote ,(transformation-pipeline-of x))
+                                 ,(map-ast #'bq-process (body-of x)))))
+
+  (:method ((x xml-unquote))
+    `(make-xml-unquote ,(bq-process (form-of x)) ,(modifier-of x)))
+
+  (:method ((x xml-element))
+    `(make-xml-element ,(bq-process (name-of x))
+         ,(bq-process (attributes-of x))
+       ,(bq-process (children-of x))))
+
+  (:method ((x xml-attribute))
+    `(make-xml-attribute
+      ,(map-ast #'bq-process (name-of x))
+      ,(map-ast #'bq-process (value-of x)))))

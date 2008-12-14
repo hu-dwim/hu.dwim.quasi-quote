@@ -22,16 +22,24 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
-       `(,(if toplevel? 'binary-quasi-quote/toplevel 'binary-quasi-quote) ,toplevel? ,body ,transformation-pipeline)))
+     ;; we are checking for *quasi-quote-depth* because the transform descents into the unquote forms
+     ;; and transform the quasi-quote's it can find there
+     (bind ((toplevel? (= 1 *quasi-quote-depth*))
+            (quasi-quote-node (make-binary-quasi-quote transformation-pipeline (process-binary-reader-body body))))
+       (if toplevel?
+           `(toplevel-quasi-quote-macro ,quasi-quote-node)
+           quasi-quote-node)))
    (lambda (form modifier)
-     `(binary-unquote ,form ,modifier))
+     (when modifier
+       (simple-reader-error "Splicing modifier specified for binary unquote at form ~S. What would that mean?" form))
+     (make-binary-unquote form))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
    :destructive-splice-character destructive-splice-character
-   :dispatched-quasi-quote-name dispatched-quasi-quote-name))
+   :dispatched-quasi-quote-name dispatched-quasi-quote-name
+   :unquote-readtable-case :toplevel))
 
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-BINARY-TO-~A" name)))
@@ -108,16 +116,6 @@
                 (error "Strings are not allowed in the body of the quasi-quoted-binary reader: ~S" form)))
     (syntax-node form)))
 
-(def reader-stub binary-quasi-quote (toplevel? body transformation-pipeline)
-  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body -environment-)))
-         (quasi-quote-node (make-binary-quasi-quote transformation-pipeline expanded-body)))
-    (if toplevel?
-        (run-transformation-pipeline quasi-quote-node)
-        quasi-quote-node)))
-
-(def reader-stub binary-unquote (form spliced?)
-  (make-binary-unquote form spliced?))
-
 
 ;;;;;;;
 ;;; AST
@@ -130,6 +128,9 @@
 (def (class* e) binary-quasi-quote (quasi-quote binary-syntax-node)
   ())
 
+(def method print-object ((self binary-quasi-quote) *standard-output*)
+  (print-object/quasi-quote self "bin"))
+
 (def (function e) make-binary-quasi-quote (transformation-pipeline body)
   (assert (not (typep body 'quasi-quote)))
   (make-instance 'binary-quasi-quote :body body :transformation-pipeline transformation-pipeline))
@@ -137,8 +138,8 @@
 (def (class* e) binary-unquote (unquote binary-syntax-node)
   ())
 
-(def (function e) make-binary-unquote (form &optional modifier)
-  (make-instance 'binary-unquote :form form :modifier modifier))
+(def (function e) make-binary-unquote (form)
+  (make-instance 'binary-unquote :form form))
 
 
 ;;;;;;;;;;;;;
@@ -146,7 +147,10 @@
 
 (def (transformation e) quasi-quoted-binary-to-binary-emitting-form (lisp-form-emitting-transformation)
   ()
-  'transform-quasi-quoted-binary-to-binary-emitting-form/toplevel)
+  'transform-quasi-quoted-binary-to-binary-emitting-form)
+
+(defmethod print-object ((self quasi-quoted-binary-to-binary-emitting-form) *standard-output*)
+  (princ "[Binary->Forms]"))
 
 #+nil ; TODO
 (def function binary-position ()
@@ -175,49 +179,62 @@
     (etypecase node
       (ub8-vector `(write-sequence ,node ,stream-variable-name))
       (binary-unquote
-       `(write-quasi-quoted-binary
-         ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote node)
-         ,stream-variable-name))
-      ;; a quasi-quoted-binary here means that it's a nested non-compatible
+       `(write-quasi-quoted-binary ,(transform-quasi-quoted-binary-to-binary-emitting-form/unquote node) ,stream-variable-name))
+      ;; a quasi-quoted-binary at this point means that it's a nested non-compatible
       (binary-quasi-quote
        (assert (typep (first (transformation-pipeline-of node)) 'lisp-form-emitting-transformation))
        `(emit ,(transform node)))
       (side-effect (form-of node)))))
 
-(def function transform-quasi-quoted-binary-to-binary-emitting-form/toplevel (input)
+(def function transform-quasi-quoted-binary-to-binary-emitting-form (input)
   (transformation-typecase input
     (binary-quasi-quote
      (wrap-emitting-forms (mapcar 'make-quasi-quoted-binary-emitting-form
                                   (reduce-binary-subsequences
                                    (transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body input)))))
-    ;; TODO delme? write test that triggers it...
-    #+nil(binary-unquote
-          (transform-quasi-quoted-binary-to-binary-emitting-form/unquote input))))
+    #+nil ;; TODO delme? write test that triggers it...
+    (binary-unquote
+     (transform-quasi-quoted-binary-to-binary-emitting-form/unquote input))))
 
-(defun transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body (node)
-  (let (result)
-    (labels ((traverse (subtree)
-               (when subtree
-                 (typecase subtree
-                   (cons
-                    (traverse (car subtree))
-                    (traverse (cdr subtree)))
-                   (binary-quasi-quote (bind ((nested-node subtree))
-                                         (if (compatible-transformation-pipelines?
-                                              (transformation-pipeline-of node)
-                                              (transformation-pipeline-of nested-node))
-                                             ;; if the pipelines are compatible, then just skip over the qq node
-                                             ;; and descend into its body as if it never was there...
-                                             (traverse (body-of nested-node))
-                                             ;; TODO hm, why not (push (transform nested-node) result)?
-                                             (push nested-node result))))
-                   (t (push subtree result))))))
-      (traverse (body-of node)))
-    (nreverse result)))
+(defun transform-quasi-quoted-binary-to-binary-emitting-form/flatten-body (input)
+  (bind (flattened-elements)
+    (labels ((recurse (node)
+               (etypecase node
+                 (cons
+                  (recurse (car node))
+                  (recurse (cdr node)))
+                 (null nil)
+                 (integer
+                  (assert (<= 0 node 255))
+                  (push node flattened-elements))
+                 (ub8-vector
+                  (iter (for el :in-vector node)
+                        (push el flattened-elements)))
+                 (binary-quasi-quote (if (compatible-transformation-pipelines?
+                                          (transformation-pipeline-of input)
+                                          (transformation-pipeline-of node))
+                                         ;; if the pipelines are compatible, then just skip over the qq node
+                                         ;; and descend into its body as if it wasn't even there...
+                                         (recurse (body-of node))
+                                         (push node flattened-elements)))
+                 (syntax-node (push node flattened-elements)))))
+      (recurse (body-of input)))
+    (nreversef flattened-elements)
+    (iter outer
+          (while flattened-elements)
+          (if (integerp (first flattened-elements))
+              (iter (with start = flattened-elements)
+                    (for count :upfrom 0)
+                    (while (integerp (first flattened-elements)))
+                    (pop flattened-elements)
+                    (finally (in outer (collect (make-array count :element-type '(unsigned-byte 8) :initial-contents (subseq start 0 count))))))
+              (iter (while flattened-elements)
+                    (until (integerp (first flattened-elements)))
+                    (in outer (collect (pop flattened-elements))))))))
 
 (def function transform-quasi-quoted-binary-to-binary-emitting-form/unquote (input)
   (map-filtered-tree (form-of input) 'binary-quasi-quote
-                     'transform-quasi-quoted-binary-to-binary-emitting-form/toplevel))
+                     'transform-quasi-quoted-binary-to-binary-emitting-form))
 
 
 

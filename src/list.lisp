@@ -19,7 +19,7 @@
      (bind ((toplevel? (= 1 *quasi-quote-nesting-level*))
             (quasi-quote-node (make-list-quasi-quote transformation-pipeline body)))
        (if toplevel?
-           (run-transformation-pipeline quasi-quote-node)
+           `(toplevel-quasi-quote-macro ,quasi-quote-node)
            quasi-quote-node)))
    (lambda (form modifier)
      (make-list-unquote form modifier))
@@ -68,10 +68,11 @@
   (make-instance 'list-unquote :form form :modifier modifier))
 
 (def method print-object ((self list-quasi-quote) *standard-output*)
-  (write-string "`list")
-  (princ (body-of self))
-  self)
+  (print-object/quasi-quote self "list"))
 
+(def method map-ast (fn (x list-quasi-quote))
+  (setf (body-of x) (funcall fn (body-of x)))
+  x)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; transform to list emitting form
@@ -79,6 +80,9 @@
 (def (transformation e) quasi-quoted-list-to-list-emitting-form (lisp-form-emitting-transformation)
   ()
   'transform-quasi-quoted-list-to-list-emitting-form)
+
+(defmethod print-object ((self quasi-quoted-list-to-list-emitting-form) *standard-output*)
+  (princ "[List->Forms]"))
 
 (def function transform-quasi-quoted-list-to-list-emitting-form (input)
   (transformation-typecase input
@@ -149,74 +153,64 @@
       (bq-list-to-vector (second form))
       whole))
 
-(defun bq-process (x)
-  (cond ((non-syntax-node-atom? x)
-         (if (simple-vector-p x)
-             (list 'bq-list-to-vector (bq-process (coerce x 'list)))
-             (list *bq-quote* x)))
-        ((typep x 'list-quasi-quote) ; (eq (car x) 'backquote)
-         ;; TODO (assert (compatible-transformation-pipelines? ))
-         (bq-process (bq-completely-process (body-of x))))
-        ((typep x 'unquote)             ; (eq (car x) *comma*)
-         (cond
-           ((destructively-spliced? x) (error ",.~S after `" (form-of x)))
-           ((spliced? x)               (error ",@~S after `" (form-of x)))
-           (t
-            (form-of x))))
-        (t (do ((p x (cdr p))
-                (q '() (cons (bq-bracket (car p)) q)))
-               ((non-syntax-node-atom? p)
-                (cons *bq-append*
-                      (nreconc q (list (list *bq-quote* p)))))
-             (when (typep p 'unquote) ; (eq (car p) *comma*)
+(def generic bq-process (x)
+  (:method ((x list-quasi-quote))
+    (bq-process (bq-completely-process (body-of x))))
+
+  (:method ((x list-unquote))
+    (cond
+      ((destructively-spliced? x) (error ",.~S after `" (form-of x)))
+      ((spliced? x)               (error ",@~S after `" (form-of x)))
+      (t
+       (form-of x))))
+
+  (:method ((x t))
+    (cond
+      ((atom x)
+       (assert (not (typep x 'syntax-node)))
+       (if (simple-vector-p x)
+           (list 'bq-list-to-vector (bq-process (coerce x 'list)))
+           (list *bq-quote* x)))
+      (t
+       (iter (for p :first x :then (cdr p))
+             (when (non-syntax-node-atom? p)
+               (collect (list *bq-quote* p) :into q)
+               (return (cons *bq-append* q)))
+             (when (typep p 'list-unquote) ; (eq (car p) *comma*)
                (cond
                  ((destructively-spliced? p) (error "Dotted ,.~S" (form-of p)))
                  ((spliced? p)               (error "Dotted ,@~S" (form-of p))))
-               (return (cons *bq-append*
-                             (nreconc q (list (form-of p))))))))))
+               (collect (form-of p) :into q)
+               (return (cons *bq-append* q)))
+             (collect (bq-bracket (car p)) :into q))))))
 
 ;;; This implements the bracket operator of the formal rules
 
 (defun bq-bracket (x)
-  (cond
-    ((non-syntax-node-atom? x)
-     (list *bq-list* (bq-process x)))
-    ((typep x 'unquote)                 ; (eq (car x) *comma*)
+  (typecase x
+    (list-unquote                       ; (eq (car x) *comma*)
      (cond
        ((destructively-spliced? x)      ; (eq (car x) *comma-dot*)
         (list *bq-clobberable* (form-of x)))
-       ((spliced? x)                   ; (eq (car x) *comma-atsign*)
+       ((spliced? x)                    ; (eq (car x) *comma-atsign*)
         (form-of x))
        (t
         (list *bq-list* (form-of x)))))
     (t
      (list *bq-list* (bq-process x)))))
 
-;;; This auxiliary function is like MAPCAR but has two extra
-;;; purpoess: (1) it handles dotted lists; (2) it tries to make
-;;; the result share with the argument x as much as possible.
-
-(defun bq-maptree (fn x)
-  (if (atom x)
-      (funcall fn x)
-      (let ((a (funcall fn (car x)))
-            (d (bq-maptree fn (cdr x))))
-        (if (and (eql a (car x)) (eql d (cdr x)))
-            x
-            (cons a d)))))
-
 ;;; This predicate is true of a form that when read looked
 ;;; like ,@foo or ,.foo
 
 (defun bq-splicing-frob (x)
-  (and (typep x 'unquote)
+  (and (typep x 'list-unquote)
        (spliced? x)))
 
 ;;; This predicate is true of a form that when read
 ;;; looked like ,@foo or just plain ,foo.
 
 (defun bq-frob (x)
-  (typep x 'unquote))
+  (typep x 'list-unquote))
 
 ;;; The simplifier essentially looks for calls to #:BQ-APPEND and
 ;;; tries to simplify them.  The arguments to #:BQ-APPEND are
@@ -236,7 +230,7 @@
       x
       (let ((x (if (eq (car x) *bq-quote*)
                    x
-                   (bq-maptree #'bq-simplify x))))
+                   (map-ast #'bq-simplify x))))
         (if (not (eq (car x) *bq-append*))
             x
             (bq-simplify-args x)))))
@@ -332,5 +326,5 @@
     ((and (eq (car x) *bq-list**)
           (consp (cddr x))
           (null (cdddr x)))
-     (cons 'cons (bq-maptree #'bq-remove-tokens (cdr x))))
-    (t (bq-maptree #'bq-remove-tokens x))))
+     (cons 'cons (map-ast #'bq-remove-tokens (cdr x))))
+    (t (map-ast #'bq-remove-tokens x))))

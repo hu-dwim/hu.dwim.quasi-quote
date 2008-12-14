@@ -103,8 +103,7 @@
                nil))))))
 
 (defun cl-quasi-quote-install-js-indentations ()
-  (let ((overrides
-         '((try unwind-protect))))
+  (let ((overrides '((try unwind-protect))))
     (dolist (el overrides)
       (put (first el) 'common-lisp-indent-function
            (if (symbolp (second el))

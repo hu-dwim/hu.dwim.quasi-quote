@@ -6,63 +6,26 @@
 
 (in-package :cl-quasi-quote)
 
-(def special-variable *reader-stub-expanders* (make-hash-table))
+(def special-variable *print-quasi-quote-transformation-pipelines* #f)
 
-(def definer reader-stub (name args &body body)
-  (with-unique-names (arg-values)
-    `(progn
-       (setf (find-reader-stub ',name)
-             (named-lambda ,(format-symbol *package* "READER-STUB/~A" name) (,arg-values -environment-)
-               (declare (ignorable -environment-))
-               (destructuring-bind ,args ,arg-values
-                 ,@body)))
-       ;; define a macro that is actually a macro, so the reader can read into a macro form with this
-       ;; which will start the whole transformation. this way when walking the unquoted forms, libs like iter will
-       ;; not think that nested quasi-quote forms are macros...
-       (def macro ,(format-symbol *package* "~A/TOPLEVEL" name) (&whole whole &rest args &environment environment)
-         (declare (ignore args))
-         (expand-reader-stub (cons ',name (rest whole)) environment)))))
+(def function print-object/quasi-quote (quasi-quote name &optional (stream *standard-output*))
+  (bind ((*standard-output* stream)
+         (body (body-of quasi-quote)))
+    (princ "`")
+    (princ name)
+    (if *print-quasi-quote-transformation-pipelines*
+        (progn
+          (princ " ")
+          (princ (transformation-pipeline-of quasi-quote))
+          (pprint-newline :mandatory)
+          (pprint-logical-block (nil body)
+            (pprint-indent :block 2)
+            (loop :do
+               (pprint-exit-if-list-exhausted)
+               (princ (pprint-pop)))))
+        (princ body)))
+  quasi-quote)
 
-(def function find-reader-stub (name &key (otherwise :error))
-  (or (gethash name *reader-stub-expanders*)
-      (handle-otherwise otherwise)))
-
-(def function (setf find-reader-stub) (value name)
-  (setf (gethash name *reader-stub-expanders*) value))
-
-(def function expand-reader-stub (form environment)
-  (macroexpand (funcall (find-reader-stub (first form)) (rest form) environment) environment))
-
-(def function recursively-macroexpand-reader-stubs (form &optional env)
-  (typecase form
-    (cons
-     (if (find-reader-stub (first form) :otherwise nil)
-         (recursively-macroexpand-reader-stubs (expand-reader-stub form env) env)
-         (iter (for entry :first form :then (cdr entry))
-               (collect (recursively-macroexpand-reader-stubs (car entry) env) :into result)
-               (cond
-                 ((consp (cdr entry))
-                  ;; nop, go on looping
-                  )
-                 ((cdr entry)
-                  (setf (cdr (last result)) (recursively-macroexpand-reader-stubs (cdr entry) env))
-                  (return result))
-                 (t (return result))))))
-    ;; also process the forms of unquote ast nodes
-    (unquote (bind ((unquote-node form))
-               (setf (form-of unquote-node)
-                     (recursively-macroexpand-reader-stubs
-                      ;; first descend into the unquoted forms and macroexpand all the macros
-                      ;; except the quasi-quote and unquote reader wrappers which are reader-stub's
-                      ;; so they are not expanded by the walker. this is needed
-                      ;; to flatten the lisp `(foo ,bar) used inside lisp macros (macrolet's),
-                      ;; so that later the RECURSIVELY-MACROEXPAND-READER-STUBS call can properly
-                      ;; walk the simple expanded lists.
-                      (cl-walker:with-walker-configuration (:undefined-reference-handler nil)
-                        (cl-walker:macroexpand-all (form-of unquote-node) env))
-                      env))
-               unquote-node))
-    (t form)))
 
 ;;;;;;;
 ;;; AST
@@ -84,6 +47,7 @@
 
 (def special-variable *print-quasi-quote-stack* nil)
 
+#+nil ;; makes trace noisy for compatible-transformation-pipelines?, and it's also wrong currently
 (def method print-object :around ((self quasi-quote) *standard-output*)
   (bind ((*print-case* :downcase))
     (when (and *print-quasi-quote-stack*
@@ -94,20 +58,23 @@
     (bind ((*print-quasi-quote-stack* (cons self *print-quasi-quote-stack*)))
       (call-next-method))))
 
+(deftype unquote-modifier ()
+  '(member nil :splice :destructive-splice))
+
 (def (class* e) unquote (syntax-node)
   ((form)
-   (modifier nil)))
+   (modifier nil :type unquote-modifier)))
 
 (def function spliced? (unquote)
-  (assert (member (modifier-of unquote) '(nil :splice :destructive-splice) :test #'eq))
+  (check-type (modifier-of unquote) unquote-modifier)
   (not (null (modifier-of unquote))))
 
 (def function destructively-spliced? (unquote)
-  (assert (member (modifier-of unquote) '(nil :splice :destructive-splice) :test #'eq))
+  (check-type (modifier-of unquote) unquote-modifier)
   (eq (modifier-of unquote) :destructive-splice))
 
 (def method print-object ((self unquote) *standard-output*)
-  (write-string ",")
+  (write-string "_")
   (cond
     ((destructively-spliced? self) (write-string "."))
     ((spliced? self)               (write-string "@")))
@@ -181,15 +148,36 @@
 (def constant +ast-print-depth+ 2)
 
 (def print-object syntax-node
-  (bind ((class (class-of -self-))
-         (*ast-print-object-nesting-level* (1+ *ast-print-object-nesting-level*)))
-    (if (> *ast-print-object-nesting-level* +ast-print-depth+)
-        (write-string "...")
-        (iter (for slot :in (class-slots class))
-              (when (slot-boundp-using-class class -self- slot)
-                (for value = (slot-value-using-class class -self- slot))
-                (unless (first-iteration-p)
-                  (write-string " "))
-                (write (first (slot-definition-initargs slot)))
-                (write-string " ")
-                (write value))))))
+  (bind ((class (class-of -self-)))
+    (pprint-logical-block (nil nil :prefix "#<" :suffix ">")
+      (princ (class-name class))
+      (princ " ")
+      (iter (for slot :in (class-slots class))
+            (when (slot-boundp-using-class class -self- slot)
+              (for value = (slot-value-using-class class -self- slot))
+              (unless (first-iteration-p)
+                (princ " "))
+              (princ (first (slot-definition-initargs slot)))
+              (princ " ")
+              (princ value))))))
+
+(def generic map-ast (fn x)
+  (:method (fn (x t))
+    (funcall fn x))
+  (:method (fn (x syntax-node))
+    (error "MAP-AST is not properly overridden for syntax node ~A" x))
+  (:method (fn (x cons))
+    (bind ((car (funcall fn (car x)))
+           (cdr (when (cdr x)
+                  (map-ast fn (cdr x)))))
+      (if (and (eql car (car x))
+               (eql cdr (cdr x)))
+          x
+          (cons car cdr))))
+  (:method (fn (x unquote))
+    (bind ((new (funcall fn x)))
+      (if (eq x new)
+          (progn
+            (setf (form-of x) (funcall fn (form-of x)))
+            x)
+          new))))

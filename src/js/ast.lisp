@@ -17,6 +17,9 @@
 (def (class* e) js-quasi-quote (quasi-quote js-syntax-node)
   ())
 
+(def method print-object ((self js-quasi-quote) *standard-output*)
+  (print-object/quasi-quote self "js"))
+
 (def (function e) make-js-quasi-quote (transformation-pipeline body)
   (make-instance 'js-quasi-quote
                  :transformation-pipeline transformation-pipeline

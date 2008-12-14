@@ -33,8 +33,7 @@
      )
    package))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (import-external-quasi-quote-symbols-for-extensions))
+(import-external-quasi-quote-symbols-for-extensions)
 
 (defun transform-function-definer-options (options)
   (cl-quasi-quote::transform-function-definer-options options))

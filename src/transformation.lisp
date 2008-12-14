@@ -8,8 +8,20 @@
 
 (def special-variable *transformation-pipeline*)
 (def special-variable *transformation*)
-(def special-variable *disable-run-transformation-pipeline* #f
-  "For debugging purposes. When T then RUN-TRANSFORMATION-PIPELINE simply returns its argument.")
+(def special-variable *transformation-environment*)
+
+(def function maybe-slurp-in-toplevel-quasi-quote (value)
+  ;; when a macro is expanded, then its arguments are toplevel qq exressions like: (macro-with-xml <body>).
+  ;; for example the xml transformation needs to look ahead and try to slurp in <body> for collapsing
+  ;; more constant parts.
+  (if (and (consp value)
+           (eq (first value) 'toplevel-quasi-quote-macro)
+           (typep (second value) 'quasi-quote)
+           (compatible-transformation-pipelines? *transformation-pipeline* (transformation-pipeline-of (second value))))
+      (progn
+        (assert (length= 2 value))
+        (second value))
+      value))
 
 (def function wrap-runtime-delayed-transformation-form (form)
   `(bind ((*transformation* ,*transformation*))
@@ -25,26 +37,33 @@
                               (append supers '(transformation)))
        ,slots
        ,@class-options)
-     (def method initialize-instance :after ((self ,name) &key)
-       (bind ((-transformation- self))
-         (declare (ignorable -transformation-))
-         (setf (transformer-of self) ,transformer)))))
+     ,(when transformer
+        `(def method initialize-instance :after ((self ,name) &key)
+              (bind ((-transformation- self))
+                (declare (ignorable -transformation-))
+                (setf (transformer-of self) ,transformer))))))
 
 (def method make-load-form ((self transformation) &optional environment)
   (make-load-form-saving-slots self :environment environment))
 
-(def generic compatible-transformations? (a b)
-  (:method-combination and)
-  (:method and (a b)
+(def generic compatible-transformations? (a a-next a-rest b b-next b-rest)
+  (:method ((a null) (a-next null) (a-rest null) (b null) (b-next null) (b-rest null))
     #t)
-  (:method :around (a b)
-    (or (eq a b)
+  (:method (a a-next a-rest b b-next b-rest)
+    (if (and a-next b-next)
+        (compatible-transformations? a-next (first a-rest) (rest a-rest)
+                                     b-next (first b-rest) (rest b-rest))
+        #f))
+  (:method :around (a a-next a-rest b b-next b-rest)
+    (or (and (eq a b)
+             (eq a-next b-next)
+             (eq a-rest b-rest))
         (call-next-method))))
 
 (def function compatible-transformation-pipelines? (a b)
-  (every (lambda (a b)
-           (compatible-transformations? a b))
-         a b))
+  (or (and (null a) (null b))
+      (compatible-transformations? (first a) (second a) (rest (rest a))
+                                   (first b) (second b) (rest (rest b)))))
 
 (def class* lisp-form-emitting-transformation (transformation)
   ((with-inline-emitting #f :accessor with-inline-emitting? :documentation "WITH-INLINE-EMITTING means that the order of the creation of the syntax nodes at runtime is in sync with the expected order of these nodes in the output (i.e. nothing like <a () ,@(reverse (list <b> <c>))>). It enables an optimization: in this mode the write-sequence calls are not wrapped in closures but rather everything is emitted at the place where it is in the code.")
@@ -52,11 +71,13 @@
    (stream-variable-name)
    (declarations '() :documentation "Add these declarations to the emitted lambda forms.")))
 
-(def method compatible-transformations? and ((a lisp-form-emitting-transformation)
-                                             (b lisp-form-emitting-transformation))
+(def method compatible-transformations? ((a lisp-form-emitting-transformation) a-next a-rest
+                                         (b lisp-form-emitting-transformation) b-next b-rest)
   (and (eql (with-inline-emitting? a) (with-inline-emitting? b))
        (eql (stream-variable-name-of a) (stream-variable-name-of b))
-       (equalp (declarations-of a) (declarations-of b))))
+       (equalp (declarations-of a) (declarations-of b))
+       (compatible-transformations? a-next (first a-rest) (rest a-rest)
+                                    b-next (first b-rest) (rest b-rest))))
 
 (def function ensure-progn (forms)
   (if (and (consp forms)
@@ -106,24 +127,52 @@
          ,forms)
       forms))
 
-(def function run-transformation-pipeline (node)
+(def function trace-transformation-functions ()
+  (trace run-transformation-pipeline transform transform*
+         compatible-transformations? compatible-transformation-pipelines?
+         transform-quasi-quoted-list-to-list-emitting-form bq-completely-process)
+  (values))
+
+(def (function d) run-transformation-pipeline (node)
   (assert (typep node 'quasi-quote))
-  (unless *disable-run-transformation-pipeline*
-    (bind ((*transformation-pipeline* (transformation-pipeline-of node)))
-      (iter (setf node (transform node))
-            (while (typep node 'quasi-quote)))))
+  (bind ((*transformation* nil)
+         (*transformation-pipeline* nil))
+    (iter (setf node (transform node))
+          (while (typep node 'quasi-quote))))
   node)
+
+(def macro toplevel-quasi-quote-macro (node &environment env)
+  (bind ((*transformation-environment* env))
+    (run-transformation-pipeline node)))
+
+(def generic transform* (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
+  (:method (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
+    (assert (typep node 'quasi-quote))
+    (funcall (transformer-of *transformation*) node)))
 
 (def function transform (node)
   (assert (typep node 'quasi-quote))
-  (bind ((*transformation* (first (transformation-pipeline-of node))))
-    (funcall (transformer-of *transformation*) node)))
+  (bind ((parent-position (position *transformation* *transformation-pipeline*))
+         (parent-tr *transformation*)
+         (parent-next-tr (when parent-position
+                           (car (nthcdr (1+ parent-position) *transformation-pipeline*))))
+         (parent-pipeline *transformation-pipeline*)
+         (*transformation-pipeline* (transformation-pipeline-of node))
+         (*transformation* (first *transformation-pipeline*)))
+    (transform* parent-tr
+                parent-next-tr
+                parent-pipeline
+                node
+                *transformation*
+                (second *transformation-pipeline*)
+                *transformation-pipeline*)))
 
 (def macro transformation-typecase (quasi-quote-node &body cases)
   (once-only (quasi-quote-node)
     `(etypecase ,quasi-quote-node
        ,@cases
        (quasi-quote (transform ,quasi-quote-node))
+       ;; TODO is this still needed here?
        (delayed-emitting ,quasi-quote-node)
        (side-effect ,quasi-quote-node))))
 
@@ -190,6 +239,23 @@
 (def (transformation e) quasi-quoted-syntax-node-to-syntax-node-emitting-form (lisp-form-emitting-transformation)
   ()
   'make-syntax-node-emitting-form)
+
+(def (transformation e) generic-transformation ()
+  ((quasi-quote-transformer)
+   (unquote-transformer))
+  'transform-with-generic-transformation)
+
+(def function transform-with-generic-transformation (input)
+  (bind ((quasi-quote-transformer (quasi-quote-transformer-of *transformation*))
+         (unquote-transformer (unquote-transformer-of *transformation*)))
+    (labels ((recurse (node)
+               (etypecase node
+                 (quasi-quote (funcall quasi-quote-transformer node))
+                 (unquote (funcall unquote-transformer node))
+                 (cons (cons (recurse (car node))
+                             (recurse (cdr node))))
+                 (null nil))))
+      (recurse input))))
 
 ;;;;;;;;
 ;;; Emit

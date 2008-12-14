@@ -142,6 +142,8 @@
      :setup-readtable-function ,setup-readtable-function
      :components ,components))
 
+;; TODO this is half-assed, because the integration file will only set up the
+;; readtable for those packages that have already been loaded...
 (define-qq-system-connection cl-quasi-quote-and-swank
   :requires (:cl-quasi-quote :swank #:cl-syntax-sugar-and-swank)
   :setup-readtable-function "cl-quasi-quote::setup-readtable"

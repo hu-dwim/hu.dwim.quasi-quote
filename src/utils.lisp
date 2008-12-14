@@ -37,6 +37,9 @@
           :into result)
         (finally (return (values result completely-reduced?)))))
 
+(def function list-without-nils (&rest args)
+  (remove nil args))
+
 (def function map-tree (form map-function &optional (process-cons #f))
   (labels ((process (form)
              (cond ((null form)
@@ -73,6 +76,14 @@
 (def (function io) princ-to-string-unless-nil (thing)
   (when thing
     (princ-to-string thing)))
+
+(def (function io) integer-to-string (thing)
+  (bind ((*print-pretty* #f))
+    (princ-to-string thing)))
+
+(def function self-evaluating? (thing)
+  (and (atom thing)
+       (not (symbolp thing))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; make-string-of-spaces

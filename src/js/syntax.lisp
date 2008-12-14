@@ -18,16 +18,17 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
-       `(,(if toplevel? 'js-quasi-quote/toplevel 'js-quasi-quote)
-          ,(= 1 *quasi-quote-depth*)
-          ,body
-          ,(if (= 1 *quasi-quote-depth*)
-               transformation-pipeline
-               (or nested-transformation-pipeline
-                   transformation-pipeline)))))
+     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*))
+            (quasi-quote-node (make-js-quasi-quote (if (= 1 *quasi-quote-depth*)
+                                                       transformation-pipeline
+                                                       (or nested-transformation-pipeline
+                                                           transformation-pipeline))
+                                                   (walk-js body))))
+       (if toplevel?
+           `(toplevel-quasi-quote-macro ,quasi-quote-node)
+           quasi-quote-node)))
    (lambda (body modifier)
-     `(js-unquote ,body ,modifier))
+     (make-js-unquote body modifier))
    :start-character start-character
    :dispatch-character dispatch-character
    :end-character end-character
@@ -35,6 +36,7 @@
    :splice-character splice-character
    :destructive-splice-character destructive-splice-character
    :readtable-case :preserve
+   :unquote-readtable-case :toplevel
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
 (macrolet ((x (name transformation-pipeline &optional args)
@@ -83,41 +85,6 @@
      (stream-variable-name &key
                            (encoding *default-character-encoding*))))
 
-(def (function e) make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-    (stream-variable-name &key binary with-inline-emitting indentation-width (encoding :utf-8)
-                          output-prefix output-postfix declarations string-escape-function)
-  (if binary
-      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
-                           :output-prefix output-prefix
-                           :output-postfix output-postfix
-                           :indentation-width indentation-width)
-            (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
-                           :encoding encoding :escape-function string-escape-function)
-            (make-instance 'quasi-quoted-binary-to-binary-emitting-form
-                           :stream-variable-name stream-variable-name
-                           :with-inline-emitting with-inline-emitting
-                           :declarations declarations))
-      (list (make-instance 'quasi-quoted-js-to-quasi-quoted-string
-                           :output-prefix output-prefix
-                           :output-postfix output-postfix
-                           :indentation-width indentation-width)
-            (make-instance 'quasi-quoted-string-to-string-emitting-form
-                           :stream-variable-name stream-variable-name
-                           :escape-function string-escape-function
-                           :with-inline-emitting with-inline-emitting
-                           :declarations declarations))))
-
-(def reader-stub js-quasi-quote (toplevel? form transformation-pipeline)
-  (bind ((expanded-body (recursively-macroexpand-reader-stubs form -environment-))
-         (quasi-quote-node (make-js-quasi-quote transformation-pipeline (walk-js expanded-body))))
-    (if toplevel?
-        (run-transformation-pipeline quasi-quote-node)
-        quasi-quote-node)))
-
-(def reader-stub js-unquote (body spliced?)
-  ;; A macro to handle the quoted parts when the walker is walking the forms. Kinda like a kludge, but it's not that bad...
-  (make-js-unquote body spliced?))
-
 (def method find-walker-handler ((ast-node syntax-node))
   (constantly ast-node))
 
@@ -153,6 +120,15 @@
     (cl-walker::undefined-reference-handler type name)))
 
 (def function walk-js (form &optional lexenv)
+  (labels ((recurse (x)
+             (typecase x
+               (list-quasi-quote
+                (run-transformation-pipeline x))
+               (cons (cons (recurse (car x))
+                           (recurse (cdr x))))
+               (t x))))
+    ;; let's transform all list qq nodes inside the form (this handles ` in macrolets in js forms)
+    (setf form (recurse form)))
   (with-walker-configuration (:undefined-reference-handler 'undefined-js-reference-handler
                               :function-name?      'js-function-name?
                               :macro-name?         'js-macro-name?

@@ -31,3 +31,13 @@
                        (:file "syntax" :depends-on ("package" "ast" "repositories"))
                        (:file "transform" :depends-on ("package" "escaping" "syntax" "ast"))
                        (:file "js-utils" :depends-on ("transform"))))))))
+
+(define-qq-system-connection :cl-quasi-quote-xml-and-cl-quasi-quote-js
+  :requires (:cl-quasi-quote-xml :cl-quasi-quote-js)
+  :setup-readtable-function "cl-quasi-quote::setup-readtable"
+  :components
+  ((:module "src"
+            :components
+            ((:module "js"
+                      :components
+                      ((:file "xml-integration")))))))

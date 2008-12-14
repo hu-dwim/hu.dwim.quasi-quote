@@ -495,7 +495,23 @@
   ((indentation-width nil)
    (output-prefix nil)
    (output-postfix nil))
-  'transform-quasi-quoted-js-to-quasi-quoted-string)
+  'transform-quasi-quoted-js-to-quasi-quoted-string/toplevel)
+
+(defmethod print-object ((self quasi-quoted-js-to-quasi-quoted-string) *standard-output*)
+  (princ "[JS->String]"))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-string/toplevel (node)
+  (assert (typep node 'js-quasi-quote))
+  (make-string-quasi-quote (rest (transformation-pipeline-of node))
+                           `(,(awhen (output-prefix-of *transformation*)
+                                (if (functionp it)
+                                    (funcall it)
+                                    it))
+                             ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
+                             ,(awhen (output-postfix-of *transformation*)
+                                (if (functionp it)
+                                    (funcall it)
+                                    it)))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))
@@ -507,16 +523,8 @@
     (js-unquote     (transform-quasi-quoted-js-to-quasi-quoted-string/unquote node))
     (js-quasi-quote (if (compatible-transformation-pipelines? *transformation-pipeline*
                                                               (transformation-pipeline-of node))
-                        (make-string-quasi-quote (rest (transformation-pipeline-of node))
-                                                 `(,(output-prefix-of *transformation*)
-                                                   ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
-                                                   ,(output-postfix-of *transformation*)))
-                        ;; FIXME major confusion: RUN-TRANSFORMATION-PIPELINE will return lisp forms here
-                        ;; which will blow up the rest of the transformation pipeline.
-                        ;; the solution is probably to add an AST node that encapsulates lisp forms.
-                        ;; unquote's would use that, too and they would be stripped down in a final transformation.
-                        ;; am i talking about list quasi quote here?
-                        (run-transformation-pipeline node)))
+                        (transform-quasi-quoted-js-to-quasi-quoted-string/toplevel node)
+                        (transform node)))
     (string-quasi-quote node)))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/unquote (node)
@@ -530,5 +538,4 @@
                      node 'transform-quasi-quoted-js-to-quasi-quoted-string))
           `(transform-quasi-quoted-js-to-quasi-quoted-string
             ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
-              node 'transform-quasi-quoted-js-to-quasi-quoted-string))))
-     spliced?)))
+              node 'transform-quasi-quoted-js-to-quasi-quoted-string)))))))

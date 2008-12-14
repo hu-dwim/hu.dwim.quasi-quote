@@ -19,16 +19,22 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     (bind ((toplevel? (= 1 *quasi-quote-nesting-level*)))
-       `(,(if toplevel? 'bivalent-quasi-quote/toplevel 'bivalent-quasi-quote) ,toplevel? ,body ,transformation-pipeline)))
+     ;; we are checking for *quasi-quote-depth* because the transform descents into the unquote forms
+     ;; and transform the quasi-quote's it can find there
+     (bind ((toplevel? (= 1 *quasi-quote-depth*))
+            (quasi-quote-node (make-bivalent-quasi-quote transformation-pipeline body)))
+       (if toplevel?
+           `(toplevel-quasi-quote-macro ,quasi-quote-node)
+           quasi-quote-node)))
    (lambda (form modifier)
-     `(bivalent-unquote ,form ,modifier))
+     (make-bivalent-unquote form modifier))
    :start-character start-character
    :end-character end-character
    :unquote-character unquote-character
    :splice-character splice-character
    :destructive-splice-character destructive-splice-character
-   :dispatched-quasi-quote-name dispatched-quasi-quote-name))
+   :dispatched-quasi-quote-name dispatched-quasi-quote-name
+   :unquote-readtable-case :toplevel))
 
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-BIVALENT-TO-~A" name))
@@ -64,15 +70,6 @@
                                                :declarations declarations))
      (stream-variable-name &key (encoding *default-character-encoding*))))
 
-(def reader-stub bivalent-quasi-quote (toplevel? body transformation-pipeline)
-  (bind ((expanded-body (process-binary-reader-body (recursively-macroexpand-reader-stubs body -environment-) #t))
-         (quasi-quote-node (make-bivalent-quasi-quote transformation-pipeline expanded-body)))
-    (if toplevel?
-        (run-transformation-pipeline quasi-quote-node)
-        quasi-quote-node)))
-
-(def reader-stub bivalent-unquote (form spliced?)
-  (make-bivalent-unquote form spliced?))
 
 ;;;;;;;
 ;;; AST
@@ -84,6 +81,9 @@
 
 (def (class* e) bivalent-quasi-quote (quasi-quote bivalent-syntax-node)
   ())
+
+(def method print-object ((self bivalent-quasi-quote) *standard-output*)
+  (print-object/quasi-quote self "biv"))
 
 (def (function e) make-bivalent-quasi-quote (transformation-pipeline body)
   (assert (not (typep body 'quasi-quote)))
@@ -105,6 +105,9 @@
   ()
   'transform-quasi-quoted-bivalent-to-bivalent-emitting-form)
 
+(defmethod print-object ((self quasi-quoted-bivalent-to-binary-emitting-form) *standard-output*)
+  (princ "[Bivalent->Forms]"))
+
 (def function write-quasi-quoted-bivalent (node stream)
   (etypecase node
     (character (write-char node stream))
@@ -125,7 +128,7 @@
            `(write-string ,node ,stream)))
       (bivalent-unquote
        `(write-quasi-quoted-bivalent
-         ,(transform-quasi-quoted-bivalent-to-bivalent-emitting-form node) ,stream))
+         ,(transform-quasi-quoted-bivalent-to-bivalent-emitting-form/unquote node) ,stream))
       (side-effect (form-of node)))))
 
 (def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form (input)
@@ -138,11 +141,11 @@
                                     (flatten (body-of input)))))))
     ;; TODO delme? write test that triggers it...
     #+nil(bivalent-unquote
-     (map-filtered-tree (form-of input) 'bivalent-quasi-quote
-                        (lambda (node)
-                          (apply #'transform-quasi-quoted-bivalent-to-bivalent-emitting-form node args))))))
+          (transform-quasi-quoted-bivalent-to-bivalent-emitting-form/unquote node))))
 
-
+(def function transform-quasi-quoted-bivalent-to-bivalent-emitting-form/unquote (input)
+  (map-filtered-tree (form-of input) 'bivalent-quasi-quote
+                     'transform-quasi-quoted-bivalent-to-bivalent-emitting-form))
 
 (def (transformation e) quasi-quoted-bivalent-to-quasi-quoted-binary (transformation)
   ((encoding *default-character-encoding*))
