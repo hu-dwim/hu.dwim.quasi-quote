@@ -241,7 +241,7 @@
    (arguments)))
 
 (def (js-walker-handler e) |new| (form parent env)
-  (when (< (length (rest form)) 2)
+  (when (< (length form) 2)
     (simple-js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" form))
   (bind ((type (second form))
          (args (cddr form)))
@@ -303,9 +303,20 @@
 
 (def (js-walker-handler e) |type-of| (form parent env)
   (unless (= (length form) 2)
-    (simple-js-compile-error nil "Invalid 'type-of' form, needs at exactly two elements: ~S" form))
+    (simple-js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" form))
   (bind (((nil object) form))
     (with-form-object (node 'type-of-form parent
+                            :source form)
+      (setf (object-of node) (walk-form object node env)))))
+
+(def class* regexp-form (walked-form)
+  ((object)))
+
+(def (js-walker-handler e) |regexp| (form parent env)
+  (unless (= (length form) 2)
+    (simple-js-compile-error nil "Invalid 'regexp' form, needs exactly one argument: ~S" form))
+  (bind (((nil object) form))
+    (with-form-object (node 'regexp-form parent
                             :source form)
       (setf (object-of node) (walk-form object node env)))))
 

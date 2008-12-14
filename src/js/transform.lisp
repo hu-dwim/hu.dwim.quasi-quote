@@ -448,6 +448,10 @@
       ,@(with-increased-indent
          (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs (elements-of -node-)))
       "}"))
+   (regexp-form
+    `("/"
+      ,(regexp-of -node-)
+      "/"))
    (for-form
     `("for ("
       ,@(recurse-as-comma-separated (variables-of -node-))
