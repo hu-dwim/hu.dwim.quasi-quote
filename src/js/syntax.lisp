@@ -302,23 +302,22 @@
   ((object)))
 
 (def (js-walker-handler e) |type-of| (form parent env)
-  (unless (= (length form) 2)
+  (unless (length= 2 form)
     (simple-js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" form))
   (bind (((nil object) form))
-    (with-form-object (node 'type-of-form parent
-                            :source form)
+    (with-form-object (node 'type-of-form parent :source form)
       (setf (object-of node) (walk-form object node env)))))
 
 (def class* regexp-form (walked-form)
-  ((object)))
+  ((regexp)))
 
 (def (js-walker-handler e) |regexp| (form parent env)
-  (unless (= (length form) 2)
-    (simple-js-compile-error nil "Invalid 'regexp' form, needs exactly one argument: ~S" form))
-  (bind (((nil object) form))
-    (with-form-object (node 'regexp-form parent
-                            :source form)
-      (setf (object-of node) (walk-form object node env)))))
+  (bind ((regexp (second form)))
+    (unless (and (length= 2 form)
+                 (stringp regexp))
+      (simple-js-compile-error nil "Invalid 'regexp' form, needs exactly one argument, a string: ~S" form))
+    (with-form-object (node 'regexp-form parent :source form)
+      (setf (regexp-of node) regexp))))
 
 
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from cl-quasi-quote-js

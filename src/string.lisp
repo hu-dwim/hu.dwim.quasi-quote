@@ -178,7 +178,7 @@
                    (cons
                     (traverse (car node))
                     (traverse (cdr node)))
-                   (string (push node flattened-elements))
+                   ((or string character) (push node flattened-elements))
                    (string-quasi-quote (bind ((nested-node node))
                                          (if (compatible-transformation-pipelines?
                                               (transformation-pipeline-of input)
@@ -187,6 +187,7 @@
                                              ;; and descend into its body as if it never was there...
                                              (traverse (body-of nested-node))
                                              (push (transform nested-node) flattened-elements))))
+                   ;; it's the last
                    (syntax-node (push node flattened-elements))))))
       (traverse (body-of input)))
     (nreversef flattened-elements)
