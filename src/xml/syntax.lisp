@@ -107,18 +107,30 @@
                (set-syntax-from-char end-character #\) *readtable*)
                (read-delimited-list end-character stream t))))))
 
-(def function read-quasi-quoted-xml-name (stream start-character end-character unquote-character)
-  ;; FIXME this should have at least some minimal ;; comment handling
-  (iter (with delimiters = (list start-character end-character unquote-character #\space #\newline))
-        (with element-name = (make-array 8 :element-type 'character :adjustable #t :fill-pointer 0))
-        (for char = (peek-char nil stream #t nil #t))
-        (until (member char delimiters :test #'char=))
-        (vector-push-extend (read-char stream #t nil #t) element-name)
-        (finally
-         (when (zerop (length element-name))
-           (simple-reader-error stream "No xml element name?"))
-         (assert-valid-xml-name element-name stream)
-         (return element-name))))
+(def (function o) read-quasi-quoted-xml-name (stream start-character end-character unquote-character)
+  (bind ((delimiters (list start-character end-character unquote-character #\space #\newline #\;)))
+    (flet ((peek ()
+             (peek-char nil stream #t nil #t))
+           (next-char ()
+             (read-char stream #t nil #t))
+           (delimiter? (char)
+             (member char delimiters :test #'char=)))
+      (declare (inline peek next-char delimiter?))
+      (iter (while (delimiter? (peek)))
+            ;; let's skip delimiters
+            (for char = (next-char))
+            (when (char= char #\;)
+              ;; and unconditionally skip ; comments until the end of line
+              (iter (until (char= (next-char) #\Newline)))))
+      (iter (with element-name = (make-array 8 :element-type 'character :adjustable #t :fill-pointer 0))
+            (for char = (peek-char nil stream #t nil #t))
+            (until (member char delimiters :test #'char=))
+            (vector-push-extend (next-char) element-name)
+            (finally
+             (when (zerop (length element-name))
+               (simple-reader-error stream "No xml element name?"))
+             (assert-valid-xml-name element-name stream)
+             (return element-name))))))
 
 (def function assert-valid-xml-name (name &optional stream)
   (when (position-if (lambda (el)
