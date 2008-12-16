@@ -70,6 +70,21 @@
     (=   '\=\=)
     (t op)))
 
+(def macro with-operator-precedence (operator &body body)
+  (with-unique-names (needs-parens? result parent-operator-precedence)
+    `(bind ((js-operator (lisp-operator-name-to-js-operator-name ,operator))
+            (js-operator-name (lisp-name-to-js-name js-operator :operator #t))
+            (,parent-operator-precedence *js-operator-precedence*)
+            (*js-operator-precedence* (or (operator-precedence js-operator)
+                                          *js-operator-precedence*))
+            (,needs-parens? (> *js-operator-precedence* ,parent-operator-precedence))
+            (,result (progn ,@body)))
+       (declare (ignorable js-operator-name))
+       ;; (format *debug-io* "operator: ~S, precedence ~A -> ~A~%" js-operator ,parent-operator-precedence *js-operator-precedence*)
+       (if ,needs-parens?
+           `("(" ,@,result ")")
+           ,result))))
+
 (def (function oe) to-js-literal (value)
   (etypecase value
     (string (concatenate 'string "'" (escape-as-js-string value) "'"))
@@ -101,8 +116,10 @@
 (def transform-function transform-incf-like (node plus-plus plus-equal)
   (bind ((arguments (arguments-of node)))
     (ecase (length arguments)
-      (1 `(,(recurse (first arguments)) " = " ,plus-plus ,(recurse (first arguments))))
-      (2 `(,(recurse (first arguments)) " " ,plus-equal " " ,(recurse (second arguments)))))))
+      (1 (with-operator-precedence '=
+           `(,(recurse (first arguments)) " = " ,plus-plus ,(recurse (first arguments)))))
+      (2 (with-operator-precedence '+=
+           `(,(recurse (first arguments)) " " ,plus-equal " " ,(recurse (second arguments))))))))
 
 (def transform-function transform-vector-like (node)
   `(#\[
@@ -158,31 +175,35 @@
   (frob
    (|null|   (bind ((arguments (arguments-of -node-)))
                (assert (length= 1 arguments))
-               `(,(recurse (first arguments)) " == null")))
+               (with-operator-precedence '==
+                 `(,(recurse (first arguments)) " == null"))))
    (|incf|   (transform-incf-like -node- "++" "+="))
    (|decf|   (transform-incf-like -node- "--" "-="))
    (|vector| (transform-vector-like -node-))
    (|list|   (transform-vector-like -node-))
    (|map|    (transform-map-like -node-))
-   ;; KLUDGE need to handle not specially, because the one at application-form can only handle infix operators
+   ;; KLUDGE need to handle 'not' specially, because the one at application-form can only handle infix operators for now
    (|not|    (unless (length= 1 (arguments-of -node-))
-               (simple-js-compile-error -node- "The not operator expects exactly one argument!"))
-             `("!(" ,(recurse (first (arguments-of -node-))) ")"))
+               (simple-js-compile-error -node- "The 'not' operator expects exactly one argument!"))
+             (with-operator-precedence '!
+               `("!" ,(recurse (first (arguments-of -node-))))))
    (|aref|   (bind ((arguments (arguments-of -node-)))
                (unless (rest arguments)
-                 (simple-js-compile-error -node- "The aref operator needs at least two arguments!"))
-               `(,(recurse (first arguments))
-                  ,@(iter (for argument :in (rest arguments))
-                          (collect `(#\[
-                                     ,(recurse argument)
-                                     #\]))))))
+                 (simple-js-compile-error -node- "The 'aref' operator needs at least two arguments!"))
+               (with-operator-precedence 'aref
+                 `(,(recurse (first arguments))
+                   ,@(iter (for argument :in (rest arguments))
+                           (collect `(#\[
+                                      ,(recurse argument)
+                                      #\])))))))
    (|elt|    (bind ((arguments (arguments-of -node-)))
                (unless (length= 2 arguments)
                  (simple-js-compile-error -node- "An elt operator with ~A arguments?" (length arguments)))
-               `(,(recurse (first arguments))
-                  #\[
-                  ,(recurse (second arguments))
-                  #\])))
+               (with-operator-precedence 'aref
+                 `(,(recurse (first arguments))
+                   #\[
+                   ,(recurse (second arguments))
+                   #\]))))
    (|array|  (bind ((arguments (arguments-of -node-)))
                `(#\[
                  ,@(recurse-as-comma-separated arguments
@@ -201,12 +222,14 @@
                (unless (length= 1 arguments)
                  (simple-js-compile-error -node- "More than one argument to ~S?" operator))
                (if (typep argument 'variable-reference-form)
-                   (ecase operator
-                     (1+ `("++" ,(recurse argument)))
-                     (1- `("--" ,(recurse argument))))
-                   (ecase operator
-                     (1+ `("(1 + " ,(recurse argument) ")"))
-                     (1- `("(1 + " ,(recurse argument) ")"))))))))
+                   (with-operator-precedence '++
+                     (ecase operator
+                       (1+ `("++" ,(recurse argument)))
+                       (1- `("--" ,(recurse argument)))))
+                   (with-operator-precedence '+
+                     (ecase operator
+                       (1+ `("1 + " ,(recurse argument)))
+                       (1- `("1 + " ,(recurse argument))))))))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
   (iter (for element :in-sequence elements)
@@ -314,21 +337,6 @@
                         (wrap-runtime-delayed-js-transformation-form
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value ,(form-of value))))))
     (t (transform-quasi-quoted-js-to-quasi-quoted-string value))))
-
-(def macro with-operator-precedence (operator &body body)
-  (with-unique-names (needs-parens? result parent-operator-precedence)
-    `(bind ((js-operator (lisp-operator-name-to-js-operator-name ,operator))
-            (js-operator-name (lisp-name-to-js-name js-operator :operator #t))
-            (,parent-operator-precedence *js-operator-precedence*)
-            (*js-operator-precedence* (or (operator-precedence js-operator)
-                                          *js-operator-precedence*))
-            (,needs-parens? (> *js-operator-precedence* ,parent-operator-precedence))
-            (,result (progn ,@body)))
-       (declare (ignorable js-operator-name))
-       ;; (format *debug-io* "operator: ~S, precedence ~A -> ~A~%" js-operator ,parent-operator-precedence *js-operator-precedence*)
-       (if ,needs-parens?
-           `("(" ,@,result ")")
-           ,result))))
 
 (macrolet ((frob (&rest entries)
              `(with-lexical-transform-functions
