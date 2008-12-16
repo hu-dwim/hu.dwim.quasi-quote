@@ -42,7 +42,7 @@
            if when unless cond
            progn let let*
            vector list aref elt slot-value
-           setf setq incf decf
+           setf setq null incf decf
            defun lambda map mapcar map-into
            block return
            create array

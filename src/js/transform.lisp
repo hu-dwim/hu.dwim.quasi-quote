@@ -156,6 +156,9 @@
                           (collect `(def js-special-form ,name
                                         ,@body)))))))
   (frob
+   (|null|   (bind ((arguments (arguments-of -node-)))
+               (assert (length= 1 arguments))
+               `(,(recurse (first arguments)) " == null")))
    (|incf|   (transform-incf-like -node- "++" "+="))
    (|decf|   (transform-incf-like -node- "--" "-="))
    (|vector| (transform-vector-like -node-))
