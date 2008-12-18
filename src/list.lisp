@@ -260,6 +260,11 @@
                                  result))
               ((eq (caar args) *bq-clobberable*)
                (bq-attach-append *bq-nconc* (cadar args) result))
+              ((and (null result)
+                    (bq-null-or-quoted (first args))
+                    (atom (first (first args))))
+               ;; this takes care of dotted lists in `(a . b)
+               (first args))
               (t (bq-attach-append *bq-append*
                                    (car args)
                                    result)))))
