@@ -127,7 +127,7 @@
 (def function trace-transformation-functions ()
   (trace run-transformation-pipeline transform transform*
          compatible-transformations? compatible-transformation-pipelines?
-         transform-quasi-quoted-list-to-list-emitting-form bq-completely-process)
+         transform-quasi-quoted-list-to-list-emitting-form)
   (values))
 
 (def (function d) run-transformation-pipeline (node)

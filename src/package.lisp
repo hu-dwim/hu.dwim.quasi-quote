@@ -63,6 +63,7 @@
      wrap-runtime-delayed-transformation-form
      transformation-typecase
      trace-transformation-functions
+     trace-list-quasi-quote-functions
      transform
      transform*
      -environment-

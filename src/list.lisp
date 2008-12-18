@@ -89,6 +89,10 @@
     (list-quasi-quote
      (bq-completely-process (body-of input)))))
 
+(def function trace-list-quasi-quote-functions ()
+  (trace bq-process bq-bracket bq-simplify bq-simplify-args bq-remove-tokens)
+  (values))
+
 ;;; Common Lisp backquote implementation, written in Common Lisp.
 ;;; Author: Guy L. Steele Jr.     Date: 27 December 1985
 ;;; Texted under Symbolics Common Lisp and Lucid Common Lisp.
@@ -283,6 +287,7 @@
 ;;;  (op item (op a b c)) => (op item a b c)
 
 (defun bq-attach-append (op item result)
+  (assert (or (eq op *bq-nconc*) (eq op *bq-append*)))
   (cond
     ((and (bq-null-or-quoted item) (bq-null-or-quoted result))
      (list *bq-quote* (append (cadr item) (cadr result))))
