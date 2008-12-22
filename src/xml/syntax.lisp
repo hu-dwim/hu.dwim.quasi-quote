@@ -160,7 +160,7 @@
                                                             :splice-character splice-character
                                                             :destructive-splice-character destructive-splice-character)))))
   ;; TODO ? (x xml-emitting-form           '(xml-emitting-form))
-  (x string-emitting-form (make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
+  (x string-emitting-form (make-quasi-quoted-xml-to-form-emitting-transformation-pipeline
                            stream-variable-name
                            :binary #f
                            :indentation-width indentation-width
@@ -168,7 +168,7 @@
                            :with-inline-emitting with-inline-emitting
                            :declarations declarations)
      (stream-variable-name &key (text-node-escaping-method :per-character)))
-  (x binary-emitting-form (make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
+  (x binary-emitting-form (make-quasi-quoted-xml-to-form-emitting-transformation-pipeline
                            stream-variable-name
                            :binary #t
                            :indentation-width indentation-width
@@ -180,7 +180,7 @@
                            (text-node-escaping-method :per-character)
                            (encoding *default-character-encoding*))))
 
-(def (function e) make-quasi-quoted-xm-to-form-emitting-transformation-pipeline
+(def (function e) make-quasi-quoted-xml-to-form-emitting-transformation-pipeline
     (stream-variable-name &key binary with-inline-emitting indentation-width
                           (encoding :utf-8) declarations (text-node-escaping-method :per-character))
   (if binary
