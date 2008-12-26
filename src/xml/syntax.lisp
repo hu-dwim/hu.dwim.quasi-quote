@@ -109,12 +109,18 @@
 
 (def (function o) read-quasi-quoted-xml-name (stream start-character end-character unquote-character)
   (bind ((delimiters (list start-character end-character unquote-character #\space #\newline #\;)))
-    (flet ((peek ()
-             (peek-char nil stream #t nil #t))
-           (next-char ()
-             (read-char stream #t nil #t))
-           (delimiter? (char)
-             (member char delimiters :test #'char=)))
+    (labels ((maybe-signal-eof (value)
+               (when (eq value 'eof)
+                 (simple-reader-error stream "End of file error while reading an XML name"))
+               value)
+             (peek ()
+               (maybe-signal-eof
+                (peek-char nil stream #f 'eof #t)))
+             (next-char ()
+               (maybe-signal-eof
+                (read-char stream #f 'eof #t)))
+             (delimiter? (char)
+               (member char delimiters :test #'char=)))
       (declare (inline peek next-char delimiter?))
       (iter (while (delimiter? (peek)))
             ;; let's skip delimiters
