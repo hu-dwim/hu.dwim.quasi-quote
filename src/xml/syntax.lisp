@@ -91,15 +91,19 @@
         (setf attributes
               (iter (for next-character = (peek-char #t stream #t nil #t))
                     (until (char= next-character #\) ))
-                    (if (char= next-character unquote-character)
-                        (collect (read stream #t nil #t))
-                        (bind ((attribute-name (read-quasi-quoted-xml-name stream start-character
-                                                                           end-character unquote-character)))
-                          (when (starts-with #\: attribute-name :test #'char=)
-                            (setf attribute-name (subseq attribute-name 1)))
-                          (assert-valid-xml-name attribute-name stream)
-                          (collect attribute-name)
-                          (collect (read stream #t nil #t))))
+                    (switch (next-character :test #'char=)
+                      (unquote-character
+                       (collect (read stream #t nil #t)))
+                      (#\;
+                       (iter (until (char= (read-char stream #f #\Newline #t) #\Newline))))
+                      (t
+                       (bind ((attribute-name (read-quasi-quoted-xml-name stream start-character
+                                                                          end-character unquote-character)))
+                         (when (starts-with #\: attribute-name :test #'char=)
+                           (setf attribute-name (subseq attribute-name 1)))
+                         (assert-valid-xml-name attribute-name stream)
+                         (collect attribute-name)
+                         (collect (read stream #t nil #t)))))
                     (finally (read-char stream #t nil #t)))))
       (list* element-name
              attributes
