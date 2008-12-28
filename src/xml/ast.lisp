@@ -119,7 +119,10 @@
                                  ,(map-ast #'bq-process (body-of x)))))
 
   (:method ((x xml-unquote))
-    `(make-xml-unquote ,(bq-process (form-of x)) ,(modifier-of x)))
+    (bind ((form (form-of x)))
+      (if (spliced? x)
+          `(make-xml-unquote (list* 'list ,(bq-bracket form)) ,(modifier-of x))
+          `(make-xml-unquote ,(bq-process form) ,(modifier-of x)))))
 
   (:method ((x xml-element))
     `(make-xml-element ,(bq-process (name-of x))
