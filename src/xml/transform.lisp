@@ -187,6 +187,9 @@
                         (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value it))))))
     (integer (integer-to-string node))
     (float (format nil "~F" node))
+    (symbol (if (constantp node)
+                (symbol-value node)
+                (symbol-name node)))
     (string-quasi-quote node) ;; TODO what about xml escaping?
     (string (escape-as-xml node))))
 

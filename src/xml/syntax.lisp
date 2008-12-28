@@ -252,7 +252,7 @@
                             ;; TODO cleanup attribute syntax, see below
                             (collect (make-xml-attribute
                                       (unless-syntax-node name (name-as-string name))
-                                      (unless-syntax-node value (princ-to-string value))))))
+                                      (unless-syntax-node value value)))))
                   (mapcar #'recurse children)))))
            (t form))))
     (make-xml-quasi-quote transformation-pipeline (recurse form))))
@@ -300,7 +300,7 @@
                                                     (name-as-string name))
                                                   (unless-syntax-node value
                                                     (check-literal-xml-attribute-name-or-value value)
-                                                    (princ-to-string value))))))))
+                                                    value)))))))
                         (mapcar (lambda (el)
                                   (if (stringp el)
                                       (make-xml-text el)
