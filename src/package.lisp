@@ -64,6 +64,8 @@
      transformation-typecase
      trace-transformation-functions
      trace-list-quasi-quote-functions
+     output-transformer
+     output-transformer-of
      transform
      transform*
      -environment-

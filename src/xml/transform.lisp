@@ -197,7 +197,8 @@
 ;;; xml escaping
 
 (def (transformation e) quasi-quoted-string-to-xml-escaped-quasi-quoted-string (generic-transformation)
-  ()
+  ((output-prefix nil)
+   (output-postfix nil))
   nil
   (:default-initargs
      :unquote-transformer 'xml-escape-unquote-transformer
@@ -206,15 +207,32 @@
 (defmethod print-object ((self quasi-quoted-string-to-xml-escaped-quasi-quoted-string) *standard-output*)
   (princ "[String->XML-Escaped-String]"))
 
+(def method make-load-form ((self quasi-quoted-string-to-xml-escaped-quasi-quoted-string) &optional environment)
+  (make-load-form-saving-slots self
+                               :slot-names (remove 'output-transformer (mapcar 'slot-definition-name (class-slots (class-of self))))
+                               :environment environment))
+
+(def constructor quasi-quoted-string-to-xml-escaped-quasi-quoted-string
+  (setf (output-transformer-of -self-)
+        (bind (((:read-only-slots output-prefix output-postfix) -self-))
+          (lambda (node)
+            (assert (typep node 'string-quasi-quote))
+            (when output-prefix
+              (if (functionp output-prefix)
+                  (awhen (funcall output-prefix)
+                    (push it (body-of node)))
+                  (push output-prefix (body-of node))))
+            (when output-postfix
+              (if (functionp output-postfix)
+                  (awhen (funcall output-postfix)
+                    (appendf (body-of node) (list it)))
+                  (appendf (body-of node) (list output-postfix))))
+            node))))
+
 (def function make-quasi-quoted-string-to-xml-escaped-quasi-quoted-string-transformation (&key output-prefix output-postfix)
   (make-instance 'quasi-quoted-string-to-xml-escaped-quasi-quoted-string
-                 :output-transformer (lambda (node)
-                                       (assert (typep node 'string-quasi-quote))
-                                       (awhen output-prefix
-                                         (push it (body-of node)))
-                                       (awhen output-postfix
-                                         (appendf (body-of node) (list it)))
-                                       node)))
+                 :output-prefix output-prefix
+                 :output-postfix output-postfix))
 
 (def function xml-escape-unquote-transformer (node)
   (check-type node string-unquote)
