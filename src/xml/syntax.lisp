@@ -30,16 +30,19 @@
                   (< (length body) 1))
          (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
        (bind ((toplevel? (= 1 *quasi-quote-nesting-level*))
-              (quasi-quote-node (if dispatched?
-                                    ;; dispatched `xml(element) syntax
-                                    (process-dispatched-xml-reader-body body transformation-pipeline)
-                                    ;; <>-based syntax
-                                    (process-<>-xml-reader-body body transformation-pipeline))))
-         (if toplevel?
-             `(toplevel-quasi-quote-macro ,quasi-quote-node)
-             quasi-quote-node)))
+              (quasi-quote-node (unless *read-suppress*
+                                  (if dispatched?
+                                      ;; dispatched `xml(element) syntax
+                                      (process-dispatched-xml-reader-body body transformation-pipeline)
+                                      ;; <>-based syntax
+                                      (process-<>-xml-reader-body body transformation-pipeline)))))
+         (unless *read-suppress*
+           (if toplevel?
+               `(toplevel-quasi-quote-macro ,quasi-quote-node)
+               quasi-quote-node))))
      (named-lambda xml-unquote-wrapper (body modifier)
-       (make-xml-unquote body modifier))
+       (unless *read-suppress*
+         (make-xml-unquote body modifier)))
      :nested-quasi-quote-wrapper (lambda (body dispatched?)
                                    (when (< (length body) 1)
                                      (simple-reader-error nil "Syntax error in XML syntax: no element name is given?"))
