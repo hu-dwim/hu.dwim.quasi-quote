@@ -98,7 +98,7 @@
                          (wrap-runtime-delayed-transformation-form
                           `(ecase (text-node-escaping-method-of *transformation*)
                              (:cdata (wrap-with-xml-quote ,(form-of node)))
-                             (:per-character (escape-as-xml ,(form-of node)))))))
+                             (:per-character (escape-quasi-quoted-string-as-xml ,(form-of node)))))))
            (string (ecase (text-node-escaping-method-of *transformation*)
                      (:cdata (wrap-with-xml-quote content))
                      (:per-character (escape-as-xml content)))))))
@@ -241,8 +241,7 @@
 
 (def function xml-escape-unquote-transformer (node)
   (check-type node string-unquote)
-  (setf (form-of node) `(awhen ,(form-of node)
-                          (escape-as-xml it)))
+  (setf (form-of node) `(escape-quasi-quoted-string-as-xml ,(form-of node)))
   node)
 
 (def function xml-escape-quasi-quote-transformer (node)

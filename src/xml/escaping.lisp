@@ -41,3 +41,12 @@
               (when result
                 (vector-push-extend character result))))
     (or result (shrink-vector string (length string)))))
+
+(def function escape-quasi-quoted-string-as-xml (thing)
+  (etypecase thing
+    (string (escape-as-xml thing))
+    (cons (map-tree thing #'escape-quasi-quoted-string-as-xml))
+    (null nil)
+    (character (or (xml-escaped-entity-for-character thing)
+                   thing))
+    (delayed-emitting thing)))
