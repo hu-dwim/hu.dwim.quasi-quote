@@ -22,7 +22,9 @@
 
   (:shadowing-import-from :cl-quasi-quote
    #:body-of
-   #:parent-of)
+   #:parent-of
+   #:map-ast
+   )
 
   (:shadow
    #:catch-form)

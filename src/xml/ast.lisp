@@ -88,29 +88,17 @@
 
 (def methods map-ast
   (:method (fn (x xml-quasi-quote))
-    (bind ((new (funcall fn x)))
-      (if (eq x new)
-          (progn
-            (setf (body-of x) (funcall fn (body-of x)))
-            x)
-          new)))
+    (map-ast/map-accessors-unless-same-returned fn x
+      body-of))
   (:method (fn (x xml-element))
-    (bind ((new (funcall fn x)))
-      (if (eq new x)
-          (progn
-            (setf (name-of x)       (funcall fn (name-of x)))
-            (setf (attributes-of x) (funcall fn (attributes-of x)))
-            (setf (children-of x)   (funcall fn (children-of x)))
-            x)
-          new)))
+    (map-ast/map-accessors-unless-same-returned fn x
+      name-of
+      attributes-of
+      children-of))
   (:method (fn (x xml-attribute))
-    (bind ((new (funcall fn x)))
-      (if (eq x new)
-          (progn
-            (setf (name-of x)  (funcall fn (name-of x)))
-            (setf (value-of x) (funcall fn (value-of x)))
-            x)
-          new))))
+    (map-ast/map-accessors-unless-same-returned fn x
+      name-of
+      value-of)))
 
 (def methods bq-process
   (:method ((x xml-quasi-quote))
@@ -121,6 +109,7 @@
   (:method ((x xml-unquote))
     (bind ((form (form-of x)))
       (if (spliced? x)
+          ;; TODO this is questionable... unconditionally wrap it inside a list? what's this? think it through... `<foo () ,@,@body>
           `(make-xml-unquote (list* 'list ,(bq-bracket form)) ,(modifier-of x))
           `(make-xml-unquote ,(bq-process form) ,(modifier-of x)))))
 

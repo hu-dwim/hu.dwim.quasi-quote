@@ -37,6 +37,7 @@
      body-of
      syntax-node
      map-ast
+     map-ast/map-accessors-unless-same-returned
      bq-process bq-bracket
      *bq-list*
      *bq-list**
