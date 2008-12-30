@@ -29,7 +29,9 @@
   (:shadowing-import-from :cl-quasi-quote
    #:body-of
    #:parent-of
-   #:form)
+   #:form
+   #:map-ast
+   )
 
   (:export
    #:test))

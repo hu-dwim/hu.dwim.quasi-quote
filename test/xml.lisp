@@ -213,20 +213,20 @@
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote1 ()
   (｢<taggg attribute="atttr"><foo/></taggg>｣
    ｢(macrolet ((nester (tag-name attribute-value &body body)
-                 `<,,tag-name (attribute ,,attribute-value) ,(progn ,@body) >))
+                 `<,,tag-name (attribute ,,attribute-value) ,@,@body>))
       (nester "taggg" "atttr" <foo>))｣))
 
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
   (｢<html><body><foo/><bar/></body></html>｣
    ｢(macrolet ((nester (&body body)
                  ;; first ,@ is for xml, the ,@body is for the lisp quasi-quote
-                 `<html <body ,@(list ,@body)>>))
+                 `<html <body ,@,@body>>))
       (nester <foo> <bar>))｣))
 
 (def xml-test test/xml/macrolet-in-unquote ()
   (｢<wrapper><element><tag1>value1</tag1><tag2>value2</tag2></element><last/></wrapper>｣
    ｢(macrolet ((wrapper (&body body)
-                 `<wrapper ,@(list ,@body)>))
+                 `<wrapper ,@,@body>))
       (wrapper
        <element
         ,@(macrolet ((x (tag value)
@@ -237,15 +237,15 @@
        <last>))｣))
 
 (def xml-test test/xml/binary-bug-trigger ()
-  (｢<wrapper><element><tag1>value1</tag1><tag2>value2</tag2></element><last/></wrapper>｣
+  (｢<div id="43">alma</div>｣
    ｢(macrolet ((render-dojo-widget (id &body body)
-                 (once-only (id)
-                   `(progn
-                      ,@body
-                      (null ,id)))))
-      (render-dojo-widget id
-        <div (:id ,id)
-             ,"alma">))｣))
+                 `(progn
+                    (null ,id)
+                    ,@body)))
+      (bind ((idd 42))
+        (render-dojo-widget idd
+          <div (:id ,(format nil "43"))
+               ,"alma">)))｣))
 
 (def test test/xml/sharp-plus-works ()
   (enable-quasi-quoted-xml-syntax)

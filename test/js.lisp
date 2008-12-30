@@ -415,10 +415,6 @@
                                           "a")
                               "b")))｣)))
 
-#|
-
-;; this is badly broken
-
 (def macro test/js/complex-macros/test-macro (properties)
   {(lambda (reader)
      (with-local-readtable
@@ -428,10 +424,10 @@
       `js-inline(slot-value
                  (slot-value
                   (create "a"
-                          (create ,@(list ,@(iter (for (name value) :on properties :by #'cddr)
-                                                  (collect `(quote ,name))
-                                                  (collect (bind ((value value))
-                                                             `str ,(princ-to-string (1+ value))))))))
+                          (create ,@,@(iter (for (name value) :on properties :by #'cddr)
+                                            (collect `(quote ,name))
+                                            (collect (bind ((value value))
+                                                       `str ,(princ-to-string (1+ value)))))))
                   "a")
                  "b"))})
 
@@ -444,23 +440,21 @@
       (is (string= (first result) "div"))
       (bind ((js (third (third result))))
         (is (js-result-equal (eval-js js) 3))))))
-|#
 
 (def test test/js/complex-macros/2 ()
   (is (js-result-equal
        (eval-js
         (emit-xml+js
          ｢(macrolet ((macro (properties)
-                       `(progn
-                          `js-inline(slot-value
-                                     (slot-value
-                                      (create "a"
-                                              (create ,@(quote ,(iter (for (name value) :on properties :by #'cddr)
-                                                                      (collect name)
-                                                                      (collect (bind ((value value))
-                                                                                 `str ,(princ-to-string (1+ value))))))))
-                                      "a")
-                                     "b"))))
+                       ` `js-inline(slot-value
+                                    (slot-value
+                                     (create "x"
+                                             (create ,@,@(iter (for (name value) :on properties :by #'cddr)
+                                                               (collect name)
+                                                               (collect (bind ((value value))
+                                                                          `str ,(princ-to-string (1+ value)))))))
+                                     "x")
+                                    "b")))
             `js(print ,(macro ("a" 1 "b" 2 "c" 3))))｣))
        3)))
 

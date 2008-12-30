@@ -49,17 +49,30 @@
   ｢`(a b)｣
   ｢`(a b (1 2))｣)
 
+(def simple-list-test test/list/dotted
+  ｢`(a . b)｣
+  ｢`(a (b . c))｣)
+
 (def simple-list-test test/list/unquote
   ｢`(a b ,(list 1 2) c)｣
   ｢`(a b ,(list 1 `("call" 'me) 3))｣
   ｢`(a b ,(list 1 `("call" 'me ,(list "Al")) 3))｣)
+
+(def test test/list/nested-unquote ()
+  (equal '(list 42 41)
+         (eval
+          `(bind ((bar 41))
+             ,(eval
+               (read-from-string-with-list-syntax
+                ｢(bind ((foo 42))
+                   ``(,,foo ,bar))｣))))))
 
 (def simple-list-test test/list/unquote-splice
   ｢`(a b ,@(list 1 2))｣
   ｢`(a b ,@(list 1 `("call" 'me) 3))｣
   ｢`(a b ,@(list 1 `("call" 'me ,(list "Al")) 3))｣)
 
-(def test test/list/nested ()
+(def test test/list/nested/1 ()
   (bind ((stage1 (eval `(let ((b 43))
                           ,(read-from-string-with-list-syntax
                             ｢`(let ((a 42))
@@ -71,8 +84,23 @@
       (bind ((stage3 (eval stage2)))
         (is (equal (list 44 42 43) stage3))))))
 
+(def special-variable *result-through-eval*)
+
+(def test test/list/nested/2 ()
+  (bind ((*result-through-eval* ()))
+    (eval (read-from-string-with-list-syntax
+           ｢(macrolet ((x (name)
+                         `(macrolet ((,name (&body body)
+                                       `(push '(,',name ,@body) *result-through-eval*)))
+                            (,name 41 42 43))))
+              (x alma)
+              (x barack))｣))
+    (is (equal '((barack 41 42 43)
+                 (alma   41 42 43))
+               *result-through-eval*))))
+
 (def test test/list/errors ()
-  (signals error (read-from-string-with-list-syntax ｢`(bar `(foo x ,a ,,b ,,,c))｣)))
+  (signals reader-error (read-from-string-with-list-syntax ｢`(bar `(foo x ,a ,,b ,,,c))｣)))
 
 ;;; this is adapted from sbcl's test suite
 
