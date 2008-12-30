@@ -159,6 +159,7 @@
     (character (babel:string-to-octets (string node) :encoding (encoding-of *transformation*))) ;; TODO: more efficient way
     (string (babel:string-to-octets node :encoding (encoding-of *transformation*)))
     (vector (coerce node 'ub8-vector))
+    (fixnum node)
     (bivalent-quasi-quote
      (make-binary-quasi-quote (rest (transformation-pipeline-of node))
                               (transform-quasi-quoted-bivalent-to-quasi-quoted-binary (body-of node))))
