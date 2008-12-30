@@ -8,6 +8,7 @@
 
 (def (transformation e) quasi-quoted-xml-to-quasi-quoted-string ()
   ((text-node-escaping-method :per-character :type (member :cdata :per-character))
+   (disable-short-xml-element-form #f :type boolean :accessor disable-short-xml-element-form?)
    (indentation-width nil))
   'transform-quasi-quoted-xml-to-quasi-quoted-string)
 
@@ -78,14 +79,18 @@
                                           (unless (first-iteration-p)
                                             (collect " "))
                                           (collect (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute attribute)))))))
-           ,@(if children
-                 `(">" ,@indent-new-line
-                       ,@(map 'list (lambda (child)
-                                      (with-increased-xml-indent-level
-                                        (transform-quasi-quoted-xml-to-quasi-quoted-string/element child)))
-                              children)
-                       (,@indent-level "</" ,transformed-name ">" ,@indent-new-line))
-                 `("/>" ,@indent-new-line)))))
+           ,@(cond
+              (children
+               `(">" ,@indent-new-line
+                     ,@(map 'list (lambda (child)
+                                    (with-increased-xml-indent-level
+                                      (transform-quasi-quoted-xml-to-quasi-quoted-string/element child)))
+                            children)
+                     (,@indent-level "</" ,transformed-name ">" ,@indent-new-line)))
+              ((disable-short-xml-element-form? *transformation*)
+               `("></" ,transformed-name ">" ,@indent-new-line))
+              (t
+               `("/>" ,@indent-new-line))))))
       (xml-text
        (bind ((content (content-of node)))
          (etypecase content

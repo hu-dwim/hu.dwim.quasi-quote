@@ -192,11 +192,13 @@
 
 (def (function e) make-quasi-quoted-xml-to-form-emitting-transformation-pipeline
     (stream-variable-name &key binary with-inline-emitting indentation-width
-                          (encoding :utf-8) declarations (text-node-escaping-method :per-character))
+                          (encoding :utf-8) declarations (text-node-escaping-method :per-character)
+                          (disable-short-xml-element-form #f))
   (if binary
       (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
                            :text-node-escaping-method text-node-escaping-method
-                           :indentation-width indentation-width)
+                           :indentation-width indentation-width
+                           :disable-short-xml-element-form disable-short-xml-element-form)
             (make-instance 'quasi-quoted-string-to-quasi-quoted-binary
                            :encoding encoding)
             (make-instance 'quasi-quoted-binary-to-binary-emitting-form
@@ -205,7 +207,8 @@
                            :declarations declarations))
       (list (make-instance 'quasi-quoted-xml-to-quasi-quoted-string
                            :text-node-escaping-method text-node-escaping-method
-                           :indentation-width indentation-width)
+                           :indentation-width indentation-width
+                           :disable-short-xml-element-form disable-short-xml-element-form)
             (make-instance 'quasi-quoted-string-to-string-emitting-form
                            :stream-variable-name stream-variable-name
                            :with-inline-emitting with-inline-emitting
