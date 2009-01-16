@@ -36,3 +36,27 @@
              ((>= ,IDX (slot-value ,LIST 'length)))
            (let ((,VAR (aref ,LIST ,IDX)))
              ,@BODY))})))
+
+(def (js-macro e) |rebind| (variables &body body)
+  {with-preserved-readtable-case
+    `(let ((new-context (create ,@(LOOP
+                                     :FOR VARIABLE :IN VARIABLES
+                                     :FOR JS-NAME = (LISP-NAME-TO-JS-NAME VARIABLE)
+                                     :COLLECT JS-NAME
+                                     :COLLECT (MAKE-SYMBOL JS-NAME)))))
+       (with new-context
+         ,@BODY))})
+
+(macrolet ((frob (name index)
+             `(def (js-macro e) ,name (thing)
+                `(|aref| ,thing ,,index))))
+  (frob |first|   0)
+  (frob |second|  1)
+  (frob |third|   2)
+  (frob |fourth|  3)
+  (frob |fifth|   4)
+  (frob |sixth|   5)
+  (frob |seventh| 6)
+  (frob |eight|   7)
+  (frob |ninth|   8)
+  (frob |tenth|   9))
