@@ -32,6 +32,7 @@
 
   (:export
    #:|finally|
+   #:|with|
    ))
 
 (in-package :cl-quasi-quote-js)

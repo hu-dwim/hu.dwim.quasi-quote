@@ -182,6 +182,8 @@
    (|vector| (transform-vector-like -node-))
    (|list|   (transform-vector-like -node-))
    (|map|    (transform-map-like -node-))
+   (|with|   (bind ((arguments (arguments-of -node-)))
+               `("with (" ,(recurse (first arguments)) ") " ,(transform-statements (rest arguments) :wrap? #t))))
    ;; KLUDGE need to handle 'not' specially, because the one at application-form can only handle infix operators for now
    (|not|    (unless (length= 1 (arguments-of -node-))
                (js-compile-error -node- "The 'not' operator expects exactly one argument!"))
