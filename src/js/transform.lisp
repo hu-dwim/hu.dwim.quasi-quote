@@ -204,18 +204,6 @@
                    #\[
                    ,(recurse (second arguments))
                    #\]))))
-   (|array|  (bind ((arguments (arguments-of -node-)))
-               `(#\[
-                 ,@(recurse-as-comma-separated arguments
-                                               (lambda (node)
-                                                 (if (and (typep node 'js-unquote)
-                                                          (spliced? node))
-                                                     (make-string-unquote
-                                                      (wrap-runtime-delayed-js-transformation-form
-                                                       `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
-                                                         ,(form-of node))))
-                                                     (recurse node))))
-                 #\])))
    ((1+ 1-)  (bind ((arguments (arguments-of -node-))
                     (argument (first arguments))
                     (operator (operator-of -node-)))
@@ -473,6 +461,19 @@
       ,@(with-increased-indent
          (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs (elements-of -node-)))
       "}"))
+   (array-form
+    (bind ((elements (elements-of -node-)))
+      `(#\[
+        ,@(recurse-as-comma-separated elements
+                                      (lambda (node)
+                                        (if (and (typep node 'js-unquote)
+                                                 (spliced? node))
+                                            (make-string-unquote
+                                             (wrap-runtime-delayed-js-transformation-form
+                                              `(transform-quasi-quoted-js-to-quasi-quoted-string/array-elements
+                                                ,(form-of node))))
+                                            (recurse node))))
+        #\])))
    (regexp-form
     `("/"
       ,(regexp-of -node-)

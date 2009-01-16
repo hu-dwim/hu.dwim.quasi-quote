@@ -235,6 +235,22 @@
                                    :source form)
       (setf (elements-of create-node) (mapcar [walk-form !1 create-node env] elements)))))
 
+(def class* array-form (walked-form)
+  ((elements)))
+
+(def (js-walker-handler e) |array| (form parent env)
+  (bind ((elements (rest form)))
+    (with-form-object (toplevel-create-node 'array-form parent
+                                            :source form)
+      (labels ((recurse (node)
+                 (if (and (vectorp node)
+                          (not (stringp node)))
+                     (with-form-object (create-node 'array-form parent
+                                                    :source form)
+                       (setf (elements-of toplevel-create-node) (map 'list #'recurse node)))
+                     (walk-form node toplevel-create-node env))))
+        (setf (elements-of toplevel-create-node) (mapcar #'recurse elements))))))
+
 (def class* slot-value-form (walked-form)
   ((object)
    (slot-name)))
