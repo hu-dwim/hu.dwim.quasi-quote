@@ -446,6 +446,20 @@
                           (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
                   ")"
                   ,@(transform-statements -node- :wrap? #t)))
+   (flet-form
+    (flet ((collect-js-names-of-variable-references (node)
+             (mapcar (compose 'lisp-name-to-js-name 'name-of)
+                     (collect-variable-references node))))
+      (iter (with variable-references = (collect-js-names-of-variable-references (cl-walker:body-of -node-)))
+            (for (lisp-name . body) :in (bindings-of -node-))
+            (for name = (lisp-name-to-js-name lisp-name))
+            (when (some (lambda (reference)
+                          (string= name reference))
+                        variable-references)
+              (js-compile-warning "Found a variable reference to a name that names an flet definition (~S). In the JavaScript output flet definitions are in the same namespace as the variables!" name))
+            (appendf variable-references (collect-js-names-of-variable-references body))
+            (collect `(,@(make-newline-and-indent) "var " ,name " = " ,(recurse body) ";") :into result)
+            (finally (return (cons result (transform-statements (cl-walker:body-of -node-) :wrap? #f)))))))
    (return-from-form
     `("return" ,@(awhen (result-of -node-)
                         (list #\space (recurse it)))))

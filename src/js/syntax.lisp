@@ -339,7 +339,7 @@
 (progn
   (dolist (symbol {with-preserved-readtable-case
                    ;; NOTE lambda needs its own handler, see above
-                   '(progn let let* setf setq defun block return if unwind-protect)})
+                   '(progn let let* setf setq defun block return if unwind-protect flet)})
     (export symbol :cl-quasi-quote-js)
     (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
       (assert cl-symbol)
