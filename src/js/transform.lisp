@@ -145,7 +145,7 @@
          (array-var (unique-js-name "_src"))
          (result nil))
     (when arguments
-      (simple-js-compile-error node "TODO: js compiler doesn't support iterating multiple sequences using map constructs yet"))
+      (js-compile-error node "TODO: js compiler doesn't support iterating multiple sequences using map constructs yet"))
     (when (eq :inplace destructively-into)
       (setf destructively-into array-var))
     (when (and (not *in-js-statement-context*)
@@ -184,12 +184,12 @@
    (|map|    (transform-map-like -node-))
    ;; KLUDGE need to handle 'not' specially, because the one at application-form can only handle infix operators for now
    (|not|    (unless (length= 1 (arguments-of -node-))
-               (simple-js-compile-error -node- "The 'not' operator expects exactly one argument!"))
+               (js-compile-error -node- "The 'not' operator expects exactly one argument!"))
              (with-operator-precedence '!
                `("!" ,(recurse (first (arguments-of -node-))))))
    (|aref|   (bind ((arguments (arguments-of -node-)))
                (unless (rest arguments)
-                 (simple-js-compile-error -node- "The 'aref' operator needs at least two arguments!"))
+                 (js-compile-error -node- "The 'aref' operator needs at least two arguments!"))
                (with-operator-precedence 'aref
                  `(,(recurse (first arguments))
                    ,@(iter (for argument :in (rest arguments))
@@ -198,7 +198,7 @@
                                       #\])))))))
    (|elt|    (bind ((arguments (arguments-of -node-)))
                (unless (length= 2 arguments)
-                 (simple-js-compile-error -node- "An elt operator with ~A arguments?" (length arguments)))
+                 (js-compile-error -node- "An elt operator with ~A arguments?" (length arguments)))
                (with-operator-precedence 'aref
                  `(,(recurse (first arguments))
                    #\[
@@ -220,7 +220,7 @@
                     (argument (first arguments))
                     (operator (operator-of -node-)))
                (unless (length= 1 arguments)
-                 (simple-js-compile-error -node- "More than one argument to ~S?" operator))
+                 (js-compile-error -node- "More than one argument to ~S?" operator))
                (if (typep argument 'variable-reference-form)
                    (with-operator-precedence '++
                      (ecase operator
@@ -306,7 +306,7 @@
         (if (and (typep name 'js-unquote)
                  (spliced? name))
             (when elements
-              (simple-js-compile-error nil "Unexpected element(s) after a spliced unquote in a create form: ~S" elements))
+              (js-compile-error nil "Unexpected element(s) after a spliced unquote in a create form: ~S" elements))
             (collect ": "))
 
         (for value = (pop elements))
@@ -332,7 +332,7 @@
     (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value-of value)))
     (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (name-of value)))
     (js-unquote    (if (spliced? value)
-                       (simple-js-compile-error nil "Spliced unquoting is not supported at value position in create forms")
+                       (js-compile-error nil "Spliced unquoting is not supported at value position in create forms")
                        (make-string-unquote
                         (wrap-runtime-delayed-js-transformation-form
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value ,(form-of value))))))
@@ -389,7 +389,7 @@
           (with-operator-precedence '|if|
             (when (or (typep then 'implicit-progn-mixin)
                       (typep else 'implicit-progn-mixin))
-              (simple-js-compile-error -node- "if's may not have multiple statements in their then/else branch when they are used in expression context"))
+              (js-compile-error -node- "if's may not have multiple statements in their then/else branch when they are used in expression context"))
             `(,(recurse condition) " ? "
                   ,(recurse then)
                " : "
@@ -495,7 +495,7 @@
     (bind ((catch-clauses (catch-clauses-of -node-))
            (finally-clause (finally-clause-of -node-)))
       (awhen (find-if [not (typep !1 'catch-form)] catch-clauses)
-        (simple-js-compile-error -node- "Expecting only catch caluse here, but got ~A" it))
+        (js-compile-error -node- "Expecting only catch caluse here, but got ~A" it))
       (flet ((transform-catch-clause (clause)
                `(,@(make-newline-and-indent) "catch (" ,(lisp-name-to-js-name (variable-name-of clause)) ")"
                  ,@(transform-statements clause :wrap? #t))))

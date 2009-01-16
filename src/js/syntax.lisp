@@ -143,17 +143,31 @@
 ;;;;;;;;;;;;;;
 ;;; conditions
 
-(def (condition* e) js-compile-error (error)
+(def (condition* e) js-compile-condition ()
   ((walked-form nil)))
+
+(def (condition* e) js-compile-error (js-compile-condition error)
+  ())
 
 (def condition* simple-js-compile-error (js-compile-error simple-error)
   ())
 
-(def function simple-js-compile-error (walked-form message &rest args)
+(def function js-compile-error (walked-form message &rest args)
   (declare (type string message)
            (type (or null syntax-node walked-form) walked-form))
   (error 'simple-js-compile-error :walked-form walked-form :format-control message :format-arguments args))
 
+
+(def (condition* e) js-compile-warning (js-compile-condition warning)
+  ())
+
+(def condition* simple-js-compile-warning (js-compile-warning simple-warning)
+  ())
+
+(def function js-compile-warning (walked-form message &rest args)
+  (declare (type string message)
+           (type (or null syntax-node walked-form) walked-form))
+  (error 'simple-js-compile-warning :walked-form walked-form :format-control message :format-arguments args))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; some js specific handlers
@@ -196,7 +210,7 @@
                               :source form)
     (bind (((raw-variables (raw-end-test &optional result) &rest raw-body) (rest form)))
       (when result
-        (simple-js-compile-error for-node "DO can't handle a result expression"))
+        (js-compile-error for-node "DO can't handle a result expression"))
       (setf (values (variables-of for-node) (steps-of for-node))
             (iter (for entry :in raw-variables)
                   (for (var init step) = (ensure-list entry))
@@ -227,7 +241,7 @@
 
 (def (js-walker-handler e) |slot-value| (form parent env)
   (unless (length= 2 (rest form))
-    (simple-js-compile-error nil "Invalid slot-value form" form))
+    (js-compile-error nil "Invalid slot-value form" form))
   (with-form-object (node 'slot-value-form parent
                           :source form)
     (setf (object-of node) (walk-form (second form) node env))
@@ -242,7 +256,7 @@
 
 (def (js-walker-handler e) |new| (form parent env)
   (when (< (length form) 2)
-    (simple-js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" form))
+    (js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" form))
   (bind ((type (second form))
          (args (cddr form)))
     (with-form-object (node 'instantiate-form parent
@@ -257,7 +271,7 @@
 
 (def (js-walker-handler e) |try| (form parent env)
   (when (< (length (rest form)) 2)
-    (simple-js-compile-error nil "Invalid 'try' form, needs at least two elements: ~S" form))
+    (js-compile-error nil "Invalid 'try' form, needs at least two elements: ~S" form))
   (with-form-object (node 'try-form parent
                           :source form)
     (bind ((body (second form))
@@ -276,11 +290,11 @@
 
 (def (js-walker-handler e) |catch| (form parent env)
   (when (< (length (rest form)) 2)
-    (simple-js-compile-error nil "Invalid 'catch' form, needs at least two elements: ~S" form))
+    (js-compile-error nil "Invalid 'catch' form, needs at least two elements: ~S" form))
   (bind (((nil (variable-name &rest condition) &body body) form))
     (unless (and variable-name
                  (symbolp variable-name))
-      (simple-js-compile-error nil "The condition variable in a 'catch' form must be a symbol. Got ~S instead." variable-name))
+      (js-compile-error nil "The condition variable in a 'catch' form must be a symbol. Got ~S instead." variable-name))
     (with-form-object (node 'catch-form parent
                             :source form)
       (setf (variable-name-of node) variable-name)
@@ -303,7 +317,7 @@
 
 (def (js-walker-handler e) |type-of| (form parent env)
   (unless (length= 2 form)
-    (simple-js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" form))
+    (js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" form))
   (bind (((nil object) form))
     (with-form-object (node 'type-of-form parent :source form)
       (setf (object-of node) (walk-form object node env)))))
@@ -315,7 +329,7 @@
   (bind ((regexp (second form)))
     (unless (and (length= 2 form)
                  (stringp regexp))
-      (simple-js-compile-error nil "Invalid 'regexp' form, needs exactly one argument, a string: ~S" form))
+      (js-compile-error nil "Invalid 'regexp' form, needs exactly one argument, a string: ~S" form))
     (with-form-object (node 'regexp-form parent :source form)
       (setf (regexp-of node) regexp))))
 
