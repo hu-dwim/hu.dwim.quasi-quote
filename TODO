@@ -3,3 +3,8 @@
 - continuation support?
 - what about lazyness?
 - what about computed-class?
+
+*** js
+
+- introduce a js-special-form that is called on the sexp and rename
+  the current definer to walked-js-special-form

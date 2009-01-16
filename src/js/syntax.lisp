@@ -230,7 +230,7 @@
   ((elements)))
 
 (def (js-walker-handler e) |create| (form parent env)
-  (let ((elements (rest form)))
+  (bind ((elements (rest form)))
     (with-form-object (create-node 'create-form parent
                                    :source form)
       (setf (elements-of create-node) (mapcar [walk-form !1 create-node env] elements)))))

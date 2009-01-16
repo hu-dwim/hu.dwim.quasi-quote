@@ -27,7 +27,8 @@
    )
 
   (:shadow
-   #:catch-form)
+   #:catch-form
+   )
 
   (:export
    #:|finally|

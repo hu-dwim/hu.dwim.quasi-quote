@@ -10,7 +10,6 @@
 (def special-variable *js-symbol-macros*        (make-hash-table :test 'eq))
 (def special-variable *js-special-forms*        (make-hash-table :test 'eq))
 (def special-variable *js-literals*             (make-hash-table :test 'eq))
-(def special-variable *js-special-forms*        (make-hash-table :test 'eq))
 (def special-variable *js-unique-counter*       (or (when (boundp '*js-unique-counter*)
                                                       *js-unique-counter*)
                                                     ;; protect it from being reseted at an accidental reload
@@ -66,6 +65,7 @@
   (gethash name *js-macros*))
 
 (def function (setf js-macro-definition) (value name)
+  (assert (and name (symbolp name)))
   (when (gethash name *js-macros*)
     (simple-style-warning "Redefining js macro ~S" name))
   (setf (gethash name *js-macros*) value))
