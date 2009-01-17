@@ -217,9 +217,9 @@
                                :slot-names (remove 'output-transformer (mapcar 'slot-definition-name (class-slots (class-of self))))
                                :environment environment))
 
-(def constructor quasi-quoted-string-to-xml-escaped-quasi-quoted-string
-  (setf (output-transformer-of -self-)
-        (bind (((:read-only-slots output-prefix output-postfix) -self-))
+(def method shared-initialize :after ((self quasi-quoted-string-to-xml-escaped-quasi-quoted-string) slot-names &key &allow-other-keys)
+  (setf (output-transformer-of self)
+        (bind (((:read-only-slots output-prefix output-postfix) self))
           (lambda (node)
             (assert (typep node 'string-quasi-quote))
             (when output-prefix
