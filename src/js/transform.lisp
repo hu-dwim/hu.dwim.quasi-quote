@@ -8,7 +8,7 @@
 
 (def special-variable *js-indent-level* 0)
 (def special-variable *in-js-statement-context* #t)
-(def special-variable *js-operator-precedence* 0)
+(def special-variable *js-operator-precedence*)
 
 (def function make-indent ()
   (awhen (indentation-width-of *transformation*)
@@ -70,20 +70,37 @@
     (=   '\=\=)
     (t op)))
 
+(def function to-js-operator-name (name)
+  (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name name) :operator #t))
+
+(def macro with-root-operator-precedence (&body body)
+  `(bind ((*js-operator-precedence* most-positive-fixnum))
+     ,@body))
+
 (def macro with-operator-precedence (operator &body body)
+  `(bind ((*js-operator-precedence* ,(if (or (numberp operator)
+                                             (consp operator))
+                                         (if (eq 'quote (first operator))
+                                             (aprog1
+                                                 (operator-precedence (lisp-operator-name-to-js-operator-name (second operator)))
+                                               (assert it () "~S is not a valid JS operator name" operator))
+                                             operator)
+                                         `(aprog1
+                                              (operator-precedence (lisp-operator-name-to-js-operator-name ,operator))
+                                            (assert it () "~S is not a valid JS operator name" ,operator)))))
+     ,@body))
+
+(def macro with-wrapping-based-on-operator-precedence (operator &body body)
   (with-unique-names (needs-parens? result parent-operator-precedence)
-    `(bind ((js-operator (lisp-operator-name-to-js-operator-name ,operator))
-            (js-operator-name (lisp-name-to-js-name js-operator :operator #t))
-            (,parent-operator-precedence *js-operator-precedence*)
-            (*js-operator-precedence* (or (operator-precedence js-operator)
-                                          *js-operator-precedence*))
-            (,needs-parens? (> *js-operator-precedence* ,parent-operator-precedence))
-            (,result (progn ,@body)))
-       (declare (ignorable js-operator-name))
-       ;; (format *debug-io* "operator: ~S, precedence ~A -> ~A~%" js-operator ,parent-operator-precedence *js-operator-precedence*)
-       (if ,needs-parens?
-           `("(" ,@,result ")")
-           ,result))))
+    `(bind ((,parent-operator-precedence *js-operator-precedence*))
+       (with-operator-precedence ,operator
+         (bind ((,needs-parens? (> *js-operator-precedence* ,parent-operator-precedence))
+                (,result (progn
+                           ;; (format *debug-io* "wrapping at operator: ~S, precedence ~A -> ~A~%" ',operator ,parent-operator-precedence *js-operator-precedence*)
+                           ,@body)))
+           (if ,needs-parens?
+               `("(" ,@,result ")")
+               ,result))))))
 
 (def (function oe) to-js-literal (value)
   (etypecase value
@@ -116,9 +133,9 @@
 (def transform-function transform-incf-like (node plus-plus plus-equal)
   (bind ((arguments (arguments-of node)))
     (ecase (length arguments)
-      (1 (with-operator-precedence '=
+      (1 (with-wrapping-based-on-operator-precedence '=
            `(,(recurse (first arguments)) " = " ,plus-plus ,(recurse (first arguments)))))
-      (2 (with-operator-precedence '+=
+      (2 (with-wrapping-based-on-operator-precedence '+=
            `(,(recurse (first arguments)) " " ,plus-equal " " ,(recurse (second arguments))))))))
 
 (def transform-function transform-vector-like (node)
@@ -175,7 +192,7 @@
   (frob
    (|null|   (bind ((arguments (arguments-of -node-)))
                (assert (length= 1 arguments))
-               (with-operator-precedence '==
+               (with-wrapping-based-on-operator-precedence '==
                  `(,(recurse (first arguments)) " == null"))))
    (|incf|   (transform-incf-like -node- "++" "+="))
    (|decf|   (transform-incf-like -node- "--" "-="))
@@ -187,12 +204,12 @@
    ;; KLUDGE need to handle 'not' specially, because the one at application-form can only handle infix operators for now
    (|not|    (unless (length= 1 (arguments-of -node-))
                (js-compile-error -node- "The 'not' operator expects exactly one argument!"))
-             (with-operator-precedence '!
+             (with-wrapping-based-on-operator-precedence 'not
                `("!" ,(recurse (first (arguments-of -node-))))))
    (|aref|   (bind ((arguments (arguments-of -node-)))
                (unless (rest arguments)
                  (js-compile-error -node- "The 'aref' operator needs at least two arguments!"))
-               (with-operator-precedence 'aref
+               (with-wrapping-based-on-operator-precedence 'member
                  `(,(recurse (first arguments))
                    ,@(iter (for argument :in (rest arguments))
                            (collect `(#\[
@@ -201,7 +218,7 @@
    (|elt|    (bind ((arguments (arguments-of -node-)))
                (unless (length= 2 arguments)
                  (js-compile-error -node- "An elt operator with ~A arguments?" (length arguments)))
-               (with-operator-precedence 'aref
+               (with-wrapping-based-on-operator-precedence 'member
                  `(,(recurse (first arguments))
                    #\[
                    ,(recurse (second arguments))
@@ -212,11 +229,11 @@
                (unless (length= 1 arguments)
                  (js-compile-error -node- "More than one argument to ~S?" operator))
                (if (typep argument 'variable-reference-form)
-                   (with-operator-precedence '++
+                   (with-wrapping-based-on-operator-precedence '++
                      (ecase operator
                        (1+ `("++" ,(recurse argument)))
                        (1- `("--" ,(recurse argument)))))
-                   (with-operator-precedence '+
+                   (with-wrapping-based-on-operator-precedence '+
                      (ecase operator
                        (1+ `("1 + " ,(recurse argument)))
                        (1- `("1 + " ,(recurse argument))))))))))
@@ -233,49 +250,54 @@
 
 (def transform-function variable-binding-form-statement-prefix-generator (node)
   (iter (for (name . value) :in (bindings-of node))
-        (collect `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))
+        (when name
+          (collect (with-root-operator-precedence
+                     `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))))
 
 (def transform-function transform-statements (thing &key (wrap? nil wrap-provided?))
-  (bind ((*js-operator-precedence* 0)
-         (node (labels ((drop-progns (node)
-                          (typecase node
-                            (progn-form (bind ((statements (cl-walker:body-of node)))
-                                          (if (and (length= 1 statements)
-                                                   (typep (first statements) 'implicit-progn-mixin)) ; don't strip the last progn
-                                              (drop-progns (first statements))
-                                              node)))
-                            (t node))))
-                 ;; skip the progn when it's not needed to avoid double {} wrapping
-                 (drop-progns thing)))
-         (*in-js-statement-context* #t)
-         (statement-prefix-generator (constantly nil))
-         (statements (etypecase node
-                       (variable-binding-form
-                        (setf statement-prefix-generator (lambda ()
-                                                           (variable-binding-form-statement-prefix-generator node)))
-                        (setf wrap? (not (in-toplevel-js-block?)))
-                        (setf wrap-provided? #t)
-                        (cl-walker:body-of node))
-                       (implicit-progn-mixin
-                        (cl-walker:body-of node))
-                       (list
-                        node))))
-    (unless wrap-provided?
-      (setf wrap? (and (rest statements)
-                       (not (in-toplevel-js-block?)))))
-    `(,@(when wrap? `(#\Newline ,@(make-indent) "{"))
-      ,@(with-increased-indent
-          (append
-           (funcall statement-prefix-generator)
-           (iter (for statement :in statements)
-                 (collect #\Newline)
-                 (awhen (make-indent)
-                   (collect it))
-                 ;; don't use RECURSE, because it rebinds *in-js-statement-context* to #f
-                 (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
-                 (when (requres-semicolon-postfix? statement)
-                   (collect #\;)))))
-       ,@(when wrap? `(#\Newline ,@(make-indent) "}")))))
+  (with-root-operator-precedence
+    (bind ((node (labels ((drop-progns (node)
+                            (typecase node
+                              (progn-form (bind ((statements (cl-walker:body-of node)))
+                                            (if (and (length= 1 statements)
+                                                     (typep (first statements) 'implicit-progn-mixin)) ; don't strip the last progn
+                                                (drop-progns (first statements))
+                                                node)))
+                              (t node))))
+                   ;; skip the progn when it's not needed to avoid double {} wrapping
+                   (drop-progns thing)))
+           (*in-js-statement-context* #t)
+           (statement-prefix-generator (constantly nil))
+           (statements (etypecase node
+                         (variable-binding-form
+                          (setf statement-prefix-generator (lambda ()
+                                                             (variable-binding-form-statement-prefix-generator node)))
+                          (setf wrap? (not (in-toplevel-js-block?)))
+                          (setf wrap-provided? #t)
+                          (cl-walker:body-of node))
+                         (implicit-progn-mixin
+                          (cl-walker:body-of node))
+                         (list
+                          node))))
+      (unless wrap-provided?
+        (setf wrap? (and (rest statements)
+                         (not (in-toplevel-js-block?)))))
+      (append
+       (when wrap?
+         `(#\Newline ,@(make-indent) "{"))
+       (with-increased-indent
+         (append
+          (funcall statement-prefix-generator)
+          (iter (for statement :in statements)
+                (collect #\Newline)
+                (awhen (make-indent)
+                  (collect it))
+                ;; don't use RECURSE, because it rebinds *in-js-statement-context* to #f
+                (collect (transform-quasi-quoted-js-to-quasi-quoted-string statement))
+                (when (requres-semicolon-postfix? statement)
+                  (collect #\;)))))
+       (when wrap?
+         `(#\Newline ,@(make-indent) "}"))))))
 
 (def function requres-semicolon-postfix? (statement)
   (not (typep statement '(or if-form try-form))))
@@ -370,13 +392,12 @@
                           ,(transform-quasi-quoted-js-to-quasi-quoted-string node)
                           ,(when (requres-semicolon-postfix? node)
                              #\;)))))))
-            (bind ((*js-operator-precedence* 0))
-              `("if (" ,(recurse condition) ")"
-                       ,@(transform-if-block then)
-                       ,@(if else
-                             `(#\Newline ,@(make-indent) "else"
-                                         ,@(transform-if-block else))))))
-          (with-operator-precedence '|if|
+            `("if (" ,(recurse condition) ")"
+                     ,@(transform-if-block then)
+                     ,@(if else
+                           `(#\Newline ,@(make-indent) "else"
+                                       ,@(transform-if-block else)))))
+          (with-wrapping-based-on-operator-precedence 'conditional
             (when (or (typep then 'implicit-progn-mixin)
                       (typep else 'implicit-progn-mixin))
               (js-compile-error -node- "if's may not have multiple statements in their then/else branch when they are used in expression context"))
@@ -391,10 +412,13 @@
            (arguments (arguments-of -node-)))
       (assert (typep operator 'lambda-function-form))
       `("(" ,(recurse operator) ")"
-        "(" ,@(recurse-as-comma-separated arguments) ")" )))
+        "(" ,@(with-operator-precedence 'comma
+                (recurse-as-comma-separated arguments))
+        ")" )))
    (lambda-function-form
     `("function ("
-      ,@(recurse-as-comma-separated (arguments-of -node-) 'transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument)
+      ,@(with-operator-precedence 'comma
+          (recurse-as-comma-separated (arguments-of -node-) 'transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument))
       ")"
       ,@(transform-statements -node- :wrap? #t)))
    (application-form
@@ -403,24 +427,29 @@
       (if (js-special-form? operator)
           (bind ((handler (gethash operator *js-special-forms*)))
             (funcall handler -node-))
-          (with-operator-precedence operator
-            (if (js-operator-name? operator)
-                ;; TODO it can only handle infix operators. due to this |not| needs its own special-form handler
-                (iter (for el :in arguments)
-                      (unless (first-time-p)
-                        (collect " ")
-                        (collect js-operator-name)
-                        (collect " "))
-                      (collect (recurse el)))
-                (bind ((dotted? (starts-with #\. js-operator-name)))
-                  (if dotted?
-                      `(,(recurse (first arguments))
-                         ,js-operator-name #\(
-                         ,@(recurse-as-comma-separated (rest arguments))
-                         #\) )
-                      `(,js-operator-name #\(
-                                          ,@(recurse-as-comma-separated arguments)
-                                          #\) ))))))))
+          (with-wrapping-based-on-operator-precedence (or (operator-precedence (lisp-operator-name-to-js-operator-name operator))
+                                                          #.(operator-precedence 'function-call))
+            ;; (format *debug-io* "application-form of ~S~%" operator)
+            (bind ((js-operator-name (to-js-operator-name operator)))
+              (if (js-operator-name? operator)
+                  ;; TODO it can only handle infix operators. due to this |not| needs its own special-form handler
+                  (iter (for el :in arguments)
+                        (unless (first-time-p)
+                          (collect " ")
+                          (collect js-operator-name)
+                          (collect " "))
+                        (collect (recurse el)))
+                  (bind ((dotted? (starts-with #\. js-operator-name)))
+                    (if dotted?
+                        (with-operator-precedence 'member
+                          `(,(recurse (first arguments))
+                             ,js-operator-name #\(
+                             ,@(recurse-as-comma-separated (rest arguments))
+                             #\) ))
+                        (with-operator-precedence 'comma
+                          `(,js-operator-name #\(
+                                              ,@(recurse-as-comma-separated arguments)
+                                              #\) ))))))))))
    (constant-form
     (to-js-literal (value-of -node-)))
    (macrolet-form
@@ -428,7 +457,8 @@
    (variable-binding-form
     (transform-statements -node-))
    (setq-form
-    `(,(recurse (variable-of -node-)) " = " ,(recurse (value-of -node-))))
+    (with-wrapping-based-on-operator-precedence '=
+      `(,(recurse (variable-of -node-)) " = " ,(recurse (value-of -node-)))))
    (function-definition-form
     `("function " ,(lisp-name-to-js-name (name-of -node-))
                   "("
@@ -454,10 +484,11 @@
     `("return" ,@(awhen (result-of -node-)
                         (list #\space (recurse it)))))
    (instantiate-form
-    `("new " ,(lisp-name-to-js-name (type-to-instantiate-of -node-))
-             "("
-             ,@(recurse-as-comma-separated (arguments-of -node-))
-             ")"))
+    (with-wrapping-based-on-operator-precedence 'new
+      `("new " ,(lisp-name-to-js-name (type-to-instantiate-of -node-))
+               "("
+               ,@(recurse-as-comma-separated (arguments-of -node-))
+               ")")))
    (create-form
     `("{ "
       ,@(with-increased-indent
@@ -492,14 +523,15 @@
    (slot-value-form
     (bind ((object (object-of -node-))
            (slot-name (slot-name-of -node-)))
-      (if (symbolp slot-name)
-          `(,(recurse object)
-             #\.
-             ,(lisp-name-to-js-name slot-name))
-          `(,(recurse object)
-             #\[
-             ,(recurse slot-name)
-             #\]))))
+      (with-wrapping-based-on-operator-precedence 'member
+        (if (symbolp slot-name)
+            `(,(recurse object)
+               #\.
+               ,(lisp-name-to-js-name slot-name))
+            `(,(recurse object)
+               #\[
+               ,(recurse slot-name)
+               #\])))))
    (type-of-form
     (bind ((object (object-of -node-)))
       `("typeof " ,(recurse object))))
@@ -534,16 +566,17 @@
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/toplevel (node)
   (assert (typep node 'js-quasi-quote))
-  (make-string-quasi-quote (rest (transformation-pipeline-of node))
-                           `(,(awhen (output-prefix-of *transformation*)
-                                (if (functionp it)
-                                    (funcall it)
-                                    it))
-                             ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
-                             ,(awhen (output-postfix-of *transformation*)
-                                (if (functionp it)
-                                    (funcall it)
-                                    it)))))
+  (with-root-operator-precedence
+    (make-string-quasi-quote (rest (transformation-pipeline-of node))
+                             `(,(awhen (output-prefix-of *transformation*)
+                                       (if (functionp it)
+                                           (funcall it)
+                                           it))
+                                ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
+                                ,(awhen (output-postfix-of *transformation*)
+                                        (if (functionp it)
+                                            (funcall it)
+                                            it))))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form (node fn)
   (map-filtered-tree (form-of node) 'js-quasi-quote fn))
