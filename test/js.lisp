@@ -442,21 +442,22 @@
         (is (js-result-equal (eval-js js) 3))))))
 
 (def test test/js/complex-macros/2 ()
-  (is (js-result-equal
-       (eval-js
-        (emit-xml+js
-         ｢(macrolet ((macro (properties)
-                       ` `js-inline(slot-value
-                                    (slot-value
-                                     (create "x"
-                                             (create ,@,@(iter (for (name value) :on properties :by #'cddr)
-                                                               (collect name)
-                                                               (collect (bind ((value value))
-                                                                          `str ,(princ-to-string (1+ value)))))))
-                                     "x")
-                                    "b")))
-            `js(print ,(macro ("a" 1 "b" 2 "c" 3))))｣))
-       3)))
+  (with-expected-failures
+    (is (js-result-equal
+         (eval-js
+          (emit-xml+js
+           ｢(macrolet ((macro (properties)
+                         ` `js-inline(slot-value
+                                      (slot-value
+                                       (create "x"
+                                               (create ,@,@(iter (for (name value) :on properties :by #'cddr)
+                                                                 (collect name)
+                                                                 (collect (bind ((value value))
+                                                                            `str ,(princ-to-string (1+ value)))))))
+                                       "x")
+                                      "b")))
+              `js(print ,(macro ("a" 1 "b" 2 "c" 3))))｣))
+         3))))
 
 (def js-test test/js/defun ()
   (with-expected-failures
@@ -497,13 +498,12 @@
       (is (search "2 + 2" (third script))))))
 
 (def test test/js/mixed-with-xml/escaping ()
-  (with-expected-failures
-    (bind ((emitted (emit-xml+js ｢<body `js-inline "&<>" >｣))
-           (body (parse-xml-into-sxml emitted)))
-      (is (string= (first body) "body"))
-      (bind ((script (third body)))
-        (is (stringp script))
-        (is (search "&<>" script))))))
+  (bind ((emitted (emit-xml+js ｢<body `js-inline "&<>" >｣))
+         (body (parse-xml-into-sxml emitted)))
+    (is (string= (first body) "body"))
+    (bind ((script (third body)))
+      (is (stringp script))
+      (is (search "&<>" script)))))
 
 ;; leave it at the end, because it screws up emacs coloring
 (def js-test test/js/string-quoting ()
