@@ -60,16 +60,6 @@
            (concatenate 'string name (princ-to-string (mod (sxhash name) 10000))))
          (hyphened-to-camel-case (symbol-name symbol))))))
 
-(def (function o) lisp-operator-name-to-js-operator-name (op)
-  (case op
-    (|and| '\&\&)
-    (|or| '\|\|)
-    (|not| '!)
-    (|eql| '\=\=)
-    (|eq| '\=\=)
-    (=   '\=\=)
-    (t op)))
-
 (def function to-js-operator-name (name)
   (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name name) :operator #t))
 

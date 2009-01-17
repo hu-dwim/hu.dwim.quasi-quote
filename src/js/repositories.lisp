@@ -164,3 +164,14 @@
 
 (def function js-operator-name? (name)
   (not (null (operator-precedence name))))
+
+(def (function o) lisp-operator-name-to-js-operator-name (op)
+  (case op
+    (|and|   '&&)
+    (|or|    '\|\|)
+    (|not|   '!)
+    (|eq|    '===)
+    (|equal| '==)
+    (|eql|   '==)
+    (=       '==)
+    (t op)))
