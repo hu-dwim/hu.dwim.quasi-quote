@@ -92,7 +92,10 @@
 
 (defun find-js-walker-handler (name)
   (or (and (consp name)
-           (gethash (first name) *js-walker-handlers*))
+           (bind (((:values handler found?) (gethash (first name) *js-walker-handlers*)))
+             (when found?
+               (assert (not (null handler)))
+               handler)))
       (find-walker-handler name)))
 
 (def (definer :available-flags "e") js-walker-handler (name (form parent lexenv) &body body)
@@ -371,4 +374,4 @@
                   (setf (gethash ',new *js-walker-handlers*) (gethash ',existing *js-walker-handlers*))
                   (export ',new))))
     (js-handler-alias |typeof| |type-of|)
-    (js-handler-alias |typeof| type-of)))
+    (js-handler-alias type-of  |type-of|)))

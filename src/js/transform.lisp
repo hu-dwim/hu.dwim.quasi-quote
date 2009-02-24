@@ -524,7 +524,8 @@
                #\])))))
    (type-of-form
     (bind ((object (object-of -node-)))
-      `("typeof " ,(recurse object))))
+      (with-operator-precedence 'typeof
+        `("typeof(" ,(recurse object) ")"))))
    (unwind-protect-form
     `(,@(make-newline-and-indent) "try"
       ,@(recurse (protected-form-of -node-))
