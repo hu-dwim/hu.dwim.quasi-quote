@@ -230,28 +230,27 @@
        (compatible-transformations? a-next (first a-rest) (rest a-rest)
                                     b-next (first b-rest) (rest b-rest))))
 
-(def function transform-quasi-quoted-string-to-quasi-quoted-binary (node)
-  (bind ((encoding (encoding-of *transformation*)))
-    (transformation-typecase node
-      (list
-       (mapcar (lambda (child)
-                 (transform-quasi-quoted-string-to-quasi-quoted-binary child))
-               node))
-      (character (babel:string-to-octets (string node) :encoding encoding))
-      (string (babel:string-to-octets node :encoding encoding))
-      (string-quasi-quote
-       (if (compatible-transformation-pipelines? *transformation-pipeline*
-                                                 (transformation-pipeline-of node))
-           (make-binary-quasi-quote (rest (transformation-pipeline-of node))
-                                    (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node)))
-           (transform node)))
-      (string-unquote
-       (make-binary-unquote
-        (wrap-runtime-delayed-transformation-form
-         `(transform-quasi-quoted-string-to-quasi-quoted-binary
-           ,(map-filtered-tree (form-of node) 'string-quasi-quote
-                               (lambda (child)
-                                 (transform-quasi-quoted-string-to-quasi-quoted-binary child))))))))))
+(def function transform-quasi-quoted-string-to-quasi-quoted-binary (node &key (encoding (encoding-of *transformation*)))
+  (transformation-typecase node
+    (list
+     (mapcar (lambda (child)
+               (transform-quasi-quoted-string-to-quasi-quoted-binary child))
+             node))
+    (character (babel:string-to-octets (string node) :encoding encoding))
+    (string (babel:string-to-octets node :encoding encoding))
+    (string-quasi-quote
+     (if (compatible-transformation-pipelines? *transformation-pipeline*
+                                               (transformation-pipeline-of node))
+         (make-binary-quasi-quote (rest (transformation-pipeline-of node))
+                                  (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node)))
+         (transform node)))
+    (string-unquote
+     (make-binary-unquote
+      (wrap-runtime-delayed-transformation-form
+       `(transform-quasi-quoted-string-to-quasi-quoted-binary
+         ,(map-filtered-tree (form-of node) 'string-quasi-quote
+                             (lambda (child)
+                               (transform-quasi-quoted-string-to-quasi-quoted-binary child)))))))))
 
 (def method compatible-transformations? ((a quasi-quoted-binary-to-binary-emitting-form) a-next a-rest
                                          (b quasi-quoted-string-to-quasi-quoted-binary) (b-next quasi-quoted-binary-to-binary-emitting-form) b-rest)
