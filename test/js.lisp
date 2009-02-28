@@ -273,6 +273,11 @@
                     "then"
                     "else")))
          (print x))｣)
+  ("second"
+   ｢`js(let ((nothing nil)
+             (x (or nothing
+                    "second")))
+         (print x))｣)
   ("then"
    ｢`js(print (if (< 2 3)
                   "then"
