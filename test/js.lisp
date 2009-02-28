@@ -40,18 +40,20 @@
                                                   (xml? #f) (output-stream-name (if xml? '*xml+js-stream* '*js-stream*)))
     (enable-quasi-quoted-list-to-list-emitting-form-syntax)
     (enable-quasi-quoted-js-syntax
-     :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                               output-stream-name
-                               :binary binary
-                               :with-inline-emitting with-inline-emitting
-                               :indentation-width indentation-width)
-     :nested-transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
-                                      output-stream-name
-                                      :binary binary
-                                      :with-inline-emitting with-inline-emitting
-                                      :indentation-width indentation-width
-                                      :output-prefix output-prefix
-                                      :output-postfix output-postfix)
+     :transformation-pipeline (lambda ()
+                                (if (= 1 *quasi-quote-lexical-depth*)
+                                    (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                     output-stream-name
+                                     :binary binary
+                                     :with-inline-emitting with-inline-emitting
+                                     :indentation-width indentation-width)
+                                    (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
+                                     output-stream-name
+                                     :binary binary
+                                     :with-inline-emitting with-inline-emitting
+                                     :indentation-width indentation-width
+                                     :output-prefix output-prefix
+                                     :output-postfix output-postfix)))
      :dispatched-quasi-quote-name 'js)
     (enable-quasi-quoted-js-syntax
      :transformation-pipeline (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
