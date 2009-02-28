@@ -22,7 +22,7 @@
      ;; we are checking for *quasi-quote-lexical-depth* because the transform descents into the unquote forms
      ;; and transform the quasi-quote's it can find there
      (bind ((toplevel? (= 1 *quasi-quote-lexical-depth*))
-            (quasi-quote-node (make-string-quasi-quote transformation-pipeline body)))
+            (quasi-quote-node (make-string-quasi-quote (coerce-to-transformation-pipeline transformation-pipeline) body)))
        (if toplevel?
            `(toplevel-quasi-quote-macro ,quasi-quote-node)
            quasi-quote-node)))

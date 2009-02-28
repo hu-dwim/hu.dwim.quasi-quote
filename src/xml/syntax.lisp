@@ -9,7 +9,7 @@
 (define-syntax (quasi-quoted-xml :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)
-                                       (make-xml-quasi-quote transformation-pipeline (mapcar 'body-of result))
+                                       (make-xml-quasi-quote (coerce-to-transformation-pipeline transformation-pipeline) (mapcar 'body-of result))
                                        (first result))))
     (&key (start-character #\<)
           (end-character #\>)
@@ -33,9 +33,9 @@
               (quasi-quote-node (unless *read-suppress*
                                   (if dispatched?
                                       ;; dispatched `xml(element) syntax
-                                      (process-dispatched-xml-reader-body body transformation-pipeline)
+                                      (process-dispatched-xml-reader-body body (coerce-to-transformation-pipeline transformation-pipeline))
                                       ;; <>-based syntax
-                                      (process-<>-xml-reader-body body transformation-pipeline)))))
+                                      (process-<>-xml-reader-body body (coerce-to-transformation-pipeline transformation-pipeline))))))
          (unless *read-suppress*
            (if toplevel?
                `(toplevel-quasi-quote-macro ,quasi-quote-node)

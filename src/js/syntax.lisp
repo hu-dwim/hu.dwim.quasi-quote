@@ -13,16 +13,12 @@
                                      (splice-character #\@)
                                      (destructive-splice-character #\.)
                                      (transformation-pipeline nil)
-                                     (nested-transformation-pipeline nil)
                                      (dispatched-quasi-quote-name "js"))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
      (bind ((toplevel? (= 1 *quasi-quote-nesting-level*))
-            (quasi-quote-node (make-js-quasi-quote (if (= 1 *quasi-quote-lexical-depth*)
-                                                       transformation-pipeline
-                                                       (or nested-transformation-pipeline
-                                                           transformation-pipeline))
+            (quasi-quote-node (make-js-quasi-quote (coerce-to-transformation-pipeline transformation-pipeline)
                                                    (walk-js body))))
        (if toplevel?
            `(toplevel-quasi-quote-macro ,quasi-quote-node)

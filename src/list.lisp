@@ -17,7 +17,7 @@
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
      (bind ((toplevel? (= 1 *quasi-quote-nesting-level*))
-            (quasi-quote-node (make-list-quasi-quote transformation-pipeline body)))
+            (quasi-quote-node (make-list-quasi-quote (coerce-to-transformation-pipeline transformation-pipeline) body)))
        (if toplevel?
            `(toplevel-quasi-quote-macro ,quasi-quote-node)
            quasi-quote-node)))

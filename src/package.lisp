@@ -72,6 +72,7 @@
      -environment-
      -transformation-
      transformation-pipeline
+     coerce-to-transformation-pipeline
      transformation-pipeline-of
      *transformation*
      *transformation-pipeline*

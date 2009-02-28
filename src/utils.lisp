@@ -85,6 +85,12 @@
   (and (atom thing)
        (not (symbolp thing))))
 
+(def function coerce-to-transformation-pipeline (thing)
+  (etypecase thing
+    (cons thing)
+    (function (funcall thing))
+    (null nil)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; make-string-of-spaces
 
