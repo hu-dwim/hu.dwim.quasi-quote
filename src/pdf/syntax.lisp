@@ -6,6 +6,8 @@
 
 (in-package :cl-quasi-quote-pdf)
 
+;; WARNING this is bitrotten
+
 ;;;;;;;;;
 ;;; Parse
 ;;;

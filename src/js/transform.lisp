@@ -417,6 +417,7 @@
       (if (js-special-form? operator)
           (bind ((handler (gethash operator *js-special-forms*)))
             (funcall handler -node-))
+          ;; KLUDGE this is lame here, operators should not be handled by the same code as application.
           (with-wrapping-based-on-operator-precedence (or (operator-precedence (lisp-operator-name-to-js-operator-name operator))
                                                           #.(operator-precedence 'function-call))
             ;; (format *debug-io* "application-form of ~S~%" operator)
