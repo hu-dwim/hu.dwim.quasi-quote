@@ -22,9 +22,9 @@
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
-     ;; we are checking for *quasi-quote-depth* because the transform descents into the unquote forms
+     ;; we are checking for *quasi-quote-lexical-depth* because the transform descents into the unquote forms
      ;; and transform the quasi-quote's it can find there
-     (bind ((toplevel? (= 1 *quasi-quote-depth*))
+     (bind ((toplevel? (= 1 *quasi-quote-lexical-depth*))
             (quasi-quote-node (make-binary-quasi-quote transformation-pipeline (process-binary-reader-body body))))
        (if toplevel?
            `(toplevel-quasi-quote-macro ,quasi-quote-node)
