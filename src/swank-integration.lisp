@@ -10,7 +10,8 @@
                    "CL-QUASI-QUOTE-JS"
                    "CL-QUASI-QUOTE-XML"
                    "CL-QUASI-QUOTE-PDF"
-                   "CL-QUASI-QUOTE-ODF"))
+                   "CL-QUASI-QUOTE-ODF"
+                   "CL-QUASI-QUOTE-CSS"))
   (register-readtable-for-swank
    (list package)
    (find-symbol "SETUP-READTABLE"

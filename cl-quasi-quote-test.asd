@@ -32,6 +32,7 @@
                ;; TODO lags behind in the refactor :cl-quasi-quote-pdf
                :cl-quasi-quote-xml
                :cl-quasi-quote-js
+               :cl-quasi-quote-css
                :swank
                )
   :components
@@ -45,6 +46,7 @@
              (:file "bivalent" :depends-on ("suite"))
              (:file "xml" :depends-on ("suite" "string"))
              (:file "js" :depends-on ("suite" "string" "xml"))
+             (:file "css" :depends-on ("suite"))
              ;;(:file "pdf" :depends-on ("suite"))
              ))))
 

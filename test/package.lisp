@@ -24,6 +24,7 @@
         :cl-quasi-quote-xml
         ;; TODO :cl-quasi-quote-pdf
         :cl-quasi-quote-js
+        :cl-quasi-quote-css
         )
 
   (:shadowing-import-from :cl-quasi-quote
