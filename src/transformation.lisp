@@ -138,9 +138,17 @@
           (while (typep node 'quasi-quote))))
   node)
 
+(def special-variable *disable-toplevel-quasi-quote-macro* #f)
+
+(def function macroexpand-ignoring-toplevel-quasi-quote-macro (form &optional env)
+  (bind ((*disable-toplevel-quasi-quote-macro* #t))
+    (macroexpand form env)))
+
 (def macro toplevel-quasi-quote-macro (node &environment env)
-  (bind ((*transformation-environment* env))
-    (run-transformation-pipeline node)))
+  (if *disable-toplevel-quasi-quote-macro*
+      node
+      (bind ((*transformation-environment* env))
+        (run-transformation-pipeline node))))
 
 (def generic transform* (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
   (:method (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)

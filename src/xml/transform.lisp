@@ -112,9 +112,13 @@
        (bind ((spliced? (spliced? node))
               (form (form-of node)))
          (if spliced?
-             (progn
-               ;; TODO optimize
-               )
+             (when (and (consp form)
+                        (eq 'list (first form)))
+               (setf form (mapcar (lambda (el)
+                                    (or (maybe-slurp-in-toplevel-quasi-quote
+                                         (macroexpand-ignoring-toplevel-quasi-quote-macro el *transformation-environment*))
+                                        el))
+                                  form)))
              (progn
                ;; first eliminate a possible toplevel qq that ends up wrapped in an unquote, probably in a macro, coming from a macro argument
                (setf form (maybe-slurp-in-toplevel-quasi-quote (form-of node)))
@@ -122,22 +126,28 @@
                (when (and (consp form)
                           (symbolp (first form))
                           (macro-function (first form)))
-                 ;; TODO this should be macroexpand and handle macrolet's. macroexpand is problematic because it also expands TOPLEVEL-QUASI-QUOTE-MACRO
                  (awhen (maybe-slurp-in-toplevel-quasi-quote
-                         (macroexpand-1 form *transformation-environment*))
+                         (macroexpand-ignoring-toplevel-quasi-quote-macro form *transformation-environment*))
                    (setf form it)))))
-         (if (self-evaluating? form)
-             (transform-quasi-quoted-xml-to-quasi-quoted-string/element form)
-             (make-string-unquote
-              (wrap-runtime-delayed-transformation-form
-               (if spliced?
-                   `(map 'list (lambda (node)
-                                 ,(with-runtime-xml-indent-level
-                                   ;; TODO this is not enough, unquoted parts are not indented just because of this
-                                   `(transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))
-                         ,form)
-                   (with-runtime-xml-indent-level
-                     `(transform-quasi-quoted-xml-to-quasi-quoted-string/element ,form))))))))
+         (cond
+           ((and spliced?
+                 (consp form)
+                 (eq 'list (first form))
+                 (every #'self-evaluating? (rest form)))
+            (mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/element (rest form)))
+           ((self-evaluating? form)
+            (transform-quasi-quoted-xml-to-quasi-quoted-string/element form))
+           (t
+            (make-string-unquote
+             (wrap-runtime-delayed-transformation-form
+              (if spliced?
+                  `(map 'list (lambda (node)
+                                ,(with-runtime-xml-indent-level
+                                  ;; TODO this is not enough, unquoted parts are not indented just because of this
+                                  `(transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))
+                        ,form)
+                  (with-runtime-xml-indent-level
+                    `(transform-quasi-quoted-xml-to-quasi-quoted-string/element ,form)))))))))
       (string-quasi-quote node)
       (null (values)))))
 
@@ -183,20 +193,22 @@
     (string-quasi-quote node)))
 
 (def function transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value (node)
-  (transformation-typecase node
-    (xml-unquote (make-string-unquote
-                  (wrap-runtime-delayed-transformation-form
-                   `(locally
-                        (declare #+sbcl(sb-ext:muffle-conditions sb-ext:compiler-note))
-                      (awhen ,(form-of node)
-                        (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value it))))))
-    (integer (integer-to-string node))
-    (float (format nil "~F" node))
-    (symbol (if (constantp node)
-                (symbol-value node)
-                (symbol-name node)))
-    (string-quasi-quote node) ;; TODO what about xml escaping?
-    (string (escape-as-xml node))))
+  (if (unquote-node-with-constant-value? node 'xml-unquote)
+      (constant-value-of-unquote-node node)
+      (transformation-typecase node
+        (xml-unquote (make-string-unquote
+                      (wrap-runtime-delayed-transformation-form
+                       `(locally
+                            (declare #+sbcl(sb-ext:muffle-conditions sb-ext:compiler-note))
+                          (awhen ,(form-of node)
+                            (transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value it))))))
+        (integer (integer-to-string node))
+        (float (format nil "~F" node))
+        (symbol (if (constantp node)
+                    (symbol-value node)
+                    (symbol-name node)))
+        (string-quasi-quote node) ;; TODO what about xml escaping?
+        (string (escape-as-xml node)))))
 
 ;;;;;;
 ;;; xml escaping

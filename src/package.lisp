@@ -36,6 +36,9 @@
      destructively-spliced?
      body-of
      syntax-node
+     unquote-node-with-constant-value?
+     constant-value-of-unquote-node
+     macroexpand-ignoring-toplevel-quasi-quote-macro
      map-ast
      map-ast/map-accessors-unless-same-returned
      bq-process bq-bracket

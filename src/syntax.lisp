@@ -81,6 +81,22 @@
   (princ (form-of self))
   self)
 
+(def function unquote-node-with-constant-value? (node type)
+  ;; TODO this could handle '(progn (progn 42))
+  (and (typep node 'unquote)
+       (constantp (form-of node))
+       (typep node type)))
+
+(def function constant-value-of-unquote-node (node)
+  (bind ((form (form-of node)))
+    (assert (constantp form))
+    (etypecase form
+      (symbol (symbol-value form))
+      (string form)
+      (integer (integer-to-string form))
+      (float (format nil "~F" form))
+      (ratio (format nil "~D" form)))))
+
 ;; TODO: eliminate side effect and check for returning (values) from unqutes
 ;; TODO: what if the unquote returns with another function
 (def (class* e) side-effect (syntax-node)

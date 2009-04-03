@@ -170,7 +170,7 @@
      (transform-quasi-quoted-s-to-s-emitting-form/unquote node))
     (side-effect (form-of node))))
 
-(defun transform-quasi-quoted-string-to-string-emitting-form/flatten-body (input)
+(def function transform-quasi-quoted-string-to-string-emitting-form/flatten-body (input)
   (let (flattened-elements)
     (labels ((traverse (node)
                (when node
