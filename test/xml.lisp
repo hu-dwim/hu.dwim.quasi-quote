@@ -211,10 +211,10 @@
         <fOOO (baR 42)>))>｣))
 
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote1 ()
-  (｢<taggg attribute="atttr"><foo/></taggg>｣
+  (｢<taggg attribute="atttr"><foo/><bar><baz/></bar></taggg>｣
    ｢(macrolet ((nester (tag-name attribute-value &body body)
                  `<,,tag-name (attribute ,,attribute-value) ,@,@body>))
-      (nester "taggg" "atttr" <foo>))｣))
+      (nester "taggg" "atttr" <foo> <bar <baz>>))｣))
 
 (def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
   (｢<html><body><foo/><bar/></body></html>｣
