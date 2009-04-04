@@ -244,7 +244,7 @@
           (collect (with-root-operator-precedence
                      `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))))
 
-(def transform-function transform-statements (thing &key (wrap? nil wrap-provided?))
+(def transform-function transform-statements (thing &key (wrap? nil wrap-provided?) prefix-statements)
   (with-root-operator-precedence
     (bind ((node (labels ((drop-progns (node)
                             (typecase node
@@ -277,6 +277,7 @@
          `(#\Newline ,@(make-indent) "{"))
        (with-increased-indent
          (append
+          prefix-statements
           (funcall statement-prefix-generator)
           (iter (for statement :in statements)
                 (collect #\Newline)
@@ -292,9 +293,105 @@
 (def function requres-semicolon-postfix? (statement)
   (not (typep statement '(or if-form try-form))))
 
-(def generic transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument (node)
-  (:method ((node required-function-argument-form))
-    (lisp-name-to-js-name (name-of node))))
+(def function source-of-parent (node)
+  (source-of (cl-walker:parent-of node)))
+
+(def transform-function transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body (node)
+  (bind ((arguments (remove-if (of-type 'allow-other-keys-function-argument-form)
+                               (arguments-of node)))
+         (rest-arg-name (aif (find-if (of-type 'rest-function-argument-form) (arguments-of node))
+                             (lisp-name-to-js-name (name-of it))
+                             "_kArgs"))
+         (rest-has-been-emitted? #f)
+         (transformed-arguments ())
+         (transformed-body-prefix ()))
+    (with-operator-precedence 'comma
+      (macrolet ((%iterate-arguments (collect-commas? &body body)
+                   `(iter (while arguments)
+                          (for argument = (pop arguments))
+                          (for previous-argument :previous argument)
+                          ,(when collect-commas?
+                             `(unless (or (first-time-p)
+                                          (typep previous-argument 'rest-function-argument-form))
+                                (push ", " transformed-arguments)))
+                          (etypecase argument
+                            ,@body)))
+                 (iterate-arguments (&body body)
+                   `(%iterate-arguments #t ,@body))
+                 (iterate-arguments-without-commas (&body body)
+                   `(%iterate-arguments #f ,@body)))
+        (labels ((process-required-arguments ()
+                   (iterate-arguments
+                    (required-function-argument-form (push (lisp-name-to-js-name (name-of argument)) transformed-arguments))
+                    (rest-function-argument-form (push (lisp-name-to-js-name (name-of argument)) transformed-arguments)
+                                                 (setf rest-has-been-emitted? #t))
+                    (keyword-function-argument-form (push argument arguments)
+                                                    (process-first-keyword-argument))))
+                 (register-keyword-parser (argument)
+                   (bind ((default-value (default-value-of argument))
+                          (js-name (lisp-name-to-js-name (name-of argument)))
+                          (js-keyword-name (lisp-name-to-js-name (effective-keyword-name-of argument))))
+                     (push (apply #'concatenate 'string
+                                  (append* " var " js-name "="
+                                           (bind ((accessor (concatenate 'string rest-arg-name "[\"" js-keyword-name "\"]")))
+                                             (if default-value
+                                                 (list accessor " ? " accessor " : " (recurse default-value))
+                                                 accessor))
+                                           ";"))
+                           transformed-body-prefix)))
+                 (process-first-keyword-argument ()
+                   (iterate-arguments
+                    (keyword-function-argument-form (unless rest-has-been-emitted?
+                                                      (push rest-arg-name transformed-arguments))
+                                                    (push (format nil "if (!~A) ~A = new Object;~%" rest-arg-name rest-arg-name) ;
+                                                          transformed-body-prefix)
+                                                    (register-keyword-parser argument)
+                                                    (process-keyword-arguments))))
+                 (process-keyword-arguments ()
+                   (iterate-arguments-without-commas
+                    (keyword-function-argument-form (register-keyword-parser argument)))))
+          (process-required-arguments))
+        `("("
+          ,@(nreverse transformed-arguments)
+          ")"
+          ,@(transform-statements node :wrap? #t :prefix-statements (nreverse transformed-body-prefix)))))))
+
+(def transform-function transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (arguments)
+  (with-operator-precedence 'comma
+    (macrolet ((iterate-arguments (&body body)
+                 `(iter (while arguments)
+                        (for argument = (pop arguments))
+                        (unless (first-time-p)
+                          (collect ", "))
+                        (typecase argument
+                          ,@body))))
+      (labels ((process-required-arguments ()
+                 (iterate-arguments
+                  (free-variable-reference-form (bind ((name (name-of argument)))
+                                                  (if (keywordp name)
+                                                      (progn
+                                                        (push argument arguments)
+                                                        (nconcing (process-keyword-arguments)))
+                                                      (collect (recurse argument)))))
+                  (t (collect (recurse argument)))))
+               (process-keyword-arguments ()
+                 `("{"
+                   ,@(with-increased-indent
+                      (iter (for name = (pop arguments))
+                            (for argument = (pop arguments))
+                            (while name)
+                            (unless (and (typep name 'free-variable-reference-form)
+                                         (keywordp (name-of name)))
+                              (js-compile-error (cl-walker:parent-of argument) "Don't know what to do with ~S at a &key name position" name))
+                            (unless argument
+                              (js-compile-error (cl-walker:parent-of argument) "Odd number of &key args for js function application form ~S" (source-of-parent argument)))
+                            (unless (first-time-p)
+                              (collect ", "))
+                            (collect (lisp-name-to-js-name (name-of name)))
+                            (collect ": ")
+                            (collect (recurse argument))))
+                   "}")))
+        (process-required-arguments)))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name-value-pairs (input-elements)
   (iter (with indent = `(#\, #\Newline ,@(make-indent)))
@@ -401,16 +498,9 @@
     (bind ((operator (operator-of -node-))
            (arguments (arguments-of -node-)))
       (assert (typep operator 'lambda-function-form))
-      `("(" ,(recurse operator) ")"
-        "(" ,@(with-operator-precedence 'comma
-                (recurse-as-comma-separated arguments))
-        ")" )))
+      `("(" ,(recurse operator) ")" "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")")))
    (lambda-function-form
-    `("function ("
-      ,@(with-operator-precedence 'comma
-          (recurse-as-comma-separated (arguments-of -node-) 'transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument))
-      ")"
-      ,@(transform-statements -node- :wrap? #t)))
+    `("function " ,@(transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body -node-)))
    (application-form
     (bind ((arguments (arguments-of -node-))
            (operator (operator-of -node-)))
@@ -434,13 +524,9 @@
                     (if dotted?
                         (with-operator-precedence 'member
                           `(,(recurse (first arguments))
-                             ,js-operator-name #\(
-                             ,@(recurse-as-comma-separated (rest arguments))
-                             #\) ))
+                             ,js-operator-name "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (rest arguments)) ")" ))
                         (with-operator-precedence 'comma
-                          `(,js-operator-name #\(
-                                              ,@(recurse-as-comma-separated arguments)
-                                              #\) ))))))))))
+                          `(,js-operator-name "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")"))))))))))
    (constant-form
     (to-js-literal (value-of -node-)))
    (macrolet-form
@@ -452,11 +538,7 @@
       `(,(recurse (variable-of -node-)) " = " ,(recurse (value-of -node-)))))
    (function-definition-form
     `("function " ,(lisp-name-to-js-name (name-of -node-))
-                  "("
-                  ,@(iter (for argument :in (arguments-of -node-))
-                          (collect (transform-quasi-quoted-js-to-quasi-quoted-string/lambda-argument argument)))
-                  ")"
-                  ,@(transform-statements -node- :wrap? #t)))
+                  ,@(transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body -node-)))
    (flet-form
     (flet ((collect-js-names-of-variable-references (node)
              (mapcar (compose 'lisp-name-to-js-name 'name-of)
