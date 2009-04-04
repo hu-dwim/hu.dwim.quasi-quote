@@ -85,3 +85,15 @@
      (funcall otherwise))
     (t
      otherwise)))
+
+(def function not-yet-implemented (&optional (datum "Not yet implemented." datum-p) &rest args)
+  (when datum-p
+    (setf datum (concatenate 'string "Not yet implemented: " datum)))
+  (apply #'cerror "Ignore and continue" datum args))
+
+(def function append* (&rest things)
+  "Like append, but works for non-list arguments, too"
+  (iter (for thing :in things)
+        (nconcing (if (listp thing)
+                      (copy-list thing)
+                      (cons thing nil)))))

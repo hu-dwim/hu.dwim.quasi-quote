@@ -55,6 +55,8 @@
      binary-position
      ub8-vector
      vector-extend
+     append*
+     not-yet-implemented
      wrap-forms-with-bindings
      quoted-symbol?
      self-evaluating?
