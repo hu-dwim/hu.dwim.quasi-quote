@@ -4,6 +4,12 @@
 
 (in-package :cl-quasi-quote-js)
 
+(macrolet ((x (&rest names)
+             `(progn
+                ,@(iter (for name :in names)
+                        (collect `(def (js-lisp-macro-alias e) ,name))))))
+  (x when unless))
+
 (def (js-macro e) |cond| (&rest clauses)
   (if (endp clauses)
       nil
