@@ -112,6 +112,9 @@
        (member (car form) '(cl:lambda |lambda|))
        #t))
 
+(def function js-lambda-like-walker (ast-node args body env)
+  (cl-walker::%walk-lambda-like ast-node (%fixup-lambda-list args) body env))
+
 (defun undefined-js-reference-handler (type name)
   (declare (ignore type name))
   #+nil ; they are simply too common in js, so just ignore them
@@ -134,6 +137,7 @@
                               :symbol-macro-name?  'js-symbol-macro-name?
                               :constant-name?      'js-constant-name?
                               :lambda-form?        'js-lambda-form?
+                              :lambda-like-walker  'js-lambda-like-walker
                               :macroexpand-1       'js-macroexpand-1
                               :find-walker-handler 'find-js-walker-handler)
     (walk-form form nil (make-walk-environment lexenv))))
@@ -174,20 +178,23 @@
 (def class* function-definition-form (lambda-function-form)
   ((name)))
 
+(def function %fixup-lambda-list (args)
+  ;; this is kinda hackish, but does what we want
+  (nsubstitute '&rest '|&rest|
+               (nsubstitute '&optional '|&optional|
+                            (nsubstitute '&allow-other-keys '|&allow-other-keys|
+                                         (substitute '&key '|&key| args)))))
+
 (def js-walker-handler |defun| (form parent env)
   (bind (((name args &rest body) (rest form)))
     (with-form-object (result 'function-definition-form parent
                               :source form)
-      (walk-lambda-like result
-                        (nsubstitute '&optional '|&optional|
-                                     (nsubstitute '&allow-other-keys '|&allow-other-keys|
-                                                  (substitute '&key '|&key| args)))
-                        body env)
+      (walk-lambda-like result (%fixup-lambda-list args) body env)
       (setf (name-of result) name))))
 
 ;; cl:lambda is a macro that expands to (function (lambda ...)), so we need to define our own handler here
 (def (js-walker-handler e) |lambda| (form parent env)
-  (walk-lambda form parent env))
+  (walk-form `(function ,form) parent env))
 
 (def (js-walker-handler e) |return| (form parent env)
   (unless (<= 1 (length form) 2)
