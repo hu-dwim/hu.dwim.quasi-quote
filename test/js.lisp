@@ -467,12 +467,30 @@
          3))))
 
 (def js-test test/js/defun ()
-  (with-expected-failures
-    (3
-     ｢`js(progn
-           (defun x (a &key (b 42) &allow-other-keys)
-             (return (+ a b)))
-           (print (x 1 :b 2)))｣)))
+  (145
+   ｢`js(progn
+         (defun x (a &key (b 42) c d)
+           (when (=== d undefined)
+             (setf d 100))
+           (return (+ a b c d)))
+         (print (x 1 :c 2)))｣)
+  (145
+   ｢`js(progn
+         (defun x (a &rest foo &key (b 42) c d)
+           (when (== foo.c 2)
+             (setf d 100))
+           (return (+ a b c d)))
+         (print (x 1 :c 2)))｣)
+  (48
+   ｢`js(flet ((fun (a &rest foo)
+                (return ((lambda (a &rest foo &key (b 42) c d)
+                           (return (+ a b c d)))
+                         a foo))))
+         (print (fun 1 :c 2 :d 3)))｣)
+  (4
+   ｢`js(flet ((fun (a &key (b 3))
+                (return (+ a b))))
+         (print (fun 1)))｣))
 
 (def js-test test/js/lambda ()
   ("foobarbaz"
