@@ -10,13 +10,16 @@
 (def special-variable *transformation*)
 (def special-variable *transformation-environment*)
 
+(def function toplevel-quasi-quote-macro-call? (form)
+  (and (consp form)
+       (eq (first form) 'toplevel-quasi-quote-macro)
+       (typep (second form) 'quasi-quote)))
+
 (def function maybe-slurp-in-toplevel-quasi-quote (value)
   ;; when a macro is expanded, then its arguments are toplevel qq exressions like: (macro-with-xml <body>).
   ;; for example the xml transformation needs to look ahead and try to slurp in <body> for collapsing
   ;; more constant parts.
-  (if (and (consp value)
-           (eq (first value) 'toplevel-quasi-quote-macro)
-           (typep (second value) 'quasi-quote)
+  (if (and (toplevel-quasi-quote-macro-call? value)
            (compatible-transformation-pipelines? *transformation-pipeline* (transformation-pipeline-of (second value))))
       (progn
         (assert (length= 2 value))
@@ -138,17 +141,14 @@
           (while (typep node 'quasi-quote))))
   node)
 
-(def special-variable *disable-toplevel-quasi-quote-macro* #f)
-
 (def function macroexpand-ignoring-toplevel-quasi-quote-macro (form &optional env)
-  (bind ((*disable-toplevel-quasi-quote-macro* #t))
-    (macroexpand form env)))
+  (if (toplevel-quasi-quote-macro-call? form)
+      form
+      (macroexpand form env)))
 
 (def macro toplevel-quasi-quote-macro (node &environment env)
-  (if *disable-toplevel-quasi-quote-macro*
-      node
-      (bind ((*transformation-environment* env))
-        (run-transformation-pipeline node))))
+  (bind ((*transformation-environment* env))
+    (run-transformation-pipeline node)))
 
 (def generic transform* (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
   (:method (parent-tr parent-next-tr parent-pipeline node tr next-tr pipeline)
