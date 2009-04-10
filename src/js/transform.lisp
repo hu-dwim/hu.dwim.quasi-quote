@@ -678,3 +678,21 @@
           `(transform-quasi-quoted-js-to-quasi-quoted-string
             ,(transform-quasi-quoted-js-to-quasi-quoted-string/process-unquoted-form
               node 'transform-quasi-quoted-js-to-quasi-quoted-string)))))))
+
+(def (transformation e) quasi-quoted-js-to-quasi-quoted-js-building-forms ()
+  ((result-quasi-quote-pipeline))
+  'transform-quasi-quoted-js-to-quasi-quoted-js-building-forms)
+
+(defmethod print-object ((self quasi-quoted-js-to-quasi-quoted-js-building-forms) *standard-output*)
+  (princ "[JS->JS forms]"))
+
+(def function transform-quasi-quoted-js-to-quasi-quoted-js-building-forms (node)
+  (check-type node js-syntax-node)
+  (bind (((list (quote qq-macro) result) (bq-completely-process node)))
+    (assert (eq list 'list))
+    (assert (eq quote 'quote))
+    (assert (eq qq-macro 'toplevel-quasi-quote-macro))
+    (with-unique-names (result-tmp)
+      `(bind ((,result-tmp ,result))
+         (setf (transformation-pipeline-of ,result-tmp) ',(result-quasi-quote-pipeline-of *transformation*))
+         ,result-tmp))))
