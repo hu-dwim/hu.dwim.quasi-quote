@@ -62,4 +62,10 @@
                                   (assert initarg)
                                   (nconcing (list initarg (if (consp slot-value)
                                                               (cons 'list processed-slot-value)
-                                                              processed-slot-value))))))))))
+                                                              processed-slot-value)))))))))
+
+  (:method ((x variable-binding-form))
+    `(make-instance 'variable-binding-form
+                    :body (list ,@(map-ast #'bq-process (cl-walker:body-of x)))
+                    :bindings (list ,@(iter (for (name . value) :in (bindings-of x))
+                                            (collect `(cons ,(map-ast #'bq-process name) ,(map-ast #'bq-process value))))))))
