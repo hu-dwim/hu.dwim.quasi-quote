@@ -41,7 +41,7 @@
      macroexpand-ignoring-toplevel-quasi-quote-macro
      map-ast
      map-ast/map-accessors-unless-same-returned
-     bq-process bq-bracket
+     bq-process bq-bracket bq-completely-process
      *bq-list*
      *bq-list**
      *bq-nconc*
@@ -82,6 +82,7 @@
      *transformation*
      *transformation-pipeline*
      *transformation-environment*
+     compatible-with-current-transformation-pipeline?
      compatible-transformation-pipelines?
      compatible-transformations?
      run-transformation-pipeline

@@ -166,7 +166,8 @@
   (etypecase node
     (vector (write-sequence node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
-    (delayed-emitting (funcall node)))
+    (delayed-emitting (funcall node))
+    (binary-quasi-quote (write-quasi-quoted-binary (body-of node) stream)))
   (values))
 
 (def function reduce-binary-subsequences (sequence)

@@ -239,8 +239,7 @@
     (character (babel:string-to-octets (string node) :encoding encoding))
     (string (babel:string-to-octets node :encoding encoding))
     (string-quasi-quote
-     (if (compatible-transformation-pipelines? *transformation-pipeline*
-                                               (transformation-pipeline-of node))
+     (if (compatible-with-current-transformation-pipeline? (transformation-pipeline-of node))
          (make-binary-quasi-quote (rest (transformation-pipeline-of node))
                                   (transform-quasi-quoted-string-to-quasi-quoted-binary (body-of node)))
          (transform node)))
@@ -250,7 +249,8 @@
        `(transform-quasi-quoted-string-to-quasi-quoted-binary
          ,(map-filtered-tree (form-of node) 'string-quasi-quote
                              (lambda (child)
-                               (transform-quasi-quoted-string-to-quasi-quoted-binary child)))))))))
+                               (transform-quasi-quoted-string-to-quasi-quoted-binary child)))))))
+    (binary-quasi-quote node)))
 
 (def method compatible-transformations? ((a quasi-quoted-binary-to-binary-emitting-form) a-next a-rest
                                          (b quasi-quoted-string-to-quasi-quoted-binary) (b-next quasi-quoted-binary-to-binary-emitting-form) b-rest)

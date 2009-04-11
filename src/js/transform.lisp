@@ -189,6 +189,7 @@
    (|vector| (transform-vector-like -node-))
    (|list|   (transform-vector-like -node-))
    (|map|    (transform-map-like -node-))
+   ;; TODO i think the with syntax ought to be a full AST node...
    (|with|   (bind ((arguments (arguments-of -node-)))
                `("with (" ,(recurse (first arguments)) ") " ,(transform-statements (rest arguments) :wrap? #t))))
    ;; KLUDGE need to handle 'not' specially, because the one at application-form can only handle infix operators for now
@@ -638,17 +639,24 @@
 (defmethod print-object ((self quasi-quoted-js-to-quasi-quoted-string) *standard-output*)
   (princ "[JS->String]"))
 
+(def method compatible-transformations? ((a quasi-quoted-js-to-quasi-quoted-string) a-next a-rest
+                                         (b quasi-quoted-js-to-quasi-quoted-string) b-next b-rest)
+  (compatible-transformations? a-next (first a-rest) (rest a-rest)
+                               b-next (first b-rest) (rest b-rest)))
+
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/toplevel (node)
   (assert (typep node 'js-quasi-quote))
   (with-root-operator-precedence
     (make-string-quasi-quote (rest (transformation-pipeline-of node))
                              `(,(awhen (output-prefix-of *transformation*)
-                                       (if (functionp it)
+                                       (if (or (functionp it)
+                                               (symbolp it))
                                            (funcall it)
                                            it))
                                 ,(transform-quasi-quoted-js-to-quasi-quoted-string (body-of node))
                                 ,(awhen (output-postfix-of *transformation*)
-                                        (if (functionp it)
+                                        (if (or (functionp it)
+                                                (symbolp it))
                                             (funcall it)
                                             it))))))
 
@@ -664,10 +672,11 @@
                                                               (transformation-pipeline-of node))
                         (transform-quasi-quoted-js-to-quasi-quoted-string/toplevel node)
                         (transform node)))
-    (string-quasi-quote node)))
+    (string-quasi-quote node)
+    (binary-quasi-quote node)))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/unquote (node)
-  (assert (typep node 'js-unquote))
+  (check-type node js-unquote)
   (bind ((spliced? (spliced? node)))
     (make-string-unquote
      (wrap-runtime-delayed-js-transformation-form

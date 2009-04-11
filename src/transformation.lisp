@@ -60,6 +60,10 @@
              (eq a-rest b-rest))
         (call-next-method))))
 
+(def function compatible-with-current-transformation-pipeline? (pipeline)
+  (or (not (boundp '*transformation-pipeline*))
+      (compatible-transformation-pipelines? *transformation-pipeline* pipeline)))
+
 (def function compatible-transformation-pipelines? (a b)
   (or (and (null a) (null b))
       (compatible-transformations? (first a) (second a) (rest (rest a))

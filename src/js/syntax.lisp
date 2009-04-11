@@ -13,7 +13,8 @@
                                      (splice-character #\@)
                                      (destructive-splice-character #\.)
                                      (transformation-pipeline nil)
-                                     (dispatched-quasi-quote-name "js"))
+                                     (dispatched-quasi-quote-name "js")
+                                     (toplevel-reader-wrapper #'identity))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -33,6 +34,7 @@
    :destructive-splice-character destructive-splice-character
    :readtable-case :preserve
    :unquote-readtable-case :toplevel
+   :toplevel-reader-wrapper toplevel-reader-wrapper
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
 (macrolet ((x (name transformation-pipeline &optional args)
