@@ -29,10 +29,11 @@
 
 (def function wrap-runtime-delayed-js-transformation-form (form)
   (wrap-runtime-delayed-transformation-form
-   (wrap-forms-with-bindings
-    (when (indentation-width-of *transformation*)
-      `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*))))
-    form)))
+   (wrap-forms-with-bindings (append `((*in-js-statement-context* ,*in-js-statement-context*)
+                                       (*js-operator-precedence* ,*js-operator-precedence*))
+                                     (when (indentation-width-of *transformation*)
+                                       `((*js-indent-level* (+ *js-indent-level* ,*js-indent-level*)))))
+                             form)))
 
 (def (function oe) hyphened-to-camel-case (input)
   (declare (type string input))
