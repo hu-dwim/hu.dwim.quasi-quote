@@ -73,7 +73,7 @@
                     text-property-default-nonsticky))))
   ;; set up some prepended rules that apply the new syntax table on the regexp matched <> chars
   (font-lock-add-keywords
-   nil `(("\\(`ui\\|`xml\\|`js-inline\\|`js\\|`str\\|`\\|,\\)" 1 'cl-quasi-quote-quasi-quote-face)
+   nil `(("\\(`ui\\|`xml\\|`js-inline\\|`js-xml\\|`js-piece\\|`js\\|`str\\|`\\|,\\)" 1 'cl-quasi-quote-quasi-quote-face)
          ("[ 	\n`]\\(<\\)\\(\\w+\\|,\\)"
           (0 (progn
                (cl-quasi-quote-mark-text-as-xml-paren (match-beginning 1) (match-end 1))
