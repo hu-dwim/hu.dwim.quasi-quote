@@ -326,6 +326,18 @@
                                   (walk-form condition node env)))
       (setf (cl-walker:body-of node) (mapcar [walk-form !1 node env] body)))))
 
+(def class* while-form (walked-form implicit-progn-mixin)
+  ((condition)))
+
+(def (js-walker-handler e) |while| (form parent env)
+  (when (< (length (rest form)) 2)
+    (js-compile-error nil "Invalid 'while' form, needs at least two elements: ~S" form))
+  (bind (((nil condition &body body) form))
+    (with-form-object (node 'while-form parent
+                            :source form)
+      (setf (condition-of node) (walk-form condition node env))
+      (setf (cl-walker:body-of node) (mapcar [walk-form !1 node env] body)))))
+
 (def (js-walker-handler e) |macrolet| (form parent env)
   ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
   (funcall (find-walker-handler `(macrolet))

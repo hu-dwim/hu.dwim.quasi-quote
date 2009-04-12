@@ -595,6 +595,11 @@
       ,@(recurse-as-comma-separated (steps-of -node-))
       ")"
       ,@(transform-statements (body-of -node-) :wrap? #t)))
+   (while-form
+    `("while ("
+      ,(recurse (condition-of -node-))
+      ")"
+      ,@(transform-statements (cl-walker:body-of -node-) :wrap? #t)))
    (slot-value-form
     (bind ((object (object-of -node-))
            (slot-name (slot-name-of -node-)))
