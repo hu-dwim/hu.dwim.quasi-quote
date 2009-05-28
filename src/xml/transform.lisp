@@ -20,6 +20,17 @@
   (make-string-quasi-quote (rest (transformation-pipeline-of node))
                            (transform-quasi-quoted-xml-to-quasi-quoted-string/element (body-of node))))
 
+(def method compatible-transformations? ((a quasi-quoted-xml-to-quasi-quoted-string) a-next a-rest
+                                         (b quasi-quoted-xml-to-quasi-quoted-string) b-next b-rest)
+  (and (eql (text-node-escaping-method-of a)
+            (text-node-escaping-method-of b))
+       (eql (disable-short-xml-element-form? a)
+            (disable-short-xml-element-form? b))
+       (eql (indentation-width-of a)
+            (indentation-width-of b))
+       (compatible-transformations? a-next (first a-rest) (rest a-rest)
+                                    b-next (first b-rest) (rest b-rest))))
+
 (def special-variable *xml-indent-level* 0)
 
 (def macro with-increased-xml-indent-level (&body body)
@@ -112,13 +123,19 @@
        (bind ((spliced? (spliced? node))
               (form (form-of node)))
          (if spliced?
-             (when (and (consp form)
-                        (eq 'list (first form)))
-               (setf form (mapcar (lambda (el)
-                                    (or (maybe-slurp-in-toplevel-quasi-quote
-                                         (macroexpand-ignoring-toplevel-quasi-quote-macro el *transformation-environment*))
-                                        el))
-                                  form)))
+             (flet ((slurp-in (form)
+                      (when (and (consp form)
+                                 (eq 'list (first form)))
+                        (mapcar (lambda (el)
+                                  (or (maybe-slurp-in-toplevel-quasi-quote
+                                       (macroexpand-ignoring-toplevel-quasi-quote-macro el *transformation-environment*))
+                                      el))
+                                form))))
+               (iter (for slurped = (slurp-in form))
+                     (if (or (null slurped)
+                             (equal form slurped))
+                         (return)
+                         (setf form slurped))))
              (progn
                ;; first eliminate a possible toplevel qq that ends up wrapped in an unquote, probably in a macro, coming from a macro argument
                (setf form (maybe-slurp-in-toplevel-quasi-quote (form-of node)))
