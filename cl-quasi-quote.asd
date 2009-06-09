@@ -152,8 +152,9 @@
             :components ((:module "integration"
                                   :components ((:file "swank-integration")))))))
 
+;; TODO doesn't work for some reason...
 (define-qq-system-connection cl-quasi-quote-xml-and-cl-quasi-quote-js
-  :requires (:cl-quasi-quote :cl-quasi-quote-xml :cl-quasi-quote-js)
+  :requires (:cl-quasi-quote-xml :cl-quasi-quote-js)
   :setup-readtable-function "cl-quasi-quote::setup-readtable"
   :components
   ((:module "src"

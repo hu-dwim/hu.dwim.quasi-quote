@@ -22,8 +22,8 @@
             (pprint-indent :block 2)
             (loop :do
                (pprint-exit-if-list-exhausted)
-               (princ (pprint-pop)))))
-        (princ body)))
+               (prin1 (pprint-pop)))))
+        (prin1 body)))
   quasi-quote)
 
 
@@ -78,7 +78,7 @@
   (cond
     ((destructively-spliced? self) (write-string "."))
     ((spliced? self)               (write-string "@")))
-  (princ (form-of self))
+  (prin1 (form-of self))
   self)
 
 (def function unquote-node-with-constant-value? (node type)

@@ -166,6 +166,7 @@
   (etypecase node
     (vector (write-sequence node stream))
     (list (mapc (lambda (node) (write-quasi-quoted-binary node stream)) node))
+    (integer (write-byte node stream))
     (delayed-emitting (funcall node))
     (binary-quasi-quote (write-quasi-quoted-binary (body-of node) stream)))
   (values))
