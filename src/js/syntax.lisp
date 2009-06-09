@@ -177,9 +177,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; some js specific handlers
 
-(def class* function-definition-form (lambda-function-form)
-  ((name)))
-
 (def function %fixup-lambda-list (args)
   ;; this is kinda hackish, but does what we want
   (nsubstitute '&rest '|&rest|
@@ -190,9 +187,9 @@
 (def js-walker-handler |defun| (form parent env)
   (bind (((name args &rest body) (rest form)))
     (with-form-object (result 'function-definition-form parent
-                              :source form)
-      (walk-lambda-like result (%fixup-lambda-list args) body env)
-      (setf (name-of result) name))))
+                              :source form
+                              :name name)
+      (walk-lambda-like result (%fixup-lambda-list args) body env))))
 
 ;; cl:lambda is a macro that expands to (function (lambda ...)), so we need to define our own handler here
 (def (js-walker-handler e) |lambda| (form parent env)
