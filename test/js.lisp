@@ -501,6 +501,13 @@
            (return (+ x "baz")))
          "foo"))｣))
 
+(def js-test test/js/nesting-through-unquote ()
+  (42
+   ｢`js(let ((x 40))
+         ,(when (> 3 2)
+            `js(incf x 2))
+         (print x))｣))
+
 (def test test/js/escaping ()
   (let ((str "alma"))
     ;; return the input if there's no need for escaping
