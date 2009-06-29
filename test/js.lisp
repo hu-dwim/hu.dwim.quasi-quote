@@ -8,6 +8,9 @@
 
 (defsuite* (test/js :in test))
 
+;;; Running the js tests requires a js command line interpreter.
+;;; On Linux you can install the package 'spidermonkey-bin' to get one.
+
 ;; this would hang sbcl, see the .asd for details...
 #+nil
 (unless (search "JavaScript" (nth-value 1 (trivial-shell:shell-command "js --version")))
@@ -111,7 +114,7 @@
 (def function pprint/xml+js (string &optional (with-inline-emitting #f) (binary #f))
   (downcased-pretty-print (macroexpand (read-from-string-with-xml+js-syntax string with-inline-emitting binary))))
 
-(def function emit-xml+js (string &optional (with-inline-emitting #f) (binary #f))
+(def function emit/xml+js (string &optional (with-inline-emitting #f) (binary #f))
   (bind ((form (read-from-string-with-xml+js-syntax string with-inline-emitting binary)))
     (with-output-to-string (*xml+js-stream*)
       (emit (eval form)))))
@@ -441,7 +444,7 @@
 (def test test/js/complex-macros/1 ()
   (with-expected-failures
     (bind ((result (parse-xml-into-sxml
-                    (emit-xml+js
+                    (emit/xml+js
                      ｢<div `js(print ,(test/js/complex-macros/test-macro ("a" 1 "b" 2 "c" 3)))>｣
                      #t))))
       (is (string= (first result) "div"))
@@ -452,7 +455,7 @@
   (with-expected-failures
     (is (js-result-equal
          (eval-js
-          (emit-xml+js
+          (emit/xml+js
            ｢(macrolet ((macro (properties)
                          ` `js-inline(slot-value
                                       (slot-value
@@ -521,7 +524,7 @@
          (print (+ `str("a") 10 ,10)))｣))
 
 (def test test/js/mixed-with-xml/simple ()
-  (bind ((emitted (emit-xml+js ｢<body `js(+ 2 2)>｣))
+  (bind ((emitted (emit/xml+js ｢<body `js(+ 2 2)>｣))
          (body (parse-xml-into-sxml emitted)))
     (is (string= (first body) "body"))
     (bind ((script (third body)))
@@ -530,7 +533,7 @@
       (is (search "2 + 2" (third script))))))
 
 (def test test/js/mixed-with-xml/escaping ()
-  (bind ((emitted (emit-xml+js ｢<body `js-inline "&<>" >｣))
+  (bind ((emitted (emit/xml+js ｢<body `js-inline "&<>" >｣))
          (body (parse-xml-into-sxml emitted)))
     (is (string= (first body) "body"))
     (bind ((script (third body)))
@@ -547,14 +550,13 @@
 #|
 REPL demos
 
-(bind ((code-as-string
-        ｢<body
-         ,(concatenate 'string "some runtime" " generated <escaped> text")
-         `str("***<put some unescaped text here!>***")
-         ;; let's insert some JavaScript here, with some unquoted runtime part:
-         `js(print (+ 2 ,(+ 20 20))
-             `str(#\Newline "***<put one more unescaped text here!>***"))>｣))
-  (pprint-xml+js code-as-string t)
-  (emit-xml+js code-as-string))
+(bind ((code-as-string ｢<body
+                          ,(string-upcase "some runtime generated <escaped> text")
+                          `str("***<unescaped text 1>***")
+                          ;; let's insert some JavaScript here, with some unquoted runtime part:
+                          `js(print (+ 2 ,(+ 20 20))
+                                `str("***<unescaped text 2>***"))>｣))
+  (pprint/xml+js code-as-string t)
+  (emit/xml+js code-as-string))
 
 |#
