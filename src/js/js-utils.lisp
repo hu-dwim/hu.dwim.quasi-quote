@@ -35,7 +35,7 @@
                             ,@(WHEN MORE `((cond ,@MORE))))})))))))
 
 (def (js-macro e) |dolist| ((var list) &body body)
-  (with-unique-js-names (idx)
+  (with-unique-names (idx)
     (once-only (list)
       {with-preserved-readtable-case
         `(do ((,IDX 0 (1+ ,IDX)))

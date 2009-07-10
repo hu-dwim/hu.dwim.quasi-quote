@@ -28,6 +28,8 @@
 (def (function ie) unique-js-name (&optional (prefix "g"))
   (concatenate 'string prefix (princ-to-string (incf *js-unique-counter*))))
 
+;; TODO: delme eventually
+;; this is suspicious and caused a weird bug in dolist (always generating the very same js variable name)
 (def (macro e) with-unique-js-names (names &body body)
   `(bind (,@(iter (for name :in names)
                   (collect `(,name (quote ,(make-symbol (unique-js-name (string name))))))))
