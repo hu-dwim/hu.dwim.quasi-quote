@@ -12,7 +12,7 @@
 (in-package #:cl-quasi-quote-system)
 
 (define-qq-subsystem :cl-quasi-quote-xml
-  :version "0.1"
+  :version "1.0"
   :description "Quasi quote transformations for emitting XML"
   :setup-readtable-function "cl-quasi-quote-xml::setup-readtable"
   :components

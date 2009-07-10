@@ -41,7 +41,7 @@
   (merge-pathnames path (component-pathname (find-system :cl-quasi-quote))))
 
 (defsystem :cl-quasi-quote
-  :version "0.1"
+  :version "1.0"
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
 	   "Tamás Borbély <tomi.borbely@gmail.com>"
 	   "Levente Mészáros <levente.meszaros@gmail.com>")

@@ -12,7 +12,7 @@
 (in-package #:cl-quasi-quote-system)
 
 (define-qq-subsystem :cl-quasi-quote-css
-  :version "0.1"
+  :version "1.0"
   :description "Quasi quote transformations for emitting CSS"
   :setup-readtable-function "cl-quasi-quote-css::setup-readtable"
   :components
