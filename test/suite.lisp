@@ -1,10 +1,17 @@
-;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test)
+(in-package :hu.dwim.quasi-quote.test)
+
+(defun setup-readtable ()
+  (hu.dwim.quasi-quote::setup-readtable)
+  (enable-string-quote-syntax))
+
+(register-readtable-for-swank
+ '(:hu.dwim.quasi-quote.test) 'setup-readtable)
 
 (defsuite* (test :in root-suite))
 

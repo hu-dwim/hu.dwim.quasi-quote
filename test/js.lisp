@@ -1,10 +1,10 @@
-;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test)
+(in-package :hu.dwim.quasi-quote.test)
 
 (defsuite* (test/js :in test))
 
@@ -14,7 +14,7 @@
 ;; this would hang sbcl, see the .asd for details...
 #+nil
 (unless (search "JavaScript" (nth-value 1 (trivial-shell:shell-command "js --version")))
-  (error "You need a command line JavaScript interpreter for the cl-quasi-quote-js tests. Install the spidermonkey-bin package for one..."))
+  (error "You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. Install the spidermonkey-bin package for one..."))
 
 (def (function d) eval-js (string)
   (bind (((:values stdout nil return-code) (trivial-shell:shell-command "js" :input string)))
@@ -161,7 +161,7 @@
                           (octets-to-string (funcall (compile nil lambda-form))
                                             :encoding :utf-8))))))
 
-;;;;;;;;;;;;;;;;;;;;;
+;;;;;;
 ;;; the tests finally
 
 (def js-test test/js/simple ()

@@ -1,10 +1,10 @@
-;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test)
+(in-package :hu.dwim.quasi-quote.test)
 
 (defsuite* (test/css :in test))
 
@@ -12,7 +12,7 @@
 
 (def test test-css/1 ()
   (bind ((*transformation* (make-instance 'quasi-quoted-css-to-quasi-quoted-string :indentation-width 0)))
-    (cl-quasi-quote-css::transform-quasi-quoted-css-to-quasi-quoted-string
+    (hu.dwim.quasi-quote.css::transform-quasi-quoted-css-to-quasi-quoted-string
      (make-css-quasi-quote nil (list (make-css-clause (list (make-css-element-selector "body" nil))
                                                  (list (make-css-attribute "color" "black"))))))))
 

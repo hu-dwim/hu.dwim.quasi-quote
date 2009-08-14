@@ -1,10 +1,10 @@
-;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote-test)
+(in-package :hu.dwim.quasi-quote.test)
 
 (defsuite* (test/binary :in test))
 
@@ -145,7 +145,7 @@
           f 10)"))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;
 ;;; mixed non-compatibles
 
 ;; TODO this mixed stuff may be nonsense...

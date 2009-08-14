@@ -1,49 +1,30 @@
-;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-quasi-quote)
+(in-package :common-lisp-user)
 
-(defpackage :cl-quasi-quote-test
-  (:nicknames :qqt)
-
-  (:use :common-lisp
-        :metabang-bind
-        :alexandria
-        :iterate
-        :stefil
-        :babel
+(defpackage :hu.dwim.quasi-quote.test
+  (:use :babel
         :babel-streams
-        :cl-def
-        :cl-walker
-        :cl-syntax-sugar
-        :cl-quasi-quote
-        :cl-quasi-quote-system
-        :cl-quasi-quote-xml
-        ;; TODO :cl-quasi-quote-pdf
-        :cl-quasi-quote-js
-        :cl-quasi-quote-css
-        )
+        :hu.dwim.common-lisp
+        :hu.dwim.def
+        :hu.dwim.quasi-quote
+        :hu.dwim.quasi-quote.css
+        :hu.dwim.quasi-quote.js
+        #+nil :hu.dwim.quasi-quote.pdf
+        :hu.dwim.quasi-quote.xml
+        :hu.dwim.stefil
+        :hu.dwim.syntax-sugar
+        :hu.dwim.walker)
 
-  (:shadowing-import-from :cl-quasi-quote
-   #:body-of
-   #:parent-of
-   #:form
-   #:map-ast
-   )
+  (:shadowing-import-from :hu.dwim.quasi-quote #:body-of
+                          #:parent-of
+                          #:form
+                          #:map-ast))
 
-  (:export
-   #:test))
-
-(in-package :cl-quasi-quote-test)
+(in-package :hu.dwim.quasi-quote.test)
 
 (import-external-quasi-quote-symbols-for-extensions)
-
-(defun setup-readtable ()
-  (cl-quasi-quote::setup-readtable)
-  (enable-string-quote-syntax #\｢ #\｣))
-
-(register-readtable-for-swank
- '("CL-QUASI-QUOTE-TEST") 'setup-readtable)
