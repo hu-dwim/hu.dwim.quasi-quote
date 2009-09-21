@@ -10,6 +10,8 @@
 
 ;;; Running the js tests requires a js command line interpreter.
 ;;; On Linux you can install the package 'spidermonkey-bin' to get one.
+;;; update-alternatives --list js
+;;; sudo update-alternatives --set js /usr/bin/smjs
 
 ;; this would hang sbcl, see the .asd for details...
 #+nil
