@@ -17,7 +17,7 @@
   :description "Quasi quoted domain specific languages and transformations"
   :depends-on (:babel
                :babel-streams
-               :hu.dwim.common-lisp
+               :hu.dwim.common
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.syntax-sugar+hu.dwim.walker
                :hu.dwim.walker)
