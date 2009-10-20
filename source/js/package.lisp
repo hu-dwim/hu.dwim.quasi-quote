@@ -9,7 +9,7 @@
 (defpackage :hu.dwim.quasi-quote.js
   (:use :babel
         :babel-streams
-        :hu.dwim.common-lisp
+        :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.quasi-quote
         :hu.dwim.syntax-sugar

@@ -7,7 +7,7 @@
 (in-package :common-lisp-user)
 
 (defpackage :hu.dwim.quasi-quote.pdf
-  (:use :hu.dwim.common-lisp
+  (:use :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.quasi-quote
         :hu.dwim.syntax-sugar))
