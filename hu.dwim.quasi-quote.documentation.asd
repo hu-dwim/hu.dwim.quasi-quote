@@ -18,4 +18,5 @@
   :depends-on (:hu.dwim.quasi-quote.test
                :hu.dwim.wui)
   :components ((:module "documentation"
-                :components ((:file "package")))))
+                :components ((:file "quasi-quote" :depends-on ("package"))
+                             (:file "package")))))
