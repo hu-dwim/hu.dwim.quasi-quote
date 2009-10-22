@@ -64,6 +64,7 @@
          (indent-new-line (when indent-level
                             '(#\NewLine))))
     (transformation-typecase node
+      (character (format nil "~A" node))
       (string (ecase (text-node-escaping-method-of *transformation*)
                 (:cdata (wrap-with-xml-quote node))
                 (:per-character (escape-as-xml node))))
