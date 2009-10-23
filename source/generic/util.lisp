@@ -96,7 +96,7 @@
 
 (def constant +string-with-spaces-cache-size+ 40)
 
-(def (constant :test 'equalp) +indent-length->string-with-spaces+
+(def (constant :test #'equalp) +indent-length->string-with-spaces+
   (bind ((result (make-array +string-with-spaces-cache-size+)))
     (iter (for index :from 0 :below +string-with-spaces-cache-size+)
           (setf (aref result index) (make-string index :initial-element #\Space)))

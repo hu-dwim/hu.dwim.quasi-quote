@@ -6,10 +6,10 @@
 
 (in-package :hu.dwim.quasi-quote.xml)
 
-(def (constant :test #'string=) +xml-namespace-uri+ "http://www.w3.org/XML/1998/namespace")
-(def (constant :test #'string=) +whitespace-characters+ (coerce
-                                                          '(#\Space #\Tab #\Linefeed #\Return #\Page)
-                                                          'simple-base-string)
+(def constant +xml-namespace-uri+ "http://www.w3.org/XML/1998/namespace")
+(def constant +whitespace-characters+ (coerce
+                                        '(#\Space #\Tab #\Linefeed #\Return #\Page)
+                                        'simple-base-string)
     "A string of all characters which are considered to be whitespace. Same as Perl's [\\s].")
 
 (defclass sax-handler (sax:default-handler)
