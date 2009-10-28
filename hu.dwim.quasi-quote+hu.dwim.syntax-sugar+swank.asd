@@ -15,7 +15,6 @@
            "Levente Mészáros <levente.meszaros@gmail.com>")
   :licence "BSD / Public domain"
   :depends-on (:hu.dwim.quasi-quote
-               :hu.dwim.syntax-sugar
-               :swank)
+               :hu.dwim.syntax-sugar+swank)
   :components ((:module "integration"
                 :components ((:file "syntax-sugar+swank")))))

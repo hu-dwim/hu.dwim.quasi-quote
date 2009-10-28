@@ -19,11 +19,13 @@
                :cxml
                :hu.dwim.def+hu.dwim.stefil
                :hu.dwim.quasi-quote
+               :hu.dwim.quasi-quote+hu.dwim.syntax-sugar+swank
                :hu.dwim.quasi-quote.css
                :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
                #+nil :hu.dwim.quasi-quote.pdf
+               :hu.dwim.stefil+swank
+               :hu.dwim.syntax-sugar+swank
                :parse-number
-               :swank
                :trivial-shell)
   :components ((:module "test"
                 :components ((:file "package")
