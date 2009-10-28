@@ -10,8 +10,7 @@
 
 (defun import-duplicate-symbols (&optional (package *package*))
   (import
-   '(shrink-vector if-bind aif when-bind awhen prog1-bind aprog1 it capitalize-first-letter capitalize-first-letter!
-     handle-otherwise)
+   '(shrink-vector capitalize-first-letter capitalize-first-letter! handle-otherwise)
    package))
 
 (def (function io) make-adjustable-vector (initial-length &key (element-type t))
@@ -33,23 +32,6 @@
   #-(or allegro cmu lispworks sbcl scl)
   (setq str (subseq str 0 size))
   str)
-
-(defmacro if-bind (var test &body then/else)
-  (assert (first then/else)
-          (then/else)
-          "IF-BIND missing THEN clause.")
-  (destructuring-bind (then &optional else)
-      then/else
-    `(let ((,var ,test))
-       (if ,var ,then ,else))))
-
-(defmacro when-bind (var test &body body)
-  `(if-bind ,var ,test (progn ,@body)))
-
-(defmacro prog1-bind (var ret &body body)
-  `(let ((,var ,ret))
-    ,@body
-    ,var))
 
 ;; cl-l10n
 (defun capitalize-first-letter (str)

@@ -206,10 +206,11 @@
 
   (:method ((node hash-table))
     (with-unique-names (table)
-      `(prog1-bind ,table (make-hash-table :test ',(hash-table-test node))
+      `(bind ((,table (make-hash-table :test ',(hash-table-test node))))
          ,@(iter (for (key value) :in-hashtable node)
                  (collect `(setf (gethash ,(make-syntax-node-emitting-form key) ,table)
-                                 ,(make-syntax-node-emitting-form value)))))))
+                                 ,(make-syntax-node-emitting-form value))))
+         ,table)))
 
   (:method ((node list))
     (iter (for element :in node)

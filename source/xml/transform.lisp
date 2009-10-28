@@ -64,7 +64,7 @@
          (indent-new-line (when indent-level
                             '(#\NewLine))))
     (transformation-typecase node
-      (character (format nil "~A" node))
+      (character (string node))
       (string (ecase (text-node-escaping-method-of *transformation*)
                 (:cdata (wrap-with-xml-quote node))
                 (:per-character (escape-as-xml node))))
@@ -181,15 +181,17 @@
        (if (and (typep value 'xml-unquote)
                 ;; NOTE: checks if the the form is a simple variable reference, because otherwise due to inline emitting we cannot evaluate the value out of order
                 (symbolp (form-of value)))
-           (when-bind form (form-of value)
-             (make-string-unquote
-              (with-unique-names (value-variable)
-                `(when-bind ,value-variable ,form
-                   ,(make-string-quasi-quote (rest *transformation-pipeline*)
-                                             `(,transformed-name
-                                               "=\""
-                                               ,(make-string-unquote `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value ,value-variable))
-                                               "\""))))))
+           (bind (((:slots form) value))
+             (when form
+               (make-string-unquote
+                (with-unique-names (value-variable)
+                  `(bind ((,value-variable ,form))
+                     (when ,value-variable
+                       ,(make-string-quasi-quote (rest *transformation-pipeline*)
+                                                 `(,transformed-name
+                                                   "=\""
+                                                   ,(make-string-unquote `(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value ,value-variable))
+                                                   "\""))))))))
            `(,transformed-name
              "=\""
              ,(transform-quasi-quoted-xml-to-quasi-quoted-string/attribute-value value)
