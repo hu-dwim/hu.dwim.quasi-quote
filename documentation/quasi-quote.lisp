@@ -29,6 +29,10 @@
 - what about lazyness?
 - what about computed-class?
 
+- extend xml syntax to support this (?)
+<p (some-attribute 42)
+  this is free text that will <i not> intern anything in any package while being read>
+
 *** js
 
 - introduce a js-special-form that is called on the sexp and rename

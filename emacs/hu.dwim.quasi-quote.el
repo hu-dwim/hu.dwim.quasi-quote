@@ -9,7 +9,7 @@
 
 ;; usage example in your init.el:
 ;;
-;; (add-to-list 'load-path (expand-file-name "~/workspace/quasi-quote/etc/"))
+;; (add-to-list 'load-path (expand-file-name "~/workspace/hu.dwim.quasi-quote/emacs/"))
 ;;
 ;; (require 'hu.dwim.quasi-quote)
 ;;

@@ -31,6 +31,7 @@
    (compatible-transformations? a a-next a-rest
                                 b-next (first b-rest) (rest b-rest))))
 
+;; TODO rename to make-transformation-pipeline/quasi-quoted-js-to-string-emitting-form
 (def (function e) make-quasi-quoted-js-to-form-emitting-transformation-pipeline
     (stream-variable-name &key binary with-inline-emitting indentation-width (encoding :utf-8)
                           output-prefix output-postfix declarations escape-as-xml)
