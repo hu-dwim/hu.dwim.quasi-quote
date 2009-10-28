@@ -6,6 +6,9 @@
 
 (in-package :hu.dwim.quasi-quote.js)
 
+(def layer js (ignore-undefined-references)
+  ())
+
 (def special-variable *js-macros*               (make-hash-table :test 'eq))
 (def special-variable *js-symbol-macros*        (make-hash-table :test 'eq))
 (def special-variable *js-special-forms*        (make-hash-table :test 'eq))
@@ -41,20 +44,32 @@
 (def (function io) js-literal-name? (name)
   (nth-value 1 (gethash name *js-literals*)))
 
-(def (function io) js-function-name? (name)
+(def layered-method hu.dwim.walker::constant-name? :in js (form &optional env)
+  (declare (ignore env))
+  (or (gethash form *js-literals*)
+      (and (not (symbolp form))
+           (not (consp form)))))
+
+(def layered-method hu.dwim.walker::function-name? :in js (name)
   (declare (ignore name))
   #t)
 
-(def (function io) js-macro-name? (name &optional env)
+(def layered-method hu.dwim.walker::macro-name? :in js (name &optional env)
   (declare (ignore env))
   (and (not (js-special-form? name))
        (not (null (js-macro-definition name)))))
 
-(def function js-symbol-macro-name? (name &optional env)
+(def layered-method hu.dwim.walker::symbol-macro-name? :in js (name &optional env)
   (and (not (js-special-form? name))
        (nth-value 1 (macroexpand-1 name env))))
 
-(def function js-macroexpand-1 (form &optional env)
+(def layered-method hu.dwim.walker::lambda-form? :in js (form &optional env)
+  (declare (ignore env))
+  (and (consp form)
+       (member (car form) '(cl:lambda |lambda|))
+       #t))
+
+(def layered-method hu.dwim.walker::walker-macroexpand-1 :in js (form &optional env)
   (declare (ignore env)) ; TODO check the env for macrolets?
   (bind ((name (first form))
          (args (rest form))

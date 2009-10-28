@@ -83,66 +83,39 @@
      (stream-variable-name &key
                            (encoding *default-character-encoding*))))
 
-(def method find-walker-handler ((ast-node syntax-node))
-  (constantly ast-node))
-
 (def special-variable *js-walker-handlers* (make-hash-table :test #'eq))
 
-(defun find-js-walker-handler (name)
-  (or (and (consp name)
-           (bind (((:values handler found?) (gethash (first name) *js-walker-handlers*)))
-             (when found?
-               (assert (not (null handler)))
-               handler)))
-      (find-walker-handler name)))
-
-(def (definer :available-flags "e") js-walker-handler (name (form parent lexenv) &body body)
+(def (definer :available-flags "e") js-walker (name &body body)
   (with-standard-definer-options name
     `(bind ((hu.dwim.walker::*walker-handlers* *js-walker-handlers*))
-       (defwalker-handler ,name (,form ,parent ,lexenv)
+       (def walker ,name
          ,@body))))
 
-(def function js-constant-name? (form &optional env)
-  (declare (ignore env))
-  (or (gethash form *js-literals*)
-      (and (not (symbolp form))
-           (not (consp form)))))
+(def layered-methods find-walker-handler
+  (:method :in js :around (form)
+    (or (and (consp form)
+             (bind (((:values handler found?) (gethash (first form) *js-walker-handlers*)))
+               (when found?
+                 (assert (not (null handler)))
+                 handler)))
+        (call-next-layered-method)))
+  (:method :in js ((ast-node syntax-node))
+    (constantly ast-node)))
 
-(def function js-lambda-form? (form &optional env)
-  (declare (ignore env))
-  (and (consp form)
-       (member (car form) '(cl:lambda |lambda|))
-       #t))
-
-(def function js-lambda-like-walker (ast-node args body env)
-  (hu.dwim.walker::%walk-lambda-like ast-node (%fixup-lambda-list args) body env))
-
-(defun undefined-js-reference-handler (type name)
-  (declare (ignore type name))
-  #+nil ; they are simply too common in js, so just ignore them
-  (unless (member name '("document" "debugger") :test #'string=)
-    (hu.dwim.walker::undefined-reference-handler type name)))
+(def layered-method hu.dwim.walker::walk-lambda-like :in js (ast-node args body env &rest rest &key &allow-other-keys)
+   (apply #'call-next-layered-method ast-node (%fixup-lambda-list args) body env rest))
 
 (def function walk-js (form &optional lexenv)
-  (labels ((recurse (x)
-             (typecase x
-               (list-quasi-quote
-                (run-transformation-pipeline x))
-               (cons (cons (recurse (car x))
-                           (recurse (cdr x))))
-               (t x))))
-    ;; let's transform all list qq nodes inside the form (this handles ` in macrolets in js forms)
-    (setf form (recurse form)))
-  (with-walker-configuration (:undefined-reference-handler 'undefined-js-reference-handler
-                              :function-name?      'js-function-name?
-                              :macro-name?         'js-macro-name?
-                              :symbol-macro-name?  'js-symbol-macro-name?
-                              :constant-name?      'js-constant-name?
-                              :lambda-form?        'js-lambda-form?
-                              :lambda-like-walker  'js-lambda-like-walker
-                              :macroexpand-1       'js-macroexpand-1
-                              :find-walker-handler 'find-js-walker-handler)
-    (walk-form form nil (make-walk-environment lexenv))))
+  (with-active-layers (js)
+    (labels ((recurse (x)
+               (typecase x
+                 (list-quasi-quote (run-transformation-pipeline x))
+                 (cons (cons (recurse (car x))
+                             (recurse (cdr x))))
+                 (t x))))
+      ;; let's transform all list qq nodes inside the form (this handles ` in macrolets in js forms)
+      (setf form (recurse form)))
+    (walk-form form :environment (make-walk-environment lexenv))))
 
 
 ;;;;;;
@@ -184,25 +157,22 @@
                             (nsubstitute '&allow-other-keys '|&allow-other-keys|
                                          (substitute '&key '|&key| args)))))
 
-(def js-walker-handler |defun| (form parent env)
-  (bind (((name args &rest body) (rest form)))
-    (with-form-object (result 'function-definition-form parent
-                              :source form
-                              :name name)
-      (walk-lambda-like result (%fixup-lambda-list args) body env))))
+(def js-walker |defun|
+  (bind (((name args &rest body) (rest -form-)))
+    (with-form-object (node 'function-definition-form -parent- :name name)
+      (walk-lambda-like node args body -environment-))))
 
 ;; cl:lambda is a macro that expands to (function (lambda ...)), so we need to define our own handler here
-(def (js-walker-handler e) |lambda| (form parent env)
-  (walk-form `(function ,form) parent env))
+(def (js-walker e) |lambda|
+  (walk-form `(function ,-form-) :parent -parent- :environment -environment-))
 
-(def (js-walker-handler e) |return| (form parent env)
-  (unless (<= 1 (length form) 2)
-    (simple-walker-error "Illegal return form: ~S" form))
-  (let ((value (second form)))
-    (with-form-object (return-from-node 'return-from-form parent
-                                        :source form)
+(def (js-walker e) |return|
+  (unless (<= 1 (length -form-) 2)
+    (simple-walker-error "Illegal return form: ~S" -form-))
+  (bind ((value (second -form-)))
+    (with-form-object (return-from-node 'return-from-form -parent-)
       (setf (result-of return-from-node) (when value
-                                           (walk-form value return-from-node env))))))
+                                           (walk-form value :parent return-from-node :environment -environment-))))))
 
 (def class* for-form (walked-form)
   ((variables)
@@ -210,10 +180,9 @@
    (looping-condition)
    (body)))
 
-(def js-walker-handler |do| (form parent env)
-  (with-form-object (for-node 'for-form parent
-                              :source form)
-    (bind (((raw-variables (raw-end-test &optional result) &rest raw-body) (rest form)))
+(def (js-walker e) |do|
+  (with-form-object (for-node 'for-form -parent-)
+    (bind (((raw-variables (raw-end-test &optional result) &rest raw-body) (rest -form-)))
       (when result
         (js-compile-error for-node "DO can't handle a result expression"))
       (setf (values (variables-of for-node) (steps-of for-node))
@@ -221,149 +190,140 @@
                   (for (var init step) = (ensure-list entry))
                   (collect (make-instance 'setq-form
                                           :parent for-node
-                                          :source form
-                                          :variable (walk-form var for-node env)
-                                          :value (walk-form init for-node env))
+                                          :variable (hu.dwim.walker::recurse var for-node)
+                                          :value (hu.dwim.walker::recurse init for-node))
                     :into variables)
                   (when step
-                    (collect (walk-form `(setq ,var ,step) for-node env) :into steps))
+                    (collect (hu.dwim.walker::recurse `(setq ,var ,step) for-node) :into steps))
                   (finally (return (values variables steps)))))
-      (setf (looping-condition-of for-node) (walk-form `(|not| ,raw-end-test) for-node env))
-      (setf (body-of for-node) (mapcar [walk-form !1 for-node env] raw-body)))))
+      (setf (looping-condition-of for-node) (hu.dwim.walker::recurse `(|not| ,raw-end-test) for-node))
+      (setf (body-of for-node) (mapcar [hu.dwim.walker::recurse !1 for-node] raw-body)))))
 
 (def class* create-form (walked-form)
   ((elements)))
 
-(def (js-walker-handler e) |create| (form parent env)
-  (bind ((elements (rest form)))
-    (with-form-object (create-node 'create-form parent
-                                   :source form)
-      (setf (elements-of create-node) (mapcar [walk-form !1 create-node env] elements)))))
+(def (js-walker e) |create|
+  (bind ((elements (rest -form-)))
+    (with-form-object (create-node 'create-form -parent-)
+      (setf (elements-of create-node) (mapcar [hu.dwim.walker::recurse !1 create-node] elements)))))
 
 (def class* array-form (walked-form)
   ((elements)))
 
-(def (js-walker-handler e) |array| (form parent env)
-  (bind ((elements (rest form)))
-    (with-form-object (toplevel-create-node 'array-form parent
-                                            :source form)
+(def (js-walker e) |array|
+  (bind ((elements (rest -form-)))
+    (with-form-object (toplevel-create-node 'array-form -parent-)
       (labels ((recurse (node)
                  (if (and (vectorp node)
                           (not (stringp node)))
-                     (with-form-object (create-node 'array-form parent
-                                                    :source form)
+                     (with-form-object (create-node 'array-form -parent-)
                        (setf (elements-of toplevel-create-node) (map 'list #'recurse node)))
-                     (walk-form node toplevel-create-node env))))
+                     (hu.dwim.walker::recurse node toplevel-create-node))))
         (setf (elements-of toplevel-create-node) (mapcar #'recurse elements))))))
 
 (def class* slot-value-form (walked-form)
   ((object)
    (slot-name)))
 
-(def (js-walker-handler e) |slot-value| (form parent env)
-  (unless (length= 2 (rest form))
-    (js-compile-error nil "Invalid slot-value form" form))
-  (with-form-object (node 'slot-value-form parent
-                          :source form)
-    (setf (object-of node) (walk-form (second form) node env))
-    (setf (slot-name-of node) (bind ((slot-name (third form)))
+(def (js-walker e) |slot-value|
+  (unless (length= 2 (rest -form-))
+    (js-compile-error nil "Invalid slot-value form" -form-))
+  (with-form-object (node 'slot-value-form -parent-)
+    (setf (object-of node) (hu.dwim.walker::recurse (second -form-) node))
+    (setf (slot-name-of node) (bind ((slot-name (third -form-)))
                                 (if (quoted-symbol? slot-name)
                                     (second slot-name)
-                                    (walk-form slot-name node env))))))
+                                    (hu.dwim.walker::recurse slot-name node))))))
 
 (def class* instantiate-form (walked-form)
   ((type-to-instantiate)
    (arguments)))
 
-(def (js-walker-handler e) |new| (form parent env)
-  (when (< (length form) 2)
-    (js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" form))
-  (bind ((type (second form))
-         (args (cddr form)))
-    (with-form-object (node 'instantiate-form parent
-                            :source form)
+(def (js-walker e) |new|
+  (when (< (length -form-) 2)
+    (js-compile-error nil "Invalid 'new' form, needs at least two elements: ~S" -form-))
+  (bind ((type (second -form-))
+         (args (cddr -form-)))
+    (with-form-object (node 'instantiate-form -parent-)
       (setf (type-to-instantiate-of node) type)
-      (setf (arguments-of node) (mapcar [walk-form !1 node env] args)))))
+      (setf (arguments-of node) (mapcar [hu.dwim.walker::recurse !1 node] args)))))
 
 (def class* try-form (walked-form)
   ((protected-form)
    (catch-clauses)
    (finally-clause)))
 
-(def (js-walker-handler e) |try| (form parent env)
-  (when (< (length (rest form)) 2)
-    (js-compile-error nil "Invalid 'try' form, needs at least two elements: ~S" form))
-  (with-form-object (node 'try-form parent
-                          :source form)
-    (bind ((body (second form))
-           (catch-clauses (copy-list (rest (rest form))))
+(def (js-walker e) |try|
+  (when (< (length (rest -form-)) 2)
+    (js-compile-error nil "Invalid 'try' form, needs at least two elements: ~S" -form-))
+  (with-form-object (node 'try-form -parent-)
+    (bind ((body (second -form-))
+           (catch-clauses (copy-list (rest (rest -form-))))
            (finally-clause (bind ((finally (assoc '|finally| catch-clauses)))
                              (when finally
                                (setf catch-clauses (remove-if [eq (first !1) '|finally|] catch-clauses))
                                (rest finally)))))
-      (setf (finally-clause-of node) (mapcar [walk-form !1 node env] finally-clause))
-      (setf (catch-clauses-of node)  (mapcar [walk-form !1 node env] catch-clauses))
-      (setf (protected-form-of node) (walk-form body node env)))))
+      (setf (finally-clause-of node) (mapcar [hu.dwim.walker::recurse !1 node] finally-clause))
+      (setf (catch-clauses-of node)  (mapcar [hu.dwim.walker::recurse !1 node] catch-clauses))
+      (setf (protected-form-of node) (hu.dwim.walker::recurse body node)))))
 
 (def class* catch-form (walked-form implicit-progn-mixin)
   ((variable-name)
    (condition)))
 
-(def (js-walker-handler e) |catch| (form parent env)
-  (when (< (length (rest form)) 2)
-    (js-compile-error nil "Invalid 'catch' form, needs at least two elements: ~S" form))
-  (bind (((nil (variable-name &rest condition) &body body) form))
+(def (js-walker e) |catch|
+  (when (< (length (rest -form-)) 2)
+    (js-compile-error nil "Invalid 'catch' form, needs at least two elements: ~S" -form-))
+  (bind (((nil (variable-name &rest condition) &body body) -form-))
     (unless (and variable-name
                  (symbolp variable-name))
       (js-compile-error nil "The condition variable in a 'catch' form must be a symbol. Got ~S instead." variable-name))
-    (with-form-object (node 'catch-form parent
-                            :source form)
+    (with-form-object (node 'catch-form -parent-)
       (setf (variable-name-of node) variable-name)
       (setf (condition-of node) (when condition
-                                  (walk-form condition node env)))
-      (setf (hu.dwim.walker:body-of node) (mapcar [walk-form !1 node env] body)))))
+                                  (hu.dwim.walker::recurse condition node)))
+      (setf (hu.dwim.walker:body-of node) (mapcar [hu.dwim.walker::recurse !1 node] body)))))
 
 (def class* while-form (walked-form implicit-progn-mixin)
   ((condition)))
 
-(def (js-walker-handler e) |while| (form parent env)
-  (when (< (length (rest form)) 2)
-    (js-compile-error nil "Invalid 'while' form, needs at least two elements: ~S" form))
-  (bind (((nil condition &body body) form))
-    (with-form-object (node 'while-form parent
-                            :source form)
-      (setf (condition-of node) (walk-form condition node env))
-      (setf (hu.dwim.walker:body-of node) (mapcar [walk-form !1 node env] body)))))
+(def (js-walker e) |while|
+  (when (< (length (rest -form-)) 2)
+    (js-compile-error nil "Invalid 'while' form, needs at least two elements: ~S" -form-))
+  (bind (((nil condition &body body) -form-))
+    (with-form-object (node 'while-form -parent-)
+      (setf (condition-of node) (hu.dwim.walker::recurse condition node))
+      (setf (hu.dwim.walker:body-of node) (mapcar [hu.dwim.walker::recurse !1 node] body)))))
 
-(def (js-walker-handler e) |macrolet| (form parent env)
+(def (js-walker e) |macrolet|
   ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
   (funcall (find-walker-handler `(macrolet))
-           `(macrolet (,@(iter (for (name args . body) :in (second form))
+           `(macrolet (,@(iter (for (name args . body) :in (second -form-))
                                (collect `(,name ,(substitute '&key '|&key|
                                                              (substitute '&body '|&body| args))
                                                 ,@body))))
-              ,@(rest (rest form)))
-           parent env))
+              ,@(rest (rest -form-)))
+           -parent- -environment-))
 
 (def class* type-of-form (walked-form)
   ((object)))
 
-(def (js-walker-handler e) |type-of| (form parent env)
-  (unless (length= 2 form)
-    (js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" form))
-  (bind (((nil object) form))
-    (with-form-object (node 'type-of-form parent :source form)
-      (setf (object-of node) (walk-form object node env)))))
+(def (js-walker e) |type-of|
+  (unless (length= 2 -form-)
+    (js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" -form-))
+  (bind (((nil object) -form-))
+    (with-form-object (node 'type-of-form -parent-)
+      (setf (object-of node) (hu.dwim.walker::recurse object node)))))
 
 (def class* regexp-form (walked-form)
   ((regexp)))
 
-(def (js-walker-handler e) |regexp| (form parent env)
-  (bind ((regexp (second form)))
-    (unless (and (length= 2 form)
+(def (js-walker e) |regexp|
+  (bind ((regexp (second -form-)))
+    (unless (and (length= 2 -form-)
                  (stringp regexp))
-      (js-compile-error nil "Invalid 'regexp' form, needs exactly one argument, a string: ~S" form))
-    (with-form-object (node 'regexp-form parent :source form)
+      (js-compile-error nil "Invalid 'regexp' form, needs exactly one argument, a string: ~S" -form-))
+    (with-form-object (node 'regexp-form -parent-)
       (setf (regexp-of node) regexp))))
 
 

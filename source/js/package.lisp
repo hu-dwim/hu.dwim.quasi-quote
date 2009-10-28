@@ -9,6 +9,7 @@
 (defpackage :hu.dwim.quasi-quote.js
   (:use :babel
         :babel-streams
+        :contextl
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.quasi-quote

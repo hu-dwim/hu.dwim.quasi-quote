@@ -38,7 +38,7 @@
        (not (typep x 'syntax-node))))
 
 ;; TODO ? maybe it's just a thinko that it's needed
-(def method hu.dwim.walker:unwalk-form ((self syntax-node))
+(def layered-method hu.dwim.walker:unwalk-form ((self syntax-node))
   self)
 
 (def (class* e) quasi-quote (syntax-node)
