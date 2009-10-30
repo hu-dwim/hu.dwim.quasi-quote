@@ -240,11 +240,12 @@
   ;; TODO ?
   #f)
 
-(def transform-function variable-binding-form-statement-prefix-generator (node)
-  (iter (for (name . value) :in (bindings-of node))
+(def transform-function statement-prefix-generator/lexical-variable-binder-form (node)
+  (iter (for binding :in (bindings-of node))
+        (for name = (name-of binding))
         (when name
           (collect (with-root-operator-precedence
-                     `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse value) ";"))))))
+                     `(#\Newline ,@(make-indent) "var " ,(lisp-name-to-js-name name) " = " ,(recurse (initial-value-of binding)) ";"))))))
 
 (def transform-function transform-statements (thing &key (wrap? nil wrap-provided?) prefix-statements)
   (with-root-operator-precedence
@@ -261,9 +262,9 @@
            (*in-js-statement-context* #t)
            (statement-prefix-generator (constantly nil))
            (statements (etypecase node
-                         (variable-binding-form
+                         (lexical-variable-binder-form
                           (setf statement-prefix-generator (lambda ()
-                                                             (variable-binding-form-statement-prefix-generator node)))
+                                                             (statement-prefix-generator/lexical-variable-binder-form node)))
                           (setf wrap? (not (in-toplevel-js-block?)))
                           (setf wrap-provided? #t)
                           (hu.dwim.walker:body-of node))
@@ -451,7 +452,7 @@
    (progn-form
     (bind ((statements (hu.dwim.walker:body-of -node-)))
       (if (and (length= 1 statements)
-               (typep (first statements) '(or variable-binding-form function-binding-form)))
+               (typep (first statements) '(or lexical-variable-binder-form function-binding-form)))
           ;; skip the progn when it's not needed to avoid double {} wrapping
           (recurse (first statements))
           (transform-statements -node-))))
@@ -533,7 +534,7 @@
     (to-js-literal (value-of -node-)))
    (macrolet-form
     (transform-statements -node-))
-   (variable-binding-form
+   (lexical-variable-binder-form
     (transform-statements -node-))
    (setq-form
     (with-wrapping-based-on-operator-precedence '=

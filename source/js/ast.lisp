@@ -64,8 +64,10 @@
                                                               (cons 'list processed-slot-value)
                                                               processed-slot-value)))))))))
 
-  (:method ((x variable-binding-form))
-    `(make-instance 'variable-binding-form
+  (:method ((x lexical-variable-binder-form))
+    `(make-instance 'lexical-variable-binder-form
                     :body (list ,@(map-ast #'bq-process (hu.dwim.walker:body-of x)))
                     :bindings (list ,@(iter (for (name . value) :in (bindings-of x))
-                                            (collect `(cons ,(map-ast #'bq-process name) ,(map-ast #'bq-process value))))))))
+                                            (collect `(make-instance 'lexical-variable-binding-form
+                                                                     :name ,(map-ast #'bq-process name)
+                                                                     :initial-value ,(map-ast #'bq-process value))))))))
