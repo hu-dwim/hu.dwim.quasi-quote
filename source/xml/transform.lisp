@@ -181,7 +181,7 @@
        (if (and (typep value 'xml-unquote)
                 ;; NOTE: checks if the the form is a simple variable reference, because otherwise due to inline emitting we cannot evaluate the value out of order
                 (symbolp (form-of value)))
-           (bind (((:slots form) value))
+           (bind ((form (form-of value)))
              (when form
                (make-string-unquote
                 (with-unique-names (value-variable)

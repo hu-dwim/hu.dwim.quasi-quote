@@ -22,6 +22,7 @@
   (import-duplicate-symbols)
   (import
    '(form-of
+     form
      modifier-of
      parent-of
      spliced?
