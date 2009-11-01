@@ -20,6 +20,7 @@
                :hu.dwim.common
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.syntax-sugar+hu.dwim.walker
+               :hu.dwim.util
                :hu.dwim.walker)
   :components ((:module "source"
                 :components ((:file "package")

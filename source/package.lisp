@@ -13,7 +13,8 @@
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.defclass-star
-        :hu.dwim.syntax-sugar))
+        :hu.dwim.syntax-sugar
+        :hu.dwim.util))
 
 (in-package :hu.dwim.quasi-quote)
 

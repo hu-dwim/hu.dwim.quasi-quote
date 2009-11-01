@@ -77,10 +77,6 @@
   (when thing
     (princ-to-string thing)))
 
-(def (function io) integer-to-string (thing)
-  (bind ((*print-pretty* #f))
-    (princ-to-string thing)))
-
 (def function self-evaluating? (thing)
   (and (atom thing)
        (not (symbolp thing))))

@@ -10,7 +10,7 @@
 
 (defun import-duplicate-symbols (&optional (package *package*))
   (import
-   '(shrink-vector capitalize-first-letter capitalize-first-letter! handle-otherwise)
+   '(shrink-vector capitalize-first-letter capitalize-first-letter!)
    package))
 
 (def (function io) make-adjustable-vector (initial-length &key (element-type t))
@@ -43,26 +43,6 @@
 (defun capitalize-first-letter! (str)
   (setf (aref str 0) (char-upcase (aref str 0)))
   str)
-
-;; wui
-(def (function io) handle-otherwise (otherwise)
-  (cond
-    ((eq otherwise :error)
-     (error "Otherwise assertion failed"))
-    ((and (consp otherwise)
-          (member (first otherwise) '(:error :warn)))
-     (case (first otherwise)
-       (:error (apply #'error (second otherwise) (nthcdr 2 otherwise)))
-       (:warn (apply #'warn (second otherwise) (nthcdr 2 otherwise)))))
-    ((functionp otherwise)
-     (funcall otherwise))
-    (t
-     otherwise)))
-
-(def function not-yet-implemented (&optional (datum "Not yet implemented." datum-p) &rest args)
-  (when datum-p
-    (setf datum (concatenate 'string "Not yet implemented: " datum)))
-  (apply #'cerror "Ignore and continue" datum args))
 
 (def function append* (&rest things)
   "Like append, but works for non-list arguments, too"
