@@ -67,7 +67,7 @@
   (:method ((x lexical-variable-binder-form))
     `(make-instance 'lexical-variable-binder-form
                     :body (list ,@(map-ast #'bq-process (hu.dwim.walker:body-of x)))
-                    :bindings (list ,@(iter (for (name . value) :in (bindings-of x))
+                    :bindings (list ,@(iter (for binding :in (bindings-of x))
                                             (collect `(make-instance 'lexical-variable-binding-form
-                                                                     :name ,(map-ast #'bq-process name)
-                                                                     :initial-value ,(map-ast #'bq-process value))))))))
+                                                                     :name ,(map-ast #'bq-process (name-of binding))
+                                                                     :initial-value ,(map-ast #'bq-process (initial-value-of binding)))))))))
