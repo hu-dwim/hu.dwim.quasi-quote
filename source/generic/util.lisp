@@ -90,7 +90,7 @@
 ;;;;;;
 ;;; make-string-of-spaces
 
-(def constant +string-with-spaces-cache-size+ 40)
+(def constant +string-with-spaces-cache-size+ 64)
 
 (def (constant :test #'equalp) +indent-length->string-with-spaces+
   (bind ((result (make-array +string-with-spaces-cache-size+)))
@@ -101,6 +101,4 @@
 (def (function io) make-string-of-spaces (count)
   (if (< count +string-with-spaces-cache-size+)
       (aref +indent-length->string-with-spaces+ count)
-      (progn
-        (warn "MAKE-STRING-OF-SPACES ran out of width, consing now...")
-        (make-string count :element-type 'base-char :initial-element #\Space))))
+      (make-string count :element-type 'base-char :initial-element #\Space)))
