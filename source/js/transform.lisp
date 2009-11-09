@@ -442,7 +442,7 @@
 
 (macrolet ((frob (&rest entries)
              `(with-lexical-transform-functions
-                (defgeneric transform-quasi-quoted-js-to-quasi-quoted-string* (form)
+                (def generic transform-quasi-quoted-js-to-quasi-quoted-string* (form)
                   ,@(iter (for (type . body) :in entries)
                           (collect `(:method ((-node- ,type))
                                       ,@body)))))))
@@ -547,14 +547,15 @@
              (mapcar (compose 'lisp-name-to-js-name 'name-of)
                      (collect-variable-references node))))
       (iter (with variable-references = (collect-js-names-of-variable-references (hu.dwim.walker:body-of -node-)))
-            (for (lisp-name . body) :in (bindings-of -node-))
+            (for binding :in (bindings-of -node-))
+            (for lisp-name = (name-of binding))
             (for name = (lisp-name-to-js-name lisp-name))
             (when (some (lambda (reference)
                           (string= name reference))
                         variable-references)
               (js-compile-warning "Found a variable reference to a name that names an flet definition (~S). In the JavaScript output flet definitions are in the same namespace as the variables!" name))
-            (appendf variable-references (collect-js-names-of-variable-references body))
-            (collect `(,@(make-newline-and-indent) "var " ,name " = " ,(recurse body) ";") :into result)
+            (appendf variable-references (collect-js-names-of-variable-references binding))
+            (collect `(,@(make-newline-and-indent) "var " ,name " = " ,(recurse binding) ";") :into result)
             (finally (return (cons result (transform-statements (hu.dwim.walker:body-of -node-) :wrap? #f)))))))
    (return-from-form
     `("return" ,@(awhen (result-of -node-)

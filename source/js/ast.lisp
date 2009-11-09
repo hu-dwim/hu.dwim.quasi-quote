@@ -55,7 +55,12 @@
            (class-name (class-name class)))
       `(make-instance ',class-name
                       ,@(iter (for slot :in (class-slots class))
-                              (unless (member (slot-definition-name slot) '(hu.dwim.walker::source hu.dwim.walker::parent))
+                              ;; we leave out some "non-interesting" slots. this may end up being a problem eventually...
+                              (unless (member (slot-definition-name slot) '(hu.dwim.walker::source
+                                                                            hu.dwim.walker::parent
+                                                                            hu.dwim.walker::usages
+                                                                            hu.dwim.walker::definition
+                                                                            ))
                                 (bind ((initarg (first (slot-definition-initargs slot)))
                                        (slot-value (slot-value-using-class class x slot))
                                        (processed-slot-value (map-ast #'bq-process slot-value)))
