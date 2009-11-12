@@ -267,7 +267,7 @@
       (setf (catch-clauses-of node)  (mapcar [hu.dwim.walker::recurse !1 node] catch-clauses))
       (setf (protected-form-of node) (hu.dwim.walker::recurse body node)))))
 
-(def class* catch-form (walked-form implicit-progn-mixin)
+(def class* catch-form (implicit-progn-mixin walked-form)
   ((variable-name)
    (condition)))
 
@@ -284,7 +284,7 @@
                                   (hu.dwim.walker::recurse condition node)))
       (setf (hu.dwim.walker:body-of node) (mapcar [hu.dwim.walker::recurse !1 node] body)))))
 
-(def class* while-form (walked-form implicit-progn-mixin)
+(def class* while-form (implicit-progn-mixin walked-form)
   ((condition)))
 
 (def (js-walker e) |while|
