@@ -4,9 +4,9 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :common-lisp-user)
+(in-package :hu.dwim.util)
 
-(defpackage :hu.dwim.quasi-quote
+(def package :hu.dwim.quasi-quote
   (:use :babel
         :babel-streams
         :hu.dwim.asdf
@@ -14,7 +14,10 @@
         :hu.dwim.def
         :hu.dwim.defclass-star
         :hu.dwim.syntax-sugar
-        :hu.dwim.util))
+        :hu.dwim.util)
+  (:readtable-setup
+   (enable-standard-hu.dwim-syntaxes)
+   (hu.dwim.syntax-sugar:enable-lambda-with-bang-args-syntax)))
 
 (in-package :hu.dwim.quasi-quote)
 

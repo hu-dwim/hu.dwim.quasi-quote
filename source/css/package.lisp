@@ -4,15 +4,16 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :common-lisp-user)
+(in-package :hu.dwim.quasi-quote)
 
-(defpackage :hu.dwim.quasi-quote.css
+(def package :hu.dwim.quasi-quote.css
   (:use :babel
         :babel-streams
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.quasi-quote
-        :hu.dwim.syntax-sugar))
+        :hu.dwim.syntax-sugar)
+  (:readtable-setup (hu.dwim.def:setup-readtable/same-as-package :hu.dwim.quasi-quote)))
 
 (in-package :hu.dwim.quasi-quote.css)
 
@@ -27,5 +28,3 @@
 
 (import-external-quasi-quote-symbols-for-extensions)
 
-(defun setup-readtable ()
-  (hu.dwim.quasi-quote::setup-readtable))

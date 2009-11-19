@@ -6,13 +6,6 @@
 
 (in-package :hu.dwim.quasi-quote.test)
 
-(defun setup-readtable ()
-  (hu.dwim.quasi-quote::setup-readtable)
-  (enable-string-quote-syntax))
-
-(register-readtable-for-swank
- '(:hu.dwim.quasi-quote.test) 'setup-readtable)
-
 (defsuite* (test :in root-suite))
 
 (def (definer e) syntax-test-definer (test-definer-name &body setup-forms)
@@ -26,7 +19,6 @@
                     (bind (((expected ast) entry))
                       `(,test-function ,expected (macroexpand (read-from-string ,ast)))))))
        `(def (test d) ,name ,args
-          (setup-readtable)
           ,@(iter (for el :in ',setup-forms)
                   (bind (((&key test-function readtable-setup) el))
                     (collect `(bind ((*readtable* (copy-readtable *readtable*)))

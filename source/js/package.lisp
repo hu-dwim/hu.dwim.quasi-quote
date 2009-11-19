@@ -4,9 +4,9 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :common-lisp-user)
+(in-package :hu.dwim.quasi-quote)
 
-(defpackage :hu.dwim.quasi-quote.js
+(def package :hu.dwim.quasi-quote.js
   (:use :babel
         :babel-streams
         :contextl
@@ -15,22 +15,18 @@
         :hu.dwim.quasi-quote
         :hu.dwim.syntax-sugar
         :hu.dwim.walker)
-
   (:shadowing-import-from :hu.dwim.quasi-quote
                           #:body-of
                           #:parent-of
                           #:map-ast)
-
   (:shadow #:catch-form)
-
   (:export #:|finally|
-           #:|with|))
+           #:|with|)
+  (:readtable-setup (hu.dwim.def:setup-readtable/same-as-package :hu.dwim.quasi-quote)))
 
 (in-package :hu.dwim.quasi-quote.js)
 
 (import-external-quasi-quote-symbols-for-extensions)
-
-(enable-readtime-wrapper-syntax)
 
 (export {with-preserved-readtable-case
          '(nil t and or not
@@ -45,5 +41,3 @@
            &optional &key &allow-other-keys &rest &body)}
         :hu.dwim.quasi-quote.js)
 
-(defun setup-readtable ()
-  (hu.dwim.quasi-quote::setup-readtable))

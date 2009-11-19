@@ -25,9 +25,8 @@
   :components ((:module "source"
                 :components ((:file "package")
                              (:file "duplicates" :depends-on ("package"))
-                             (:file "configuration" :depends-on ("duplicates"))
                              (:module "generic"
-                              :depends-on ("configuration")
+                              :depends-on ("duplicates")
                               :components ((:file "util")
                                            (:file "syntax" :depends-on ("util"))
                                            (:file "transformation" :depends-on ("util" "syntax"))

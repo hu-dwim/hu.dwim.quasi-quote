@@ -4,9 +4,9 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :common-lisp-user)
+(in-package :hu.dwim.quasi-quote)
 
-(defpackage :hu.dwim.quasi-quote.test
+(def package :hu.dwim.quasi-quote.test
   (:use :babel
         :babel-streams
         :hu.dwim.common
@@ -19,11 +19,13 @@
         :hu.dwim.stefil
         :hu.dwim.syntax-sugar
         :hu.dwim.walker)
-
   (:shadowing-import-from :hu.dwim.quasi-quote #:body-of
                           #:parent-of
                           #:form
-                          #:map-ast))
+                          #:map-ast)
+  (:readtable-setup
+   (hu.dwim.def:setup-readtable/same-as-package :hu.dwim.quasi-quote)
+   (hu.dwim.syntax-sugar:enable-string-quote-syntax)))
 
 (in-package :hu.dwim.quasi-quote.test)
 

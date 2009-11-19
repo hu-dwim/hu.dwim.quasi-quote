@@ -10,7 +10,6 @@
 
 (defsystem :hu.dwim.quasi-quote.xml+cxml
   :class hu.dwim.system
-  :setup-readtable-function-name "hu.dwim.quasi-quote.xml::setup-readtable"
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
            "Tamás Borbély <tomi.borbely@gmail.com>"
            "Levente Mészáros <levente.meszaros@gmail.com>")

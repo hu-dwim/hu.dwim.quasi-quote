@@ -25,7 +25,7 @@
     (read-from-string string)))
 
 (def function pprint-bivalent (string &optional (with-inline-emitting #f))
-  (pprint (macroexpand (read-from-string-with-string-syntax string with-inline-emitting))))
+  (pprint (macroexpand (read-from-string-with-string-syntax string :with-inline-emitting with-inline-emitting))))
 
 (def function test-bivalent-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
