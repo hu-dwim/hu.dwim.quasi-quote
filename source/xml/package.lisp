@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.quasi-quote)
+(in-package :hu.dwim.util)
 
 (def package :hu.dwim.quasi-quote.xml
   (:use :babel
