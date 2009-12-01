@@ -10,18 +10,13 @@
 
 (defsystem :hu.dwim.quasi-quote.test
   :class hu.dwim.test-system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Test suite for hu.dwim.quasi-quote"
   :depends-on (:bordeaux-threads
                :cxml
                :hu.dwim.quasi-quote
                :hu.dwim.quasi-quote.css
-               :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
                #+nil :hu.dwim.quasi-quote.pdf
-               :hu.dwim.util.test
+               :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
+               :hu.dwim.stefil+hu.dwim.def+swank
                :parse-number
                :trivial-shell)
   :components ((:module "test"

@@ -10,11 +10,7 @@
 
 (defsystem :hu.dwim.quasi-quote
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Quasi quoted domain specific languages and transformations"
+  :description "Quasi quoted domain specific languages and transformations."
   :depends-on (:babel
                :babel-streams
                :hu.dwim.common

@@ -10,11 +10,7 @@
 
 (defsystem :hu.dwim.quasi-quote.css
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Quasi quote transformations for emitting CSS"
+  :description "Quasi quote transformations for emitting CSS."
   :depends-on (:hu.dwim.quasi-quote)
   :components ((:module "source"
                 :components ((:module "css"

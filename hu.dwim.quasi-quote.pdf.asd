@@ -10,11 +10,7 @@
 
 (defsystem :hu.dwim.quasi-quote.pdf
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Quasi quote transformations for emitting PDF"
+  :description "Quasi quote transformations for emitting PDF."
   :depends-on (:cffi
                :hu.dwim.quasi-quote)
   :components ((:module "source"

@@ -10,11 +10,7 @@
 
 (defsystem :hu.dwim.quasi-quote.js
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Quasi quote transformations for emitting JavaScript"
+  :description "Quasi quote transformations for emitting JavaScript."
   :depends-on (:cl-ppcre
                :hu.dwim.quasi-quote
                :hu.dwim.walker)

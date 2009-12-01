@@ -10,11 +10,7 @@
 
 (defsystem :hu.dwim.quasi-quote.xml
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Quasi quote transformations for emitting XML"
+  :description "Quasi quote transformations for emitting XML."
   :depends-on (:hu.dwim.quasi-quote)
   :components ((:module "source"
                 :components ((:module "xml"

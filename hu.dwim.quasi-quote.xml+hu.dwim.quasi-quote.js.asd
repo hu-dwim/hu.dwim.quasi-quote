@@ -10,10 +10,6 @@
 
 (defsystem :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
   :depends-on (:hu.dwim.quasi-quote.js
                :hu.dwim.quasi-quote.xml)
   :components ((:module "integration"
