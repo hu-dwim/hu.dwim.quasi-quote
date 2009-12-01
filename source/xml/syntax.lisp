@@ -17,12 +17,14 @@
           (splice-character #\@)
           (destructive-splice-character #\.)
           (transformation-pipeline nil)
-          (dispatched-quasi-quote-name "xml"))
+          (dispatched-quasi-quote-name "xml")
+          (signal-reader-redefinition #f))
   (bind ((original-reader-on-start-character   (multiple-value-list (get-macro-character* start-character *readtable*)))
          (original-reader-on-end-character     (when end-character
                                                  (multiple-value-list (get-macro-character* end-character *readtable*))))
          (original-reader-on-unquote-character (multiple-value-list (get-macro-character* unquote-character *readtable*))))
-    (awhen (first original-reader-on-start-character)
+    (awhen (and signal-reader-redefinition
+                (first original-reader-on-start-character))
       (simple-style-warning "Installing the XML reader on character ~S while it already has a reader installed: ~S" start-character it))
     (set-quasi-quote-syntax-in-readtable
      (named-lambda xml-quasi-quote-wrapper (body dispatched?)
