@@ -240,6 +240,13 @@
          (.to-string (+ "" x))
          (print (not (not (.match (+ "foo" x "bar") "o-b")))))｣))
 
+(def js-test test/js/lambda-call ()
+  (42
+   ｢`js(flet ((produce-lambda (a)
+                (return (lambda (b)
+                          (return (+ a b))))))
+         (print ((produce-lambda 2) 40)))｣))
+
 (def js-test test/js/precedence1 ()
   ("ok"
    ｢`js(print (if (and t
