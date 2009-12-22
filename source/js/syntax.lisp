@@ -105,6 +105,19 @@
 (def layered-method hu.dwim.walker::walk-lambda-like :in js (ast-node args body env &rest rest &key &allow-other-keys)
    (apply #'call-next-layered-method ast-node (%fixup-lambda-list args) body env rest))
 
+(def layered-method walk-application :in js (form parent operator arguments environment)
+  (if (and (consp operator)
+           (not (hu.dwim.walker::lambda-form? operator)))
+      (progn
+        ;; js can have ((foo)), so walk the operator of an application
+        (setf operator (walk-form operator :parent parent :environment environment))
+        (aprog1
+            ;; call-next-layered-method is not good because we change the arg type or OPERATOR...
+            (walk-application form parent operator arguments environment)
+          ;; set proper parent
+          (setf (hu.dwim.walker::parent-of operator) it)))
+      (call-next-layered-method)))
+
 (def function walk-js (form &optional lexenv)
   (with-active-layers (js)
     (labels ((recurse (x)

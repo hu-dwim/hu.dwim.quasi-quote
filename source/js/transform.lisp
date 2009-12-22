@@ -440,6 +440,12 @@
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value ,(form-of value))))))
     (t (transform-quasi-quoted-js-to-quasi-quoted-string value))))
 
+(def transform-function emit-lambda-application-form (node)
+  (bind ((operator (operator-of node))
+         (arguments (arguments-of node)))
+    (assert (typep operator '(or lambda-function-form application-form)))
+    `("(" ,(recurse operator) ")" "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")")))
+
 (macrolet ((frob (&rest entries)
              `(with-lexical-transform-functions
                 (def generic transform-quasi-quoted-js-to-quasi-quoted-string* (form)
@@ -498,38 +504,39 @@
                     (recurse else)
                     "undefined"))))))
    (lambda-application-form
-    (bind ((operator (operator-of -node-))
-           (arguments (arguments-of -node-)))
-      (assert (typep operator 'lambda-function-form))
-      `("(" ,(recurse operator) ")" "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")")))
+    (emit-lambda-application-form -node-))
    (lambda-function-form
     `("function " ,@(transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body -node-)))
    (application-form
     (bind ((arguments (arguments-of -node-))
            (operator (operator-of -node-)))
-      (if (js-special-form? operator)
-          (bind ((handler (gethash operator *js-special-forms*)))
-            (funcall handler -node-))
-          ;; KLUDGE this is lame here, operators should not be handled by the same code as application.
-          (with-wrapping-based-on-operator-precedence (or (operator-precedence (lisp-operator-name-to-js-operator-name operator))
-                                                          #.(operator-precedence 'function-call))
-            ;; (format *debug-io* "application-form of ~S~%" operator)
-            (bind ((js-operator-name (to-js-operator-name operator)))
-              (if (js-operator-name? operator)
-                  ;; TODO it can only handle infix operators. due to this |not| needs its own special-form handler
-                  (iter (for el :in arguments)
-                        (unless (first-time-p)
-                          (collect " ")
-                          (collect js-operator-name)
-                          (collect " "))
-                        (collect (recurse el)))
-                  (bind ((dotted? (starts-with #\. js-operator-name)))
-                    (if dotted?
-                        (with-operator-precedence 'member
-                          `(,(recurse (first arguments))
-                             ,js-operator-name "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (rest arguments)) ")" ))
-                        (with-operator-precedence 'comma
-                          `(,js-operator-name "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")"))))))))))
+      (cond
+        ((typep operator 'application-form)
+         (emit-lambda-application-form -node-))
+        ((js-special-form? operator)
+         (bind ((handler (gethash operator *js-special-forms*)))
+           (funcall handler -node-)))
+        (t
+         ;; KLUDGE this is lame here, operators should not be handled by the same code as application.
+         (with-wrapping-based-on-operator-precedence (or (operator-precedence (lisp-operator-name-to-js-operator-name operator))
+                                                         #.(operator-precedence 'function-call))
+           ;; (format *debug-io* "application-form of ~S~%" operator)
+           (bind ((js-operator-name (to-js-operator-name operator)))
+             (if (js-operator-name? operator)
+                 ;; TODO it can only handle infix operators. due to this |not| needs its own special-form handler
+                 (iter (for el :in arguments)
+                       (unless (first-time-p)
+                         (collect " ")
+                         (collect js-operator-name)
+                         (collect " "))
+                       (collect (recurse el)))
+                 (bind ((dotted? (starts-with #\. js-operator-name)))
+                   (if dotted?
+                       (with-operator-precedence 'member
+                         `(,(recurse (first arguments))
+                            ,js-operator-name "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (rest arguments)) ")" ))
+                       (with-operator-precedence 'comma
+                         `(,js-operator-name "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")")))))))))))
    (constant-form
     (to-js-literal (value-of -node-)))
    (macrolet-form
