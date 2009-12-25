@@ -403,6 +403,7 @@
         (for name = (pop elements))
         (while name)
         (unless (first-time-p)
+          ;; FIXME: this here will emit a comma even if a spliced unquote follows that at the end doesn't splice anything (breaks ie iirc)
           (collect indent))
         (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name name))
         (if (and (typep name 'js-unquote)
