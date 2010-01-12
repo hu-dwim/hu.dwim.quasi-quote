@@ -16,7 +16,6 @@
   :components ((:module "source"
                 :components ((:module "pdf"
                               :components ((:file "package")
-                                           (:file "zlib")
                                            (:file "ast" :depends-on ("package"))
                                            (:file "syntax" :depends-on ("package" "ast"))
                                            (:file "transform" :depends-on ("package" "syntax" "ast"))))))))
