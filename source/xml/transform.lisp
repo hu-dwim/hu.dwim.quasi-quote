@@ -136,49 +136,50 @@
       (xml-unquote
        (bind ((spliced? (spliced? node))
               (form (form-of node)))
-         (if spliced?
-             (flet ((slurp-in (form)
-                      (when (and (consp form)
-                                 (eq 'list (first form)))
-                        (mapcar (lambda (el)
-                                  (or (maybe-slurp-in-toplevel-quasi-quote
-                                       (macroexpand-ignoring-toplevel-quasi-quote-macro el *transformation-environment*))
-                                      el))
-                                form))))
-               (iter (for slurped = (slurp-in form))
-                     (if (or (null slurped)
-                             (equal form slurped))
-                         (return)
-                         (setf form slurped))))
-             (progn
-               ;; first eliminate a possible toplevel qq that ends up wrapped in an unquote, probably in a macro, coming from a macro argument
-               (setf form (maybe-slurp-in-toplevel-quasi-quote (form-of node)))
-               ;; if it's a macro call, let's see if maybe it expands to a literal qq that we can slurp in
-               (when (and (consp form)
-                          (symbolp (first form))
-                          (macro-function (first form)))
-                 (awhen (maybe-slurp-in-toplevel-quasi-quote
-                         (macroexpand-ignoring-toplevel-quasi-quote-macro form *transformation-environment*))
-                   (setf form it)))))
-         (cond
-           ((and spliced?
-                 (consp form)
-                 (eq 'list (first form))
-                 (every #'self-evaluating? (rest form)))
-            (mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/element (rest form)))
-           ((self-evaluating? form)
-            (transform-quasi-quoted-xml-to-quasi-quoted-string/element form))
-           (t
-            (make-string-unquote
-             (wrap-runtime-delayed-transformation-form
-              (if spliced?
-                  `(map 'list (lambda (node)
-                                ,(with-runtime-xml-indent-level
-                                  ;; TODO this is not enough, unquoted parts are not indented just because of this
-                                  `(transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))
-                        ,form)
-                  (with-runtime-xml-indent-level
-                    `(transform-quasi-quoted-xml-to-quasi-quoted-string/element ,form)))))))))
+         (when form
+           (if spliced?
+               (flet ((slurp-in (form)
+                        (when (and (consp form)
+                                   (eq 'list (first form)))
+                          (mapcar (lambda (el)
+                                    (or (maybe-slurp-in-toplevel-quasi-quote
+                                         (macroexpand-ignoring-toplevel-quasi-quote-macro el *transformation-environment*))
+                                        el))
+                                  form))))
+                 (iter (for slurped = (slurp-in form))
+                       (if (or (null slurped)
+                               (equal form slurped))
+                           (return)
+                           (setf form slurped))))
+               (progn
+                 ;; first eliminate a possible toplevel qq that ends up wrapped in an unquote, probably in a macro, coming from a macro argument
+                 (setf form (maybe-slurp-in-toplevel-quasi-quote (form-of node)))
+                 ;; if it's a macro call, let's see if maybe it expands to a literal qq that we can slurp in
+                 (when (and (consp form)
+                            (symbolp (first form))
+                            (macro-function (first form)))
+                   (awhen (maybe-slurp-in-toplevel-quasi-quote
+                           (macroexpand-ignoring-toplevel-quasi-quote-macro form *transformation-environment*))
+                     (setf form it)))))
+          (cond
+            ((and spliced?
+                  (consp form)
+                  (eq 'list (first form))
+                  (every #'self-evaluating? (rest form)))
+             (mapcar 'transform-quasi-quoted-xml-to-quasi-quoted-string/element (rest form)))
+            ((self-evaluating? form)
+             (transform-quasi-quoted-xml-to-quasi-quoted-string/element form))
+            (t
+             (make-string-unquote
+              (wrap-runtime-delayed-transformation-form
+               (if spliced?
+                   `(map 'list (lambda (node)
+                                 ,(with-runtime-xml-indent-level
+                                   ;; TODO this is not enough, unquoted parts are not indented just because of this
+                                   `(transform-quasi-quoted-xml-to-quasi-quoted-string/element node)))
+                         ,form)
+                   (with-runtime-xml-indent-level
+                     `(transform-quasi-quoted-xml-to-quasi-quoted-string/element ,form))))))))))
       (string-quasi-quote node)
       (null (values)))))
 
