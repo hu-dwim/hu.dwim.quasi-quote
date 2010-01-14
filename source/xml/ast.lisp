@@ -118,6 +118,11 @@
          ,(bq-process (attributes-of x))
        ,(bq-process (children-of x))))
 
+  (:method ((x xml-text))
+    ;; TODO it's not completely clear to me why it's needed. it got triggered in HU.DWIM.WUI::EMIT-ERROR-RESPONSE-FOR-AJAX-AWARE-CLIENT
+    ;; TODO record a test that triggers it and include the reason here in a comment
+    `(make-xml-text ,(content-of x)))
+
   (:method ((x xml-attribute))
     `(make-xml-attribute
       ,(map-ast #'bq-process (name-of x))
