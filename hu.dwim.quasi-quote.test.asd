@@ -10,8 +10,7 @@
 
 (defsystem :hu.dwim.quasi-quote.test
   :class hu.dwim.test-system
-  :depends-on (:bordeaux-threads
-               :cxml
+  :depends-on (:cxml
                :hu.dwim.quasi-quote
                :hu.dwim.quasi-quote.css
                #+nil :hu.dwim.quasi-quote.pdf

@@ -18,6 +18,7 @@
         :hu.dwim.quasi-quote.xml
         :hu.dwim.stefil
         :hu.dwim.syntax-sugar
+        :hu.dwim.util
         :hu.dwim.walker)
   (:shadowing-import-from :hu.dwim.quasi-quote #:body-of
                           #:parent-of
