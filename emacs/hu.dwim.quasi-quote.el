@@ -80,18 +80,10 @@
                nil)
              prepend)
           (2 'hu.dwim.quasi-quote.xml-element-face))
-         ("[^-'=/<>(]\\(>+\\)[\]\" 	)}>]*$"
+         ("[^-'=/<>(]\\(>+\\)[\] 	)}>]"
           (0 (progn
                (hu.dwim.quasi-quote.mark-text-as-xml-paren (match-beginning 1) (match-end 1))
-               ;; ok, and now let's go until the end of line and while we only see close parens
-               ;; mark all >'s as an xml close paren
-               (let ((index (match-end 1)))
-                 (while (or (member (char-after index) '(?\  ?\"))
-                            (find (char-after index) hu.dwim.quasi-quote.paren-pairs :key 'second))
-                   (when (equal (char-after index) ?> )
-                     (hu.dwim.quasi-quote.mark-text-as-xml-paren index (1+ index)))
-                   (incf index)))
-               nil))))
+               (hu.dwim.quasi-quote:%mark-upcoming-xml-parens)))))
    'append)
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
@@ -100,6 +92,18 @@
                (remove-text-properties (match-beginning 1) (match-end 1)
                                        `(syntax-table nil))
                nil))))))
+
+;; TODO wtf?, it seems to be not getting triggered...
+(defun hu.dwim.quasi-quote:%mark-upcoming-xml-parens ()
+  ;; ok, and now let's go until the end of line and while we only see close parens
+  ;; mark all >'s as an xml close paren
+  (let ((index (match-end 1)))
+    (while (or (member (char-after index) '(?\  ?\"))
+               (find (char-after index) hu.dwim.quasi-quote.paren-pairs :key 'second))
+      (when (equal (char-after index) ?> )
+        (hu.dwim.quasi-quote.mark-text-as-xml-paren index (1+ index)))
+      (incf index)))
+  nil)
 
 (defun hu.dwim.quasi-quote.install-js-indentations ()
   (let ((overrides '((try unwind-protect))))
