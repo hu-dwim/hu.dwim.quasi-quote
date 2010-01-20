@@ -258,6 +258,14 @@
                   "wrong"
                   "ok"))｣))
 
+(def js-test test/js/1+ ()
+  (212
+   ｢`js(let ((var 1))
+         (print (+ ""
+                   (.toString (1+ var))
+                   (.toString var)
+                   (.toString (incf var)))))｣))
+
 (def js-test test/js/if ()
   ("then"
    ｢`js(if (< 2 3)
