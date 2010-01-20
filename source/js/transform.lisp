@@ -220,15 +220,10 @@
                     (operator (operator-of -node-)))
                (unless (length= 1 arguments)
                  (js-compile-error -node- "More than one argument to ~S?" operator))
-               (if (typep argument 'variable-reference-form)
-                   (with-wrapping-based-on-operator-precedence '++
-                     (ecase operator
-                       (1+ `("++" ,(recurse argument)))
-                       (1- `("--" ,(recurse argument)))))
-                   (with-wrapping-based-on-operator-precedence '+
-                     (ecase operator
-                       (1+ `("1 + " ,(recurse argument)))
-                       (1- `("1 + " ,(recurse argument))))))))))
+               (with-wrapping-based-on-operator-precedence '+
+                 (ecase operator
+                   (1+ `("1 + " ,(recurse argument)))
+                   (1- `("1 + " ,(recurse argument)))))))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
   (iter (for element :in-sequence elements)
