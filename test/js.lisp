@@ -13,12 +13,14 @@
 ;;; update-alternatives --list js
 ;;; sudo update-alternatives --set js /usr/bin/smjs
 
-
-;; TODO FIXME: on SBCL this doesn't work because ASDF grabs the Big Compiler Lock by using WITH-COMPILATION-UNIT.
-;; Then TRIVIAL-SHELL reads the standard-output in a separate thread which in turn calls compile to initialize some PCL cache
-#+nil
-(unless (search "JavaScript" (nth-value 1 (trivial-shell:shell-command "js --version")))
-  (error "You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. Install the spidermonkey-bin package for one..."))
+(eval-always
+  ;; KLUDGE: ASDF grabs the Big Compiler Lock by using WITH-COMPILATION-UNIT
+  ;; KLUDGE: TRIVIAL-SHELL reads the standard-output in a separate thread and PCL cache needs the same lock
+  ;; KLUDGE: avoid deadlock by initializing PCL cache now
+  (sb-thread::release-mutex sb-c::**world-lock**)
+  (unless (search "JavaScript" (nth-value 1 (trivial-shell:shell-command "js --version")))
+    (error "You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. Install the spidermonkey-bin package for one..."))
+  (sb-thread::get-mutex sb-c::**world-lock**))
 
 (def (function d) eval-js (string)
   (bind (((:values stdout nil return-code) (trivial-shell:shell-command "js" :input string)))
