@@ -6,8 +6,7 @@
 
 (in-package :hu.dwim.quasi-quote.js)
 
-(def layer js (ignore-undefined-references)
-  ())
+(def layer js (ignore-undefined-references))
 
 (def special-variable *js-macros*               (make-hash-table :test 'eq))
 (def special-variable *js-symbol-macros*        (make-hash-table :test 'eq))

@@ -83,29 +83,18 @@
      (stream-variable-name &key
                            (encoding *default-character-encoding*))))
 
-(def special-variable *js-walker-handlers* (make-hash-table :test #'eq))
-
 (def (definer :available-flags "e") js-walker (name &body body)
   (with-standard-definer-options name
-    `(bind ((hu.dwim.walker::*walker-handlers* *js-walker-handlers*))
-       (def walker ,name
-         ,@body))))
+    `(def (walker :in js) ,name
+         ,@body)))
 
-(def layered-methods find-walker-handler
-  (:method :in js :around (form)
-    (or (and (consp form)
-             (bind (((:values handler found?) (gethash (first form) *js-walker-handlers*)))
-               (when found?
-                 (assert (not (null handler)))
-                 handler)))
-        (call-next-layered-method)))
-  (:method :in js ((ast-node syntax-node))
-    (constantly ast-node)))
+(def layered-method walk-form :in js ((node syntax-node) &key &allow-other-keys)
+  node)
 
-(def layered-method hu.dwim.walker::walk-lambda-like :in js (ast-node args body env &rest rest &key &allow-other-keys)
+(def layered-method walk-form/lambda-like :in js (ast-node args body env &rest rest &key &allow-other-keys)
    (apply #'call-next-layered-method ast-node (%fixup-lambda-list args) body env rest))
 
-(def layered-method walk-application :in js (form parent operator arguments environment)
+(def layered-method walk-form/application :in js (form parent operator arguments environment)
   (if (and (consp operator)
            (not (hu.dwim.walker::lambda-form? operator)))
       (progn
@@ -113,7 +102,7 @@
         (setf operator (walk-form operator :parent parent :environment environment))
         (aprog1
             ;; call-next-layered-method is not good because we change the arg type or OPERATOR...
-            (walk-application form parent operator arguments environment)
+            (walk-form/application form parent operator arguments environment)
           ;; set proper parent
           (setf (hu.dwim.walker::parent-of operator) it)))
       (call-next-layered-method)))
@@ -129,7 +118,6 @@
       ;; let's transform all list qq nodes inside the form (this handles ` in macrolets in js forms)
       (setf form (recurse form)))
     (walk-form form :environment (make-walk-environment lexenv))))
-
 
 ;;;;;;
 ;;; conditions
@@ -173,7 +161,7 @@
 (def js-walker |defun|
   (bind (((name args &rest body) (rest -form-)))
     (with-form-object (node 'function-definition-form -parent- :name name)
-      (walk-lambda-like node args body -environment-))))
+      (walk-form/lambda-like node args body -environment-))))
 
 ;; cl:lambda is a macro that expands to (function (lambda ...)), so we need to define our own handler here
 (def (js-walker e) |lambda|
@@ -310,23 +298,33 @@
 
 (def (js-walker e) |macrolet|
   ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
-  (funcall (find-walker-handler `(macrolet))
-           `(macrolet (,@(iter (for (name args . body) :in (second -form-))
-                               (collect `(,name ,(substitute '&key '|&key|
-                                                             (substitute '&body '|&body| args))
-                                                ,@body))))
-              ,@(rest (rest -form-)))
-           -parent- -environment-))
+  (walk-form
+    `(macrolet (,@(iter (for (name args . body) :in (second -form-))
+                        (collect `(,name ,(substitute '&key '|&key|
+                                                      (substitute '&body '|&body| args))
+                                         ,@body))))
+       ,@(rest (rest -form-)))
+    :parent -parent- :environment -environment-))
 
 (def class* type-of-form (walked-form)
   ((object)))
 
+(def function %walk-form/type-of (-form- -parent- -environment-)
+  (with-walker-handler-lexical-environment
+    (unless (length= 2 -form-)
+      (js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" -form-))
+    (bind (((nil object) -form-))
+      (with-form-object (node 'type-of-form -parent-)
+        (setf (object-of node) (hu.dwim.walker::recurse object node))))))
+
+(def (js-walker e) type-of
+  (%walk-form/type-of -form- -parent- -environment-))
+
 (def (js-walker e) |type-of|
-  (unless (length= 2 -form-)
-    (js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" -form-))
-  (bind (((nil object) -form-))
-    (with-form-object (node 'type-of-form -parent-)
-      (setf (object-of node) (hu.dwim.walker::recurse object node)))))
+  (%walk-form/type-of -form- -parent- -environment-))
+
+(def (js-walker e) |typeof|
+  (%walk-form/type-of -form- -parent- -environment-))
 
 (def class* regexp-form (walked-form)
   ((regexp)))
@@ -339,26 +337,25 @@
     (with-form-object (node 'regexp-form -parent-)
       (setf (regexp-of node) regexp))))
 
+(def function substitute-operator (form new-operator)
+  (bind ((new-form (copy-list form)))
+    (setf (car new-form) new-operator)
+    new-form))
 
 ;; reinstall some cl handlers on the same, but lowercase symbol exported from hu.dwim.quasi-quote.js
 ;; because `js is case sensitive...
-(progn
-  (dolist (symbol {with-preserved-readtable-case
-                   ;; NOTE lambda needs its own handler, see above
-                   '(progn let let* setf setq defun block return if unwind-protect flet)})
-    (export symbol :hu.dwim.quasi-quote.js)
-    (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
-      (assert cl-symbol)
-      (awhen (gethash cl-symbol hu.dwim.walker::*walker-handlers*)
-        (setf (gethash symbol *js-walker-handlers*) it))))
+(macrolet ((frob ()
+             `(progn
+                ,@(iter (for symbol :in {with-preserved-readtable-case
+                                          ;; NOTE lambda needs its own handler, see above
+                                          '(progn let let* setq defun block if unwind-protect flet)})
+                        (collect `(export ',symbol :hu.dwim.quasi-quote.js))
+                        (collect (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
+                                   (assert cl-symbol)
+                                   `(def (walker :in js) ,symbol
+                                      (walk-form (substitute-operator -form- ',cl-symbol) :parent -parent- :environment -environment-))))))))
+  (frob))
 
-  (macrolet ((js-to-lisp-handler-alias (new existing)
-               `(setf (gethash ',new *js-walker-handlers*) (gethash ',existing hu.dwim.walker::*walker-handlers*))))
-    (js-to-lisp-handler-alias |setf| setq))
+(def (walker :in js) |setf|
+  (walk-form (substitute-operator -form- 'setq) :parent -parent- :environment -environment-))
 
-  (macrolet ((js-handler-alias (new existing)
-               `(progn
-                  (setf (gethash ',new *js-walker-handlers*) (gethash ',existing *js-walker-handlers*))
-                  (export ',new))))
-    (js-handler-alias |typeof| |type-of|)
-    (js-handler-alias type-of  |type-of|)))
