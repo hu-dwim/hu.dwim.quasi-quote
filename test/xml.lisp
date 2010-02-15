@@ -10,6 +10,7 @@
 
 (def special-variable *xml-stream*)
 
+;; TODO should use define-syntax
 (def function setup-readtable-for-xml-test (&key with-inline-emitting (binary #t) indentation-width)
   (enable-quasi-quoted-list-to-list-emitting-form-syntax)
   (if binary

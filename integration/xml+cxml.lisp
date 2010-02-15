@@ -6,8 +6,6 @@
 
 (in-package :hu.dwim.quasi-quote.xml)
 
-(def constant +xml-namespace-uri+ "http://www.w3.org/XML/1998/namespace")
-
 (defclass sax-handler (sax:default-handler)
   ())
 

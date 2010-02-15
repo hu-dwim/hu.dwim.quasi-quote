@@ -12,7 +12,8 @@
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.quasi-quote
-        :hu.dwim.syntax-sugar)
+        :hu.dwim.syntax-sugar
+        :hu.dwim.util)
   (:readtable-setup (hu.dwim.def:setup-readtable/same-as-package :hu.dwim.quasi-quote)))
 
 (in-package :hu.dwim.quasi-quote.xml)

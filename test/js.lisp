@@ -410,9 +410,9 @@
 (def js-test test/js/create-unquote ()
   (1
    ｢`js(print (slot-value (create ,@(list "a" 1 "b" 2)) 'a))｣)
-  (2
+  (4
    ｢`js(let ((a "b"))
-         (print (slot-value (create ,"a" ,1 "b" ,2) a)))｣))
+         (print (slot-value (create ,"a" ,3 "b" ,4) a)))｣))
 
 (def test test/js/create-unquote/errors ()
   (flet ((transform (string)
