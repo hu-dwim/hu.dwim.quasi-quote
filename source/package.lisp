@@ -46,7 +46,6 @@
      *bq-append*
      *bq-simplify*
      *bq-clobberable*
-     make-string-of-spaces
      find-ancestor-syntax-node
      list-without-nils
      binary-position
