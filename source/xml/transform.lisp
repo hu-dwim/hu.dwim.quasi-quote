@@ -44,7 +44,7 @@
           (emit (string encoding))
           (emit (format nil "\"?>~%"))))))
 
-(def special-variable *xml-indent-level* 0)
+(def (special-variable e) *xml-indent-level* 0)
 
 (def macro with-increased-xml-indent-level (&body body)
   `(bind ((*xml-indent-level* (1+ *xml-indent-level*)))
