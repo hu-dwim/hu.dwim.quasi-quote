@@ -14,6 +14,7 @@
         :hu.dwim.def
         :hu.dwim.quasi-quote
         :hu.dwim.syntax-sugar
+        :hu.dwim.util
         :hu.dwim.walker)
   (:shadowing-import-from :hu.dwim.quasi-quote
                           #:body-of
