@@ -68,12 +68,14 @@
 
 (def layered-method hu.dwim.walker::walker-macroexpand-1 :in js (form &optional env)
   (declare (ignore env)) ; TODO check the env for macrolets?
-  (bind ((name (first form))
-         (args (rest form))
-         (expander (js-macro-definition name)))
-    (if expander
-        (values (funcall expander args) #t)
-        (values form #f))))
+  (if (consp form)
+      (bind ((name (first form))
+             (args (rest form))
+             (expander (js-macro-definition name)))
+        (if expander
+            (values (funcall expander args) #t)
+            (values form #f)))
+      (values form #f)))
 
 (def function js-macro-definition (name)
   (gethash name *js-macros*))
