@@ -295,9 +295,8 @@
   (source-of (hu.dwim.walker:parent-of node)))
 
 (def transform-function transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body (node)
-  (bind ((arguments (remove-if (of-type 'allow-other-keys-function-argument-form)
-                               (arguments-of node)))
-         (rest-arg-name (aif (find-if (of-type 'rest-function-argument-form) (arguments-of node))
+  (bind ((arguments (bindings-of node))
+         (rest-arg-name (aif (find-if (of-type 'rest-function-argument-form) arguments)
                              (lisp-name-to-js-name (name-of it))
                              "_kArgs"))
          (rest-has-been-emitted? #f)
