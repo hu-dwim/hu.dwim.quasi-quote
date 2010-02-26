@@ -12,7 +12,7 @@
    (indentation-width nil))
   'transform-quasi-quoted-css-to-quasi-quoted-string)
 
-(defmethod print-object ((self quasi-quoted-css-to-quasi-quoted-string) *standard-output*)
+(def print-object quasi-quoted-css-to-quasi-quoted-string
   (princ "[CSS->String]"))
 
 (def function transform-quasi-quoted-css-to-quasi-quoted-string (node)
