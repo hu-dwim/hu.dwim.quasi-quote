@@ -211,18 +211,25 @@
         <ElemenT>
         <fOOO (baR 42)>))>｣))
 
-(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote1 ()
+(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote/1 ()
   (｢<taggg attribute="atttr"><foo/><bar><baz/></bar></taggg>｣
    ｢(macrolet ((nester (tag-name attribute-value &body body)
                  `<,,tag-name (attribute ,,attribute-value) ,@,@body>))
       (nester "taggg" "atttr" <foo> <bar <baz>>))｣))
 
-(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote2 ()
+(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote/2 ()
   (｢<html><body><foo/><bar/></body></html>｣
    ｢(macrolet ((nester (&body body)
                  ;; first ,@ is for xml, the ,@body is for the lisp quasi-quote
                  `<html <body ,@,@body>>))
       (nester <foo> <bar>))｣))
+
+(def xml-test test/xml/nested-through-macro-using-lisp-quasi-quote/3 ()
+  (｢<taggg attribute="atttr"><foo/><bar><baz/></bar></taggg>｣
+   ｢(macrolet ((nester (tag-name attribute-value &body body)
+                 `<,,tag-name (attribute ,,attribute-value) ,@,@body>))
+      ;; TODO because of the NIL (any non-xml node) in there this runs RUN-TRANSFORMATION-PIPELINE, but it shouldn't!
+      (nester "taggg" "atttr" <foo> nil <bar <baz>>))｣))
 
 (def xml-test test/xml/macrolet-in-unquote ()
   (｢<wrapper><element><tag1>value1</tag1><tag2>value2</tag2></element><last/></wrapper>｣
