@@ -405,7 +405,12 @@
 
 (def js-test test/js/create ()
   (1
-   ｢`js(print (slot-value (slot-value (create "a" (create "b" ,1)) 'a) 'b))｣))
+   ｢`js(print (slot-value (slot-value (create "a" (create "b" ,1)) 'a) 'b))｣)
+  ("true"
+   ｢`js(print (slot-value (create :foo true) 'foo))｣)
+  (42
+   ｢`js(let ((x 42))
+         (print (slot-value (create :foo x) 'foo)))｣))
 
 (def js-test test/js/create-unquote ()
   (1
