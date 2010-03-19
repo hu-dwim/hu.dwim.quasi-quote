@@ -423,11 +423,10 @@
                          `(transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name             ,(form-of name))))))
     (t (transform-quasi-quoted-js-to-quasi-quoted-string name))))
 
-(def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value)
+(def transform-function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value)
   (typecase value
-    (symbol        (lisp-name-to-js-name value))
+    (symbol        (recurse value))
     (constant-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (value-of value)))
-    (variable-reference-form (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value (name-of value)))
     (js-unquote    (if (spliced? value)
                        (js-compile-error nil "Spliced unquoting is not supported at value position in create forms")
                        (make-string-unquote
