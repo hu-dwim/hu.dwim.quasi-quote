@@ -440,6 +440,12 @@
     (assert (typep operator '(or lambda-function-form application-form)))
     `("(" ,(recurse operator) ")" "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")")))
 
+(def function drop-progn-wrapper-around-single-expression (node)
+  (if (and (typep node 'progn-form)
+           (length= 1 (hu.dwim.walker:body-of node)))
+      (first-elt (hu.dwim.walker:body-of node))
+      node))
+
 (macrolet ((frob (&rest entries)
              `(with-lexical-transform-functions
                 (def generic transform-quasi-quoted-js-to-quasi-quoted-string* (form)
@@ -458,8 +464,8 @@
           (transform-statements -node-))))
    (if-form
     (bind ((condition (condition-of -node-))
-           (then (then-of -node-))
-           (else (else-of -node-)))
+           (then (drop-progn-wrapper-around-single-expression (then-of -node-)))
+           (else (drop-progn-wrapper-around-single-expression (else-of -node-))))
       (when (and (typep else 'constant-form)
                  (eq nil (value-of else)))
         (setf else nil))
