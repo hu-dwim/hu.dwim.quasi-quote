@@ -22,7 +22,8 @@
                           #:map-ast)
   (:shadow #:catch-form)
   (:export #:|finally|
-           #:|with|)
+           #:|with|
+           #:|apply|)
   (:readtable-setup (hu.dwim.def:setup-readtable/same-as-package :hu.dwim.quasi-quote)))
 
 (in-package :hu.dwim.quasi-quote.js)

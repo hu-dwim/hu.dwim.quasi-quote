@@ -511,6 +511,11 @@
     (bind ((arguments (arguments-of -node-))
            (operator (operator-of -node-)))
       (cond
+        ((eq operator '|apply|)
+         `(,(recurse (first arguments))
+           ".apply(this, ["
+           ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (rest arguments))
+           "])"))
         ((typep operator 'application-form)
          (emit-lambda-application-form -node-))
         ((js-special-form? operator)
