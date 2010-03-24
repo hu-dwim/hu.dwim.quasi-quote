@@ -523,6 +523,13 @@
                 (return (+ a b))))
          (print (fun 1)))｣))
 
+(def js-test test/js/apply ()
+  (45
+   ｢`js(progn
+         (defun x (a &key (b 42) c)
+           (return (+ a b c)))
+         (print (apply x 1 :c 2)))｣))
+
 (def js-test test/js/lambda ()
   ("foobarbaz"
    ｢`js(print
