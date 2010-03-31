@@ -528,7 +528,7 @@
               `js(print ,(macro ("a" 1 "b" 2 "c" 3))))｣))
          3))))
 
-(def js-test test/js/defun ()
+(def js-test test/js/defun/key ()
   (145
    ｢`js(progn
          (defun x (a &key (b 42) c d)
@@ -553,6 +553,20 @@
    ｢`js(flet ((fun (a &key (b 3))
                 (return (+ a b))))
          (print (fun 1)))｣))
+
+(def js-test test/js/defun/optional ()
+  (with-expected-failures
+    (43
+     ｢`js(progn
+           (defun x (a &optional (b 42) c)
+             (return (+ a b c)))
+           (print (x 1)))｣))
+  (with-expected-failures
+    (301
+     ｢`js(progn
+           (defun x (a &optional (b 42) c)
+             (return (+ a b c)))
+           (print (x 1 100 200)))｣)))
 
 (def js-test test/js/apply ()
   (45
