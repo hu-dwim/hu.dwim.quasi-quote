@@ -578,6 +578,15 @@
                "("
                ,@(recurse-as-comma-separated (arguments-of -node-))
                ")")))
+   (with-form
+     (unless *in-js-statement-context*
+       (error "The JavaScript 'with' form can only be used as a statement (it's used in an expression context). AST node: ~A" -node-))
+    `("with ("
+      ,(recurse (context-of -node-))
+      ") { "
+      ,@(with-increased-indent
+         (transform-statements -node-))
+      "}"))
    (create-form
     `("{ "
       ,@(with-increased-indent

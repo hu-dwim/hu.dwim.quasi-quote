@@ -200,7 +200,23 @@
       (setf (looping-condition-of for-node) (hu.dwim.walker::recurse `(|not| ,raw-end-test) for-node))
       (setf (body-of for-node) (mapcar [hu.dwim.walker::recurse !1 for-node] raw-body)))))
 
-(def class* create-form (walked-form)
+;;;;;;
+;;; with-form
+
+(def (class* e) with-form (implicit-progn-mixin)
+  ((context)))
+
+(def (js-walker e) |with|
+  (bind ((context (second -form-))
+         (body (rest (rest -form-))))
+    (with-form-object (node 'with-form -parent-)
+      (setf (context-of node) (hu.dwim.walker::recurse context node))
+      (setf (hu.dwim.walker:body-of node) (mapcar [hu.dwim.walker::recurse !1 node] body)))))
+
+;;;;;;
+;;; create-form
+
+(def (class* e) create-form (walked-form)
   ((elements)))
 
 (def (js-walker e) |create|
