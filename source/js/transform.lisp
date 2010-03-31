@@ -225,11 +225,11 @@
                    (1+ `("1 + " ,(recurse argument)))
                    (1- `("1 + " ,(recurse argument)))))))))
 
-(def function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
-  (iter (for element :in-sequence elements)
+(def transform-function transform-quasi-quoted-js-to-quasi-quoted-string/array-elements (elements)
+  (iter (for element :in elements)
         (unless (first-iteration-p)
           (collect ", "))
-        (collect (transform-quasi-quoted-js-to-quasi-quoted-string element))))
+        (collect (recurse element))))
 
 (def (function i) in-toplevel-js-block? ()
   ;; TODO ?

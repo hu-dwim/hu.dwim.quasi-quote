@@ -138,6 +138,7 @@
               (form (form-of node)))
          (when form
            (if spliced?
+               ;; TODO why is there a difference between spliced? and non-spliced?
                (flet ((slurp-in (form)
                         (when (and (consp form)
                                    (eq 'list (first form)))

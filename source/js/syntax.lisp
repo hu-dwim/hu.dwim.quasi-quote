@@ -219,24 +219,33 @@
 (def (class* e) create-form (walked-form)
   ((elements)))
 
+(def (function e) make-create-form (elements &key parent)
+  (make-instance 'create-form :elements elements :parent parent))
+
 (def (js-walker e) |create|
   (bind ((elements (rest -form-)))
     (with-form-object (create-node 'create-form -parent-)
       (setf (elements-of create-node) (mapcar [hu.dwim.walker::recurse !1 create-node] elements)))))
 
+;;;;;;
+;;; array-form
+
 (def class* array-form (walked-form)
   ((elements)))
 
+(def (function e) make-array-form (elements &key parent)
+  (make-instance 'array-form :elements elements :parent parent))
+
 (def (js-walker e) |array|
   (bind ((elements (rest -form-)))
-    (with-form-object (toplevel-create-node 'array-form -parent-)
+    (with-form-object (toplevel-array-node 'array-form -parent-)
       (labels ((recurse (node)
                  (if (and (vectorp node)
                           (not (stringp node)))
-                     (with-form-object (create-node 'array-form -parent-)
-                       (setf (elements-of toplevel-create-node) (map 'list #'recurse node)))
-                     (hu.dwim.walker::recurse node toplevel-create-node))))
-        (setf (elements-of toplevel-create-node) (mapcar #'recurse elements))))))
+                     (with-form-object (array-node 'array-form -parent-)
+                       (setf (elements-of toplevel-array-node) (map 'list #'recurse node)))
+                     (hu.dwim.walker::recurse node toplevel-array-node))))
+        (setf (elements-of toplevel-array-node) (mapcar #'recurse elements))))))
 
 (def class* slot-value-form (walked-form)
   ((object)
