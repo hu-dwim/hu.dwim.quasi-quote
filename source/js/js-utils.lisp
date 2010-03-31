@@ -43,15 +43,27 @@
            (let ((,VAR (aref ,LIST ,IDX)))
              ,@BODY))})))
 
+#+nil ; this is an alternative rebind using 'with'. delme?
 (def (js-macro e) |rebind| (variables &body body)
   {with-preserved-readtable-case
-    `(let ((new-context (create ,@(LOOP
-                                     :FOR VARIABLE :IN VARIABLES
-                                     :FOR JS-NAME = (LISP-NAME-TO-JS-NAME VARIABLE)
-                                     :COLLECT JS-NAME
-                                     :COLLECT (MAKE-SYMBOL JS-NAME)))))
-       (with new-context
-         ,@BODY))})
+    `(with (create ,@(LOOP
+                       :FOR VARIABLE :IN VARIABLES
+                       :FOR JS-NAME = (LISP-NAME-TO-JS-NAME VARIABLE)
+                       :COLLECT JS-NAME
+                       :COLLECT (MAKE-SYMBOL JS-NAME)))
+           ,@BODY)})
+
+(def (js-macro e) |rebind| (variables &body body)
+  {with-preserved-readtable-case
+    `((lambda ,VARIABLES
+        ,@BODY) ,@VARIABLES)})
+
+(def (js-macro e) |rebind/expression| (variables &body body)
+  (unless (length= 1 body)
+    (error "~S only supports a single statement whose return value will be the result of the form" '|rebind/expression|))
+  {with-preserved-readtable-case
+    `((lambda ,VARIABLES
+        (return ,@BODY)) ,@VARIABLES)})
 
 (macrolet ((frob (name index)
              `(def (js-macro e) ,name (thing)
