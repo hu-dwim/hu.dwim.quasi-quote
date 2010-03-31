@@ -320,10 +320,15 @@
         (labels ((process-required-arguments ()
                    (iterate-arguments
                     (required-function-argument-form (push (lisp-name-to-js-name (name-of argument)) transformed-arguments))
+                    (optional-function-argument-form (push argument arguments)
+                                                     (process-first-optional-argument))
                     (rest-function-argument-form (push (lisp-name-to-js-name (name-of argument)) transformed-arguments)
                                                  (setf rest-has-been-emitted? #t))
                     (keyword-function-argument-form (push argument arguments)
                                                     (process-first-keyword-argument))))
+                 (register-optional-parser (argument)
+                   (declare (ignore argument))
+                   (not-yet-implemented))
                  (register-keyword-parser (argument)
                    (bind ((default-value (default-value-of argument))
                           (js-name (lisp-name-to-js-name (name-of argument)))
@@ -340,13 +345,20 @@
                    (iterate-arguments
                     (keyword-function-argument-form (unless rest-has-been-emitted?
                                                       (push rest-arg-name transformed-arguments))
-                                                    (push (format nil "if (!~A) ~A = new Object;~%" rest-arg-name rest-arg-name) ;
+                                                    (push (format nil "if (!~A) ~A = new Object;~%" rest-arg-name rest-arg-name)
                                                           transformed-body-prefix)
                                                     (register-keyword-parser argument)
                                                     (process-keyword-arguments))))
                  (process-keyword-arguments ()
                    (iterate-arguments-without-commas
-                    (keyword-function-argument-form (register-keyword-parser argument)))))
+                    (keyword-function-argument-form (register-keyword-parser argument))))
+                 (process-first-optional-argument ()
+                   (iterate-arguments
+                    (optional-function-argument-form (register-optional-parser argument)
+                                                     (process-optional-arguments))))
+                 (process-optional-arguments ()
+                   (iterate-arguments-without-commas
+                    (optional-function-argument-form (register-optional-parser argument)))))
           (process-required-arguments))
         `("("
           ,@(nreverse transformed-arguments)
