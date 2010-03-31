@@ -427,6 +427,37 @@
     (signals js-compile-error
       (transform ｢`js(create ,@1 "b")｣))))
 
+(def js-test test/js/rebind ()
+  (42
+   ｢`js(let* ((x 40)
+              (y 2)
+              (fn (rebind/expression (x y)
+                    (lambda (event)
+                      (print (+ x y))))))
+         (setf x 0)
+         (setf y 0)
+         (fn))｣)
+  (42
+   ｢`js(let* ((x 40)
+              (y 2)
+              (fn ))
+         (rebind (x y)
+           (setf fn (lambda (event)
+                      (print (+ x y)))))
+         (setf x 0)
+         (setf y 0)
+         (fn))｣))
+
+(def test test/js/rebind/errors ()
+  (flet ((transform (string)
+           (transform (macroexpand (read-from-string-with-xml+js-syntax string)))))
+    (signals error (transform ｢`js(let ((fn (rebind (x y)
+                                               (lambda (event)
+                                                 (print (+ x y)))))))｣))
+    (signals error (transform ｢`js(rebind/expression (x y)
+                                    (print 1)
+                                    (print 2))｣))))
+
 (def xml+js-test test/js/macrolet/1 ()
   (42
    ｢`js(macrolet ((macro (var value &body body)
