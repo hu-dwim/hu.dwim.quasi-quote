@@ -660,7 +660,8 @@
       ,@(make-newline-and-indent) "finally"
       ,@(transform-statements (cleanup-form-of -node-) :wrap? #t)))
    (try-form
-    (bind ((catch-clauses (catch-clauses-of -node-))
+    (bind ((protected-form (protected-form-of -node-))
+           (catch-clauses (catch-clauses-of -node-))
            (finally-clause (finally-clause-of -node-)))
       (awhen (find-if [not (typep !1 'catch-form)] catch-clauses)
         (js-compile-error -node- "Expecting only catch caluse here, but got ~A" it))
@@ -668,7 +669,10 @@
                `(,@(make-newline-and-indent) "catch (" ,(lisp-name-to-js-name (variable-name-of clause)) ")"
                  ,@(transform-statements clause :wrap? #t))))
         `(,@(make-newline-and-indent) "try"
-          ,@(transform-statements (protected-form-of -node-) :wrap? #t)
+          ,@(transform-statements (if (typep protected-form 'implicit-progn-mixin)
+                                      protected-form
+                                      (list protected-form))
+                                  :wrap? #t)
           ,@(mapcar #'transform-catch-clause catch-clauses)
           ,@(when finally-clause
               `(,@(make-newline-and-indent) "finally"
