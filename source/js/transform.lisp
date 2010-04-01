@@ -59,7 +59,10 @@
               (gethash (string-downcase symbol) *js-reserved-keywords*))
          (bind ((name (symbol-name symbol)))
            (concatenate 'string name (princ-to-string (mod (sxhash name) 10000))))
-         (hyphened-to-camel-case (symbol-name symbol))))))
+         (bind ((name (copy-seq (symbol-name symbol))))
+           ;; NOTE: be careful extending the set of replaced characters: some js operators like /= go through here currently
+           (nsubstitute #\_ #\? name)
+           (hyphened-to-camel-case name))))))
 
 (def function to-js-operator-name (name)
   (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name name) :operator #t))
