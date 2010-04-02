@@ -81,7 +81,7 @@
                nil)
              prepend)
           (2 'hu.dwim.quasi-quote.xml-element-face))
-         ("[^-'=/<>(]\\(>+\\)"
+         ("[^-'=/<>(]\\(>+\\)[^=]"
           (0 (progn
                (hu.dwim.quasi-quote:mark-text-as-xml-paren (match-beginning 1) (match-end 1))
                (hu.dwim.quasi-quote:%mark-upcoming-xml-parens)))))
