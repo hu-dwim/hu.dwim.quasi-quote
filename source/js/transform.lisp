@@ -140,7 +140,7 @@
             (collect (recurse argument)))
     #\]))
 
-(def transform-function transform-map-like (node &key (destructively-into :inplace))
+(def transform-function transform-map-like (node &key destructively-into)
   (bind ((arguments (arguments-of node))
          (fn (pop arguments))
          (fn-processed (cond
@@ -192,7 +192,7 @@
    (|decf|   (transform-incf-like -node- "--" "-="))
    (|vector| (transform-vector-like -node-))
    (|list|   (transform-vector-like -node-))
-   (|map|    (transform-map-like -node-))
+   (|map|    (transform-map-like -node- :destructively-into :inplace))
    ;; TODO i think the with syntax ought to be a full AST node...
    (|with|   (bind ((arguments (arguments-of -node-)))
                `("with (" ,(recurse (first arguments)) ") " ,(transform-statements (rest arguments) :wrap? #t))))
@@ -569,6 +569,7 @@
    (function-definition-form
     `("function " ,(lisp-name-to-js-name (name-of -node-))
                   ,@(transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body -node-)))
+   ;; TODO check how we render stuff re flet/labels and how that behaves in js...
    (flet-form
     (flet ((collect-js-names-of-variable-references (node)
              (mapcar (compose 'lisp-name-to-js-name 'name-of)
