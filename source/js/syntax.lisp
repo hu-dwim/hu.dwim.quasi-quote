@@ -144,9 +144,9 @@
   ())
 
 (def function js-compile-warning (walked-form message &rest args)
-  (declare (type string message)
-           (type (or null syntax-node walked-form) walked-form))
-  (error 'simple-js-compile-warning :walked-form walked-form :format-control message :format-arguments args))
+  (check-type message string)
+  (check-type walked-form (or null syntax-node walked-form))
+  (warn 'simple-js-compile-warning :walked-form walked-form :format-control message :format-arguments args))
 
 ;;;;;;
 ;;; some js specific handlers

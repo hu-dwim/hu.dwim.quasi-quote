@@ -580,7 +580,7 @@
             (when (some (lambda (reference)
                           (string= name reference))
                         variable-references)
-              (js-compile-warning "Found a variable reference to a name that names an flet definition (~S). In the JavaScript output flet definitions are in the same namespace as the variables!" name))
+              (js-compile-warning -node- "Found a variable reference to a name that names an flet definition (~S). In the JavaScript output flet definitions are in the same namespace as the variables!" name))
             (appendf variable-references (collect-js-names-of-variable-references binding))
             (collect `(,@(make-newline-and-indent) "var " ,name " = " ,(recurse binding) ";") :into result)
             (finally (return (cons result (transform-statements (hu.dwim.walker:body-of -node-) :wrap? #f)))))))
