@@ -533,6 +533,9 @@
            "])"))
         ((typep operator 'application-form)
          (emit-lambda-application-form -node-))
+        ((typep operator 'walked-lexical-function-object-form)
+         (with-operator-precedence 'comma
+           `(,(recurse operator) "(" ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments arguments) ")")))
         ((js-special-form? operator)
          (bind ((handler (gethash operator *js-special-forms*)))
            (funcall handler -node-)))
@@ -585,6 +588,8 @@
             (appendf variable-references (collect-js-names-of-variable-references binding))
             (collect `(,@(make-newline-and-indent) "var " ,name " = " ,(recurse binding) ";") :into result)
             (finally (return (cons result (transform-statements (hu.dwim.walker:body-of -node-) :wrap? #f)))))))
+   (walked-lexical-function-object-form
+    (lisp-name-to-js-name (name-of -node-)))
    (return-from-form
     `("return" ,@(awhen (result-of -node-)
                         (list #\space (recurse it)))))
