@@ -228,7 +228,7 @@
         (float (format nil "~F" node))
         (symbol (if (constantp node)
                     (symbol-value node)
-                    (symbol-name node)))
+                    (error "To avoid confusion, the XML quasi quote transformation does not allow non-constant symbols as attribute values. The symbol in question is ~S" node)))
         (string-quasi-quote node) ;; TODO what about xml escaping?
         (string (escape-as-xml node)))))
 
