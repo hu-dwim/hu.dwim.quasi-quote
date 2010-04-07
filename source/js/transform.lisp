@@ -631,9 +631,8 @@
       ,(regexp-of -node-)
       "/"))
    (for-form
-    `("for ("
-      ,@(recurse-as-comma-separated (variables-of -node-))
-      "; "
+    `("var " ,@(recurse-as-comma-separated (variables-of -node-)) ";" #\Newline
+      "for (; "
       ,(recurse (looping-condition-of -node-))
       "; "
       ,@(recurse-as-comma-separated (steps-of -node-))
