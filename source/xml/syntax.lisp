@@ -6,6 +6,9 @@
 
 (in-package :hu.dwim.quasi-quote.xml)
 
+(def (special-variable e :documentation "The default variable that holds the XML output stream.")
+  *xml-stream*)
+
 (define-syntax (quasi-quoted-xml :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)
@@ -175,6 +178,7 @@
                                                             :splice-character splice-character
                                                             :destructive-splice-character destructive-splice-character)))))
   ;; TODO ? (x xml-emitting-form           '(xml-emitting-form))
+  ;; TODO make stream-variable-name &key defaulting to *xml-stream*
   (x string-emitting-form (make-quasi-quoted-xml-to-form-emitting-transformation-pipeline
                            stream-variable-name
                            :binary #f
@@ -336,3 +340,20 @@
   (etypecase name
     (string name)
     (symbol (symbol-name name))))
+
+;;;;;;
+;;; XML emitting
+
+(def (macro e) with-xml-stream (stream &body body)
+  `(bind ((*xml-stream* ,stream))
+     ,@body))
+
+(def (macro e) emit-into-xml-stream (stream &body body)
+  `(bind ((*xml-stream* ,stream))
+     (emit (progn ,@body))))
+
+(def (macro e) emit-into-xml-stream-buffer ((&key (external-format *default-character-encoding*)) &body body)
+  (with-unique-names (buffer)
+    `(with-output-to-sequence (,buffer :external-format ,external-format)
+       (bind ((*xml-stream* ,buffer))
+         (emit (progn ,@body))))))

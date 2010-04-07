@@ -6,6 +6,9 @@
 
 (in-package :hu.dwim.quasi-quote.js)
 
+(def (special-variable e :documentation "The default variable that holds the JavaScript output stream.")
+  *js-stream*)
+
 (define-syntax quasi-quoted-js (&key start-character
                                      end-character
                                      dispatch-character
@@ -62,6 +65,7 @@
                                                            :destructive-splice-character destructive-splice-character
                                                            :dispatched-quasi-quote-name dispatched-quasi-quote-name)))))
   ;; TODO ? (x js-emitting-form            '(js-emitting-form))
+  ;; TODO make stream-variable-name &key defaulting to *js-stream*
   (x string-emitting-form (make-quasi-quoted-js-to-form-emitting-transformation-pipeline
                            stream-variable-name
                            :binary #f
@@ -383,4 +387,21 @@
 
 (def (walker :in js) |setf|
   (walk-form (substitute-operator -form- 'setq) :parent -parent- :environment -environment-))
+
+;;;;;;
+;;; JavaScript emitting
+
+(def (macro e) with-js-stream (stream &body body)
+  `(bind ((*js-stream* ,stream))
+     ,@body))
+
+(def (macro e) emit-into-js-stream (stream &body body)
+  `(bind ((*js-stream* ,stream))
+     (emit (progn ,@body))))
+
+(def (macro e) emit-into-js-stream-buffer ((&key (external-format *default-character-encoding*)) &body body)
+  (with-unique-names (buffer)
+    `(with-output-to-sequence (,buffer :external-format ,external-format)
+       (bind ((*js-stream* ,buffer))
+         (emit (progn ,@body))))))
 
