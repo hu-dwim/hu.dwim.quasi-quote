@@ -357,3 +357,16 @@
     `(with-output-to-sequence (,buffer :external-format ,external-format)
        (bind ((*xml-stream* ,buffer))
          (emit (progn ,@body))))))
+
+(def (function e) emit-xml-prologue (&key (encoding :utf-8) (stream *xml-stream*) (version "1.1"))
+  (macrolet ((emit (string)
+               `(write-string ,string stream)))
+    (if (and (eq encoding :utf-8)
+             (string= version "1.1"))
+        (emit #.(coerce (format nil "<?xml version=\"1.1\" encoding=\"UTF-8\"?>~%") 'simple-base-string))
+        (progn
+          (emit "<?xml version=\"")
+          (emit (or version "1.1"))
+          (emit "\" encoding=\"")
+          (emit (string encoding))
+          (emit (format nil "\"?>~%"))))))
