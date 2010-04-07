@@ -30,7 +30,7 @@
 
 (import-external-quasi-quote-symbols-for-extensions)
 
-(export {hu.dwim.util::with-preserved-readtable-case
+(export {hu.dwim.syntax-sugar:with-preserved-readtable-case
          '(nil t and or not
            if when unless cond
            progn let let*
