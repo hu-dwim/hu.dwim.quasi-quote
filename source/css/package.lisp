@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.util)
+(in-package :hu.dwim.def)
 
 (def package :hu.dwim.quasi-quote.css
   (:use :babel
@@ -28,4 +28,3 @@
    package))
 
 (import-external-quasi-quote-symbols-for-extensions)
-

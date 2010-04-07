@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.util)
+(in-package :hu.dwim.def)
 
 (def package :hu.dwim.quasi-quote
   (:use :babel
@@ -16,7 +16,7 @@
         :hu.dwim.syntax-sugar
         :hu.dwim.util)
   (:readtable-setup
-   (enable-standard-hu.dwim-syntaxes)
+   (hu.dwim.util:enable-standard-hu.dwim-syntaxes)
    (hu.dwim.syntax-sugar:enable-lambda-with-bang-args-syntax)))
 
 (in-package :hu.dwim.quasi-quote)

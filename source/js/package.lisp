@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.util)
+(in-package :hu.dwim.util) ; TODO: (in-package :hu.dwim.def) just like in all the other places
 
 (def package :hu.dwim.quasi-quote.js
   (:use :babel
@@ -30,7 +30,7 @@
 
 (import-external-quasi-quote-symbols-for-extensions)
 
-(export {with-preserved-readtable-case
+(export {hu.dwim.util::with-preserved-readtable-case
          '(nil t and or not
            if when unless cond
            progn let let*
@@ -42,4 +42,3 @@
            do
            &optional &key &allow-other-keys &rest &body)}
         :hu.dwim.quasi-quote.js)
-

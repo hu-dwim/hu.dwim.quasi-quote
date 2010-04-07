@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.util)
+(in-package :hu.dwim.def)
 
 (def package :hu.dwim.quasi-quote.pdf
   (:use :hu.dwim.common
@@ -16,4 +16,3 @@
 (in-package :hu.dwim.quasi-quote.pdf)
 
 (import-external-quasi-quote-symbols-for-extensions)
-
