@@ -141,6 +141,7 @@
     #\]))
 
 (def transform-function transform-map-like (node &key destructively-into)
+  (not-yet-implemented "the js 'map operator is rather buggy, consider using wui.map")
   (bind ((arguments (arguments-of node))
          (fn (pop arguments))
          (fn-processed (cond
