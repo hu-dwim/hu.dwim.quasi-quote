@@ -510,8 +510,8 @@
                            `(#\Newline ,@(make-indent) "else"
                                        ,@(transform-if-block else)))))
           (with-wrapping-based-on-operator-precedence 'conditional
-            (when (or (typep then 'implicit-progn-mixin)
-                      (typep else 'implicit-progn-mixin))
+            (when (or (typep then 'progn-form)
+                      (typep else 'progn-form))
               (js-compile-error -node- "if's may not have multiple statements in their then/else branch when they are used in expression context"))
             `(,(recurse condition) " ? "
                   ,(recurse then)
