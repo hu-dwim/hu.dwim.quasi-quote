@@ -528,10 +528,17 @@
            (operator (operator-of -node-)))
       (cond
         ((eq operator '|apply|)
-         `(,(recurse (first arguments))
-           ".apply(this, ["
-           ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (rest arguments))
-           "])"))
+         (bind ((argument-count (length arguments)))
+           `(,(recurse (first arguments))
+              ".apply(this, "
+              ,@(if (length= 2 argument-count)
+                    (list (recurse (elt arguments (1- argument-count))))
+                    `("["
+                      ,@(transform-quasi-quoted-js-to-quasi-quoted-string/application-arguments (subseq arguments 1 (1- argument-count)))
+                      "].concat("
+                      ,(recurse (elt arguments (1- argument-count)))
+                      ")"))
+              ")")))
         ((typep operator 'application-form)
          (emit-lambda-application-form -node-))
         ((typep operator 'walked-lexical-function-object-form)
