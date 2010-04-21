@@ -48,10 +48,14 @@
     (not-yet-implemented "Currently the JavaScript 'foreach macro does not support multiple sequences to iterate on"))
   (when (quoted-form? function)
     (setf function (second function)))
-  {with-preserved-readtable-case
-    `(.forEach ,ARRAY (lambda (el index array)
-                        ;; forEach calls the thunk with 3 arguments which can have surprising effects (i.e. with the silly dojo.addOnLoad), so drop the others...
-                        (,FUNCTION el)))})
+  (with-unique-names (el)
+    {with-preserved-readtable-case
+      `(dolist (,EL ,ARRAY)
+         (,FUNCTION ,EL))
+      #+nil ; this could work, but of course forEach is not available on IE...
+      `(.forEach ,ARRAY (lambda (el index array)
+                          ;; forEach calls the thunk with 3 arguments which can have surprising effects (i.e. with the silly dojo.addOnLoad), so drop the others...
+                          (,FUNCTION el)))}))
 
 #+nil ; this is an alternative rebind using 'with'. delme?
 (def (js-macro e) |rebind| (variables &body body)
