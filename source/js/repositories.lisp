@@ -44,6 +44,7 @@
 (def layered-method hu.dwim.walker::constant-name? :in js (form &optional env)
   (declare (ignore env))
   (or (gethash form *js-literals*)
+      (keywordp form)
       (and (not (symbolp form))
            (not (consp form)))))
 
