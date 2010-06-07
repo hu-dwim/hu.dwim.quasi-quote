@@ -381,11 +381,14 @@
       (labels ((process-required-arguments ()
                  (iterate-arguments
                   (free-variable-reference-form (bind ((name (name-of argument)))
-                                                  (if (keywordp name)
-                                                      (progn
-                                                        (push argument arguments)
-                                                        (nconcing (process-keyword-arguments)))
-                                                      (collect (recurse argument)))))
+                                                  (assert (not (keywordp name)))
+                                                  (collect (recurse argument))))
+                  (constant-form (bind ((value (value-of argument)))
+                                   (if (keywordp value)
+                                       (progn
+                                         (push argument arguments)
+                                         (nconcing (process-keyword-arguments)))
+                                       (collect (recurse argument)))))
                   (t (collect (recurse argument)))))
                (process-keyword-arguments ()
                  `("{"
@@ -393,14 +396,14 @@
                       (iter (for name = (pop arguments))
                             (for argument = (pop arguments))
                             (while name)
-                            (unless (and (typep name 'free-variable-reference-form)
-                                         (keywordp (name-of name)))
+                            (unless (and (typep name 'constant-form)
+                                         (keywordp (value-of name)))
                               (js-compile-error (hu.dwim.walker:parent-of argument) "Don't know what to do with ~S at a &key name position" name))
                             (unless argument
                               (js-compile-error (hu.dwim.walker:parent-of argument) "Odd number of &key args for js function application form ~S" (source-of-parent argument)))
                             (unless (first-time-p)
                               (collect ", "))
-                            (collect (lisp-name-to-js-name (name-of name)))
+                            (collect (lisp-name-to-js-name (value-of name)))
                             (collect ": ")
                             (collect (recurse argument))))
                    "}")))
