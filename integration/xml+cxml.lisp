@@ -45,7 +45,7 @@
                 :validate #f)))
 
 (def class* format-quasi-quoted-xml/sax-handler (sax:default-handler)
-  ((element-handler nil)))
+  ((element-handler (constantly #f))))
 
 (defmethod sax:start-element ((builder format-quasi-quoted-xml/sax-handler) namespace-uri local-name qname attributes)
   (unless (funcall (element-handler-of builder) namespace-uri local-name qname attributes)
