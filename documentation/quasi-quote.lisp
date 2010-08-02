@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.quasi-quote.documentation)
 
-(def project :hu.dwim.quasi-quote :path (system-pathname :hu.dwim.quasi-quote))
+(def project :hu.dwim.quasi-quote)
 
 (def book user-guide (:title "User guide")
   (chapter (:title "Introduction")
