@@ -83,6 +83,10 @@
 (def (function e) make-xml-attribute (name value)
   (make-instance 'xml-attribute :name name :value value))
 
+(def (function eio) maybe-make-xml-attribute (name value)
+  (when value
+    (make-xml-attribute name value)))
+
 (def (function e) make-xml-text (content)
   (make-instance 'xml-text :content content))
 
