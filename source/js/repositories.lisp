@@ -83,9 +83,13 @@
 
 (def function (setf js-macro-definition) (value name)
   (assert (and name (symbolp name)))
-  (when (gethash name *js-macros*)
-    (simple-style-warning "Redefining js macro ~S" name))
-  (setf (gethash name *js-macros*) value))
+  (if value
+      (progn
+        (when (gethash name *js-macros*)
+          (simple-style-warning "Redefining js macro ~S" name))
+        (setf (gethash name *js-macros*) value))
+      (remhash name *js-macros*))
+  value)
 
 (def (definer e :available-flags "e") js-macro (name args &rest body)
   "Define a javascript macro, and store it in the toplevel macro environment."
