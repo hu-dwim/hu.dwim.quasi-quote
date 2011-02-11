@@ -583,6 +583,9 @@
    (function-definition-form
     `("function " ,(lisp-name-to-js-name (name-of -node-))
                   ,@(transform-quasi-quoted-js-to-quasi-quoted-string/lambda-arguments-with-body -node-)))
+   (macro-definition-form
+    ;; we don't have anything to do with defmacro forms at this stage anymore
+    (values))
    ;; TODO check how we render stuff re flet/labels and how that behaves in js...
    (flet-form
     (flet ((collect-js-names-of-variable-references (node)

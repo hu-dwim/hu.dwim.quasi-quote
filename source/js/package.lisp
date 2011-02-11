@@ -36,7 +36,7 @@
            progn let let*
            vector list aref elt slot-value
            setf setq null incf decf
-           defun lambda map mapcar map-into
+           defun defmacro lambda map mapcar map-into
            block return
            create array
            do

@@ -71,10 +71,9 @@
   (declare (ignore env)) ; TODO check the env for macrolets?
   (if (consp form)
       (bind ((name (first form))
-             (args (rest form))
              (expander (js-macro-definition name)))
         (if expander
-            (values (funcall expander args) #t)
+            (values (funcall expander form) #t)
             (values form #f)))
       (values form #f)))
 
@@ -94,19 +93,19 @@
 (def (definer e :available-flags "e") js-macro (name args &rest body)
   "Define a javascript macro, and store it in the toplevel macro environment."
   ;; TODO (undefine-js-compiler-macro name)
-  (with-unique-names (arg-values)
+  (with-unique-names (form)
     (with-standard-definer-options name
       `(progn
          (setf (js-macro-definition ',name)
-               (lambda (,arg-values)
-                 (destructuring-bind ,args ,arg-values ,@body)))
+               (lambda (,form)
+                 (destructuring-bind ,args (rest ,form) ,@body)))
          ',name))))
 
 (def (definer e :available-flags "e") js-lisp-macro-alias (lisp-name &optional (js-name (intern (string-downcase lisp-name))))
   (with-standard-definer-options js-name
     `(setf (js-macro-definition ',js-name)
-           (lambda (args)
-             (macroexpand `(,',lisp-name ,@args))))))
+           (lambda (form)
+             (macroexpand `(,',lisp-name ,@(rest form)))))))
 
 (def (definer :available-flags "e") js-literal (name string)
   (bind ((lowercase-name (intern (string-downcase name))))

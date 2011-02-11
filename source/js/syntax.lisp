@@ -325,15 +325,28 @@
       (setf (condition-of node) (hu.dwim.walker::recurse condition node))
       (setf (hu.dwim.walker:body-of node) (mapcar [hu.dwim.walker::recurse !1 node] body)))))
 
+(def function %sanitize-macro-lambda-list (lambda-list)
+  ;; KLUDGE this function shouldn't really exist..
+  (substitute '&key '|&key|
+              (substitute '&body '|&body| lambda-list)))
+
 (def (js-walker e) |macrolet|
   ;; this is a KLUDGE: the walker only understands &BODY but the js reader is case sensitive
   (walk-form
     `(macrolet (,@(iter (for (name args . body) :in (second -form-))
-                        (collect `(,name ,(substitute '&key '|&key|
-                                                      (substitute '&body '|&body| args))
+                        (collect `(,name ,(%sanitize-macro-lambda-list args)
                                          ,@body))))
        ,@(rest (rest -form-)))
     :parent -parent- :environment -environment-))
+
+(def layered-method hu.dwim.walker::define-macro :in js (defmacro-form)
+  (bind (((_ name lambda-list &rest body) defmacro-form)
+         ((:values body declarations doc) (parse-body body :whole defmacro-form)))
+    (declare (ignore declarations doc))
+    (setf (js-macro-definition name)
+          (eval `(named-lambda ,(symbolicate '#:js-macro-expander/ name) (form)
+                   (destructuring-bind ,(%sanitize-macro-lambda-list lambda-list) (rest form)
+                     ,@body))))))
 
 (def class* type-of-form (walked-form)
   ((object)))
@@ -377,7 +390,7 @@
              `(progn
                 ,@(iter (for symbol :in {with-preserved-readtable-case
                                           ;; NOTE lambda needs its own handler, see above
-                                          '(progn let let* setq defun block if unwind-protect flet)})
+                                          '(progn let let* setq defun defmacro block if unwind-protect flet labels)})
                         (collect `(export ',symbol :hu.dwim.quasi-quote.js))
                         (collect (bind ((cl-symbol (find-symbol (string-upcase (symbol-name symbol)) :common-lisp)))
                                    (assert cl-symbol)
