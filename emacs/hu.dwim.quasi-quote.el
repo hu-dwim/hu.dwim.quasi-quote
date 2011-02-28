@@ -75,7 +75,7 @@
   ;; set up some prepended rules that apply the new syntax table on the regexp matched <> chars
   (font-lock-add-keywords
    nil `(("\\(`ui\\|`xml\\|`js-inline\\|`js-onload\\|`js-xml\\|`js-piece\\|`js\\|`str\\|`\\|,\\)" 1 'hu.dwim.quasi-quote.quasi-quote-face)
-         ("[ 	\n`]\\(<\\)\\(\\w+\\|,\\)"
+         ("[ 	\n`]\\(<\\)\\([0-9a-zA-Z,<]+\\)"
           (0 (progn
                (hu.dwim.quasi-quote:mark-text-as-xml-paren (match-beginning 1) (match-end 1))
                nil)
@@ -89,6 +89,12 @@
   ;; set up some appended rules that remove it
   (font-lock-add-keywords
    nil `(("\\w\\([<>]\\)[^>]"
+          (0 (progn
+               (remove-text-properties (match-beginning 1) (match-end 1)
+                                       `(syntax-table nil))
+               nil)))))
+  (font-lock-add-keywords
+   nil `(("\\([<>]\\)[=\"]"
           (0 (progn
                (remove-text-properties (match-beginning 1) (match-end 1)
                                        `(syntax-table nil))
