@@ -163,7 +163,7 @@
     (when (and (not *in-js-statement-context*)
                (not destructively-into))
       (setf destructively-into (unique-js-name "_tgt"))
-      (setf result (list (format "var ~A = [];~%" destructively-into))))
+      (setf result (list (format nil "var ~A = [];~%" destructively-into))))
     (bind ((result `(,(format nil "var ~A = " array-var)
                      ,(recurse sequence)
                      ,(format nil ";~%for (~A = 0; ~A < ~A.length; ~A++) {~%" idx-var idx-var array-var idx-var)
