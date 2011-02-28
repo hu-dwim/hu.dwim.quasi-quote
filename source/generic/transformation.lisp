@@ -268,7 +268,8 @@
                              (recurse (cdr node))))
                  (null nil))))
       (bind ((result (recurse input)))
-        (aif (output-transformer-of *transformation*)
+        (aif (and (slot-boundp *transformation* 'output-transformer)
+                  (output-transformer-of *transformation*))
              (funcall it result)
              result)))))
 
