@@ -22,10 +22,12 @@
           (transformation-pipeline nil)
           (dispatched-quasi-quote-name "xml")
           (signal-reader-redefinition #f))
-  (bind ((original-readtable (copy-readtable))
-         (original-reader-on-start-character   (multiple-value-list (get-macro-character* start-character *readtable*))))
+  (bind ((start-character/original-reader   (multiple-value-list (get-macro-character* start-character *readtable*)))
+         (end-character/original-reader     (when end-character
+                                                 (multiple-value-list (get-macro-character* end-character *readtable*))))
+         (unquote-character/original-reader (multiple-value-list (get-macro-character* unquote-character *readtable*))))
     (awhen (and signal-reader-redefinition
-                (first original-reader-on-start-character))
+                (first start-character/original-reader))
       (simple-style-warning "Installing the XML reader on character ~S while it already has a reader installed: ~S" start-character it))
     (set-quasi-quote-syntax-in-readtable
      (named-lambda xml-quasi-quote-wrapper (body dispatched?)
@@ -64,19 +66,28 @@
      :toplevel-reader-wrapper (lambda (reader)
                                 (declare (optimize debug))
                                 (named-lambda xml-toplevel-reader-wrapper (stream char)
-                                  (bind ((next-char (peek-char nil stream nil :eof t)))
-                                    (if (and (char= char #\<) ; we are installed on the less-then sign...
-                                             (or (eq next-char :eof)
-                                                 (not (or (alphanumericp next-char)
-                                                          (char= unquote-character next-char)))))
-                                        (progn
-                                          ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
-                                          ;; but i don't care much: it works fine on lisps with sane stream buffering,
-                                          ;; which includes SBCL.
-                                          (unread-char start-character stream)
-                                          (bind ((*readtable* original-readtable))
-                                            (read stream t 'eof t)))
-                                        (funcall reader stream char))))))))
+                                  (block nil
+                                    (bind ((next-char (peek-char nil stream nil :eof t)))
+                                      (if (and (char= char #\<) ; we are installed on the less-then sign...
+                                               (or (eq next-char :eof)
+                                                   (not (or (alphanumericp next-char)
+                                                            (char= unquote-character next-char)))))
+                                          (flet ((restore-macro-character (character function non-terminating?)
+                                                   (if function
+                                                       (set-macro-character character function non-terminating?)
+                                                       (set-syntax-from-char character character)))) ; copy from the standard readtable
+                                            ;; KLUDGE UNREAD-CHAR after a PEEK-CHAR is not allowed by the standard,
+                                            ;; but i don't care much: it works fine on lisps with sane stream buffering,
+                                            ;; which includes SBCL.
+                                            (unread-char start-character stream)
+                                            (bind ((*readtable* (copy-readtable)))
+                                              ;; disable us and call READ recursively to read a single #\<
+                                              (apply #'restore-macro-character start-character start-character/original-reader)
+                                              (when end-character
+                                                (apply #'restore-macro-character end-character end-character/original-reader))
+                                              (apply #'restore-macro-character unquote-character unquote-character/original-reader)
+                                              (return (read stream t 'eof t))))
+                                          (funcall reader stream char)))))))))
 
 (def function make-quasi-quoted-xml-body-reader (start-character end-character unquote-character)
   (named-lambda quasi-quoted-xml-body-reader (stream)
