@@ -414,20 +414,20 @@
         (with elements = input-elements)
 
         (for name = (pop elements))
+        (for name-is-a-spliced-unquote = (and (typep name 'js-unquote)
+                                              (spliced? name)))
         (while name)
         (unless (first-time-p)
           ;; FIXME: this here will emit a comma even if a spliced unquote follows that at the end doesn't splice anything (breaks ie iirc)
           (collect indent))
         (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name name))
-        (if (and (typep name 'js-unquote)
-                 (spliced? name))
+        (if name-is-a-spliced-unquote
             (when elements
               (js-compile-error nil "Unexpected element(s) after a spliced unquote in a create form: ~S" elements))
             (collect ": "))
-
         (for value = (pop elements))
-        (while value)
-        (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value value))))
+        (unless name-is-a-spliced-unquote
+          (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/value value)))))
 
 (def function transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name (name)
   (typecase name
