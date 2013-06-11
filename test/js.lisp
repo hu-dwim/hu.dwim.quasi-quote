@@ -6,6 +6,8 @@
 
 (in-package :hu.dwim.quasi-quote.test)
 
+;; TODO non-toplevel (progn (defun foo () ...)) gets rendered as a flat instruction list without the function header
+
 (defsuite* (test/js :in test))
 
 ;;; Running the js tests requires a js command line interpreter.
@@ -24,22 +26,25 @@
   #+sbcl
   (sb-thread::get-mutex sb-c::**world-lock**))
 
-(def (function d) eval-js (string)
-  (bind (((:values stdout nil return-code) (trivial-shell:shell-command "js" :input string)))
-    (is (= 0 return-code))
-    (with-input-from-string (input stdout)
-      (bind ((result (read-line input #f)))
-        (block nil
-          ;; KLUDGE parse-number::invalid-number is not a serious-condition...
-          (awhen (ignore-some-conditions (parse-number::invalid-number serious-condition)
-                   (parse-number:parse-number result))
-            (return it))
-          #+nil
-          (switch (result :test #'string=)
-            ("true" (return #t))
-            ("false" (return #f))
-            ("undefined" (return 'undefined)))
-          result)))))
+(def (function d) eval-js (js-script)
+  (bind ((js-script-file (temporary-file-name "qq-js-test")))
+    (write-string-into-file js-script js-script-file)
+    (unwind-protect
+         (bind (((:values stdout nil return-code) (trivial-shell:shell-command (string+ "js " js-script-file))))
+           (is (= 0 return-code))
+           (with-input-from-string (input stdout)
+             (bind ((result (read-line input #f)))
+               (block nil
+                 (awhen (ignore-some-conditions (parse-error)
+                          (parse-number:parse-number result))
+                   (return it))
+                 #+nil
+                 (switch (result :test #'string=)
+                   ("true" (return #t))
+                   ("false" (return #f))
+                   ("undefined" (return 'undefined)))
+                 result))))
+      (delete-file js-script-file))))
 
 (def special-variable *js-stream*)
 (def special-variable *xml+js-stream*)
@@ -133,6 +138,10 @@
       (< (abs (- a b)) 0.0000001)
       (equal a b)))
 
+(def (function d) compile-lambda-form-for-js-test (lambda-form)
+  ;;(eval/interpret lambda-form)
+  (compile nil lambda-form))
+
 (def (function d) test-js-emitting-forms (expected ast)
   (bind ((lambda-form `(lambda ()
                          (with-output-to-string (*js-stream*)
@@ -140,7 +149,7 @@
     ;;(print (macroexpand-all lambda-form))
     (is (js-result-equal expected
                          (eval-js
-                          (funcall (compile nil lambda-form)))))))
+                          (funcall (compile-lambda-form-for-js-test lambda-form)))))))
 
 (def function test-js-emitting-forms/binary (expected ast)
   (bind ((lambda-form `(lambda ()
@@ -149,7 +158,7 @@
     ;;(print (macroexpand-all lambda-form))
     (is (js-result-equal expected
                          (eval-js
-                          (octets-to-string (funcall (compile nil lambda-form))
+                          (octets-to-string (funcall (compile-lambda-form-for-js-test lambda-form))
                                             :encoding :utf-8))))))
 
 (def function test-xml+js-emitting-forms (expected ast)
@@ -157,7 +166,7 @@
                          (with-output-to-string (*xml+js-stream*)
                            (emit ,ast)))))
     (is (js-result-equal expected (eval-js
-                                   (funcall (compile nil lambda-form)))))))
+                                   (funcall (compile-lambda-form-for-js-test lambda-form)))))))
 
 (def function test-xml+js-emitting-forms/binary (expected ast)
   (bind ((lambda-form `(lambda ()
@@ -166,7 +175,7 @@
     ;;(print (macroexpand-all lambda-form))
     (is (js-result-equal expected
                          (eval-js
-                          (octets-to-string (funcall (compile nil lambda-form))
+                          (octets-to-string (funcall (compile-lambda-form-for-js-test lambda-form))
                                             :encoding :utf-8))))))
 
 ;;;;;;
@@ -292,6 +301,16 @@
                (print "then")
                (print "else"))
            (print "ok"))｣))
+
+(def js-test test/js/if/bug1 ()
+  ;; this bug doesn't trigger yet, and i don't know how to trigger it. sometimes it happens in hdws.connect, but touching the file to force a reconnect fixes it.
+  ;; the problem is that dolist emits into two statements, but the required wrapping {}'s don't get emitted in the branch of the 'if.
+  ;; it must be connected to the macroexpansion order somehow...
+  ("true"
+   ｢`js(if t
+           (dolist (object (list "true"))
+             (print object))
+           (print "false"))｣))
 
 (def js-test test/js/if-as-expression ()
   ("else"

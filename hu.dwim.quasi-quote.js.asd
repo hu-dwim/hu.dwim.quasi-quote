@@ -10,6 +10,7 @@
   :description "Quasi quote transformations for emitting JavaScript."
   :depends-on (:cl-ppcre
                :hu.dwim.quasi-quote
+               :hu.dwim.util.temporary-files
                :hu.dwim.walker)
   :components ((:module "source"
                 :components ((:module "js"
