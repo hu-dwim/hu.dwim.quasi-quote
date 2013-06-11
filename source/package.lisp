@@ -21,6 +21,7 @@
 
 (in-package :hu.dwim.quasi-quote)
 
+;; TODO rename to import-semi-external-symbols and keep it internal (also rename other variants of ieqqsfe!)
 (def (function e) import-external-quasi-quote-symbols-for-extensions (&optional (package *package*))
   "Import those symbols in PACKAGE that are public to extensions of hu.dwim.quasi-quote but not to its users."
   (import-duplicate-symbols)

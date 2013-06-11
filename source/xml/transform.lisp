@@ -248,6 +248,7 @@
 
 (def method make-load-form ((self quasi-quoted-string-to-xml-escaped-quasi-quoted-string) &optional environment)
   (make-load-form-saving-slots self
+                               ;; TODO this remove may not be this easy...
                                :slot-names (remove 'output-transformer (mapcar 'slot-definition-name (class-slots (class-of self))))
                                :environment environment))
 

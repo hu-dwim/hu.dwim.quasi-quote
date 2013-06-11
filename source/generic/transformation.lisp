@@ -4,6 +4,8 @@
 ;;;
 ;;; See LICENCE for details.
 
+;; TODO this transformation and the pipeline is a bit of a mess... a cleanup would be useful.
+
 (in-package :hu.dwim.quasi-quote)
 
 (def special-variable *transformation-pipeline*)
