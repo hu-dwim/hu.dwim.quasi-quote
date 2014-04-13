@@ -200,7 +200,19 @@
               ,@(list (make-xml-attribute "attribute3" "3")
                       (make-xml-attribute "attribute4" "4"))
               aTTriUte5 "5"
-              ,(make-xml-attribute "attribute6" "6"))>｣))
+              ,(make-xml-attribute "attribute6" "6"))>｣)
+  (｢<element a1="v1" attribute=""/>｣
+   ｢<element (:a1 "v1" :attribute ,(first (list "")))>｣)
+  (｢<element attribute=""/>｣
+   ｢<element (:attribute ,(or nil ""))>｣))
+
+(def xml-test test/xml/attribute-unquoting/bug/1 ()
+  ;; the issue is that constantp is surprisingly smart:
+  ;; (constantp '(first '(""))) => T
+  ;; (constantp '(first (list ""))) => NIL
+  (with-expected-failures
+    (｢<element attribute=""/>｣
+     ｢<element (:attribute ,(first '("")))>｣)))
 
 (def xml-test test/xml/case-sensitivity ()
    ;; the xml reader is case sensitive, but unquoted regions are returning to the toplevel readtable's readtable-case
