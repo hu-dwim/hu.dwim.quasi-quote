@@ -24,7 +24,7 @@
   (unless (search "JavaScript" (nth-value 1 (trivial-shell:shell-command "js --version")))
     (warn "You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. Install the spidermonkey-bin package for one..."))
   #+sbcl
-  (sb-thread::get-mutex sb-c::**world-lock**))
+  (sb-thread::grab-mutex sb-c::**world-lock**))
 
 (def (function d) eval-js (js-script)
   (bind ((js-script-file (temporary-file-name "qq-js-test")))
