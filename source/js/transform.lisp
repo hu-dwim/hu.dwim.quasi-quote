@@ -98,11 +98,11 @@
 
 (def (function oe) to-js-literal (value)
   (etypecase value
-    (string (concatenate 'string "'" (escape-as-js-string value) "'"))
+    (string (concatenate 'string "\"" (escape-as-js-string value) "\""))
     (integer (princ-to-string value))
     (float (format nil "~F" value))
     (ratio (concatenate 'string "(" (princ-to-string (numerator value)) " / " (princ-to-string (denominator value)) ")"))
-    (character (concatenate 'string "'" (escape-as-js-string (string value)) "'"))
+    (character (concatenate 'string "\"" (escape-as-js-string (string value)) "\""))
     (symbol (bind ((js-value (gethash value *js-literals*)))
               (assert js-value () "~S is not a valid js literal" value)
               js-value))
@@ -420,7 +420,10 @@
         (unless (first-time-p)
           ;; FIXME: this here will emit a comma even if a spliced unquote follows that at the end doesn't splice anything (breaks ie iirc)
           (collect indent))
-        (collect (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name name))
+        (for name-or-unquote = (transform-quasi-quoted-js-to-quasi-quoted-string/create-form/name name))
+        (if (stringp name-or-unquote)
+            (collect (concatenate 'string "\"" name-or-unquote "\""))
+            (collect name-or-unquote))
         (if name-is-a-spliced-unquote
             (when elements
               (js-compile-error nil "Unexpected element(s) after a spliced unquote in a create form: ~S" elements))

@@ -10,7 +10,7 @@
   (bind ((result (make-array 128 :initial-element t)))
     (iter (for idx :from 32 :to 126)
           (setf (aref result idx) nil))
-    (iter (for (character replacement) :in '((#\'              #\')
+    (iter (for (character replacement) :in '((#\"              #\")
                                              (#\\              #\\)
                                              (#\Backspace      #\b)
                                              (#.(code-char 12) #\f)
