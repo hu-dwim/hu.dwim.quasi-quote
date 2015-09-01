@@ -123,7 +123,7 @@
                (read-delimited-list end-character stream t))))))
 
 (def (function o) read-quasi-quoted-xml-name (stream start-character end-character unquote-character)
-  (bind ((delimiters (list start-character end-character unquote-character #\( #\) #\space #\newline #\;)))
+  (bind ((delimiters (list start-character end-character unquote-character #\space #\newline #\;)))
     (labels ((maybe-signal-eof (value)
                (when (eq value 'eof)
                  (simple-reader-error stream "End of file error while reading an XML name"))
