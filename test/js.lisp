@@ -11,40 +11,40 @@
 (defsuite* (test/js :in test))
 
 ;;; Running the js tests requires a js command line interpreter.
-;;; On Linux you can install the package 'spidermonkey-bin' to get one.
+;;; On Debian 7 you can install the package 'spidermonkey-bin' to get one.
 ;;; update-alternatives --list js
 ;;; sudo update-alternatives --set js /usr/bin/smjs
+;;;
+;;; On Debian 8
+;;; sudo apt-get install libmozjs-24-bin
 
-(progn
-  ;; KLUDGE: ASDF grabs the Big Compiler Lock by using WITH-COMPILATION-UNIT
-  ;; KLUDGE: TRIVIAL-SHELL reads the standard-output in a separate thread and PCL cache needs the same lock
-  ;; KLUDGE: avoid deadlock by initializing PCL cache now
-  #+sbcl
-  (sb-thread::release-mutex sb-c::**world-lock**)
-  (unless (search "JavaScript" (nth-value 1 (trivial-shell:shell-command "js --version")))
-    (warn "You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. Install the spidermonkey-bin package for one..."))
-  #+sbcl
-  (sb-thread::grab-mutex sb-c::**world-lock**))
+(def special-variable *js-executable-name* "js24")
 
 (def (function d) eval-js (js-script)
-  (bind ((js-script-file (temporary-file-name "qq-js-test")))
-    (write-string-into-file js-script js-script-file)
-    (unwind-protect
-         (bind (((:values stdout nil return-code) (trivial-shell:shell-command (string+ "js " js-script-file))))
-           (is (= 0 return-code))
-           (with-input-from-string (input stdout)
-             (bind ((result (read-line input #f)))
-               (block nil
-                 (awhen (ignore-some-conditions (parse-error)
-                          (parse-number:parse-number result))
-                   (return it))
-                 #+nil
-                 (switch (result :test #'string=)
-                   ("true" (return #t))
-                   ("false" (return #f))
-                   ("undefined" (return 'undefined)))
-                 result))))
-      (delete-file js-script-file))))
+  (flet ((run-program/local (command)
+           (uiop:run-program command :output :string :ignore-error-status t)))
+    (bind ((js-script-file (temporary-file-name "qq-js-test")))
+      (write-string-into-file js-script js-script-file)
+      (unwind-protect
+           (bind (((:values stdout nil return-code) (run-program/local (string+ *js-executable-name* " " js-script-file))))
+             (when (eql return-code 127)
+               (unless (search "JavaScript" (run-program/local (string+ *js-executable-name* " --help")))
+                 (format *debug-io* "~% *** You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. On Debian the package libmozjs-24-bin or spidermonkey-bin, and you may need to adjust the executable name also in the sources...~%")))
+             (is (= 0 return-code))
+             (is (not (null stdout)))
+             (with-input-from-string (input stdout)
+               (bind ((result (read-line input #f)))
+                 (block nil
+                   (awhen (ignore-some-conditions (parse-error)
+                            (parse-number:parse-number result))
+                     (return it))
+                   #+nil
+                   (switch (result :test #'string=)
+                     ("true" (return #t))
+                     ("false" (return #f))
+                     ("undefined" (return 'undefined)))
+                   result))))
+        (delete-file js-script-file)))))
 
 (def special-variable *js-stream*)
 (def special-variable *xml+js-stream*)
@@ -588,6 +588,7 @@
            (print (x 1 100 200)))｣)))
 
 (def js-test test/js/apply ()
+  ;; TODO FIXME this breaks and it's not expected
   (45
    ｢`js(progn
          (defun x (a &key (b 42) c)

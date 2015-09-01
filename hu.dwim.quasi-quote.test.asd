@@ -14,7 +14,7 @@
                :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
                :hu.dwim.stefil+hu.dwim.def+swank
                :parse-number
-               :trivial-shell)
+               :uiop)
   :components ((:module "test"
                 :components ((:file "package")
                              (:file "suite" :depends-on ("package"))
