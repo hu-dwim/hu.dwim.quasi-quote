@@ -145,7 +145,7 @@
               (iter (until (char= (next-char) #\Newline)))))
       (iter (with element-name = (make-array 8 :element-type 'character :adjustable #t :fill-pointer 0))
             (for char = (peek-char nil stream #t nil #t))
-            (until (member char delimiters :test #'char=))
+            (until (delimiter? char))
             (vector-push-extend (next-char) element-name)
             (finally
              (when (zerop (length element-name))
