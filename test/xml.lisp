@@ -124,6 +124,9 @@
   ;; a newline, space, start-character, end-character or the unquote-character.
   (｢<aaa$#@!]{}[]()bbb/>｣
    ｢<aaa$#@!]{}[]()bbb>｣)
+  (｢<alma/>｣
+   ｢<alma;$#@!]{}[]()bbb>
+    >｣)
   (｢<element attribute="1"/>｣
    ｢<element (:attribute 1)>｣)
   (｢<element attribute1="1" attribute2="2"/>｣
@@ -135,6 +138,11 @@
    ｢<element <child>>｣)
   (｢<element><child/></element>｣
    ｢<element () <child>>｣))
+
+(def test test/xml/simple/bug/1 ()
+  (with-input-from-string (stream "<aaa$#@!]{}[]()bbb>")
+    (is (string= (hu.dwim.quasi-quote.xml::read-quasi-quoted-xml-name stream #\< #\> #\,)
+                 "aaa$#@!]{}[]()bbb"))))
 
 (def xml-test test/xml/simple-dispatched ()
   (｢<element/>｣
