@@ -8,7 +8,7 @@
   :defsystem-depends-on (:hu.dwim.asdf)
   :class "hu.dwim.asdf:hu.dwim.system"
   :depends-on (:hu.dwim.quasi-quote.xml+cxml
-               :hu.dwim.util.temporary-files)
+               :hu.dwim.util/temporary-files)
   :components ((:module "source"
                 :components ((:module "xml"
                                       :components ((:file "templating")))))))
