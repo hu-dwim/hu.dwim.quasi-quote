@@ -9,7 +9,8 @@
 (def (special-variable e :documentation "The default variable that holds the XML output stream.")
   *xml-stream*)
 
-(define-syntax (quasi-quoted-xml :readtime-wrapper-result-transformer
+(define-syntax (quasi-quoted-xml :export t
+                                 :readtime-wrapper-result-transformer
                                  (lambda (result)
                                    (if (rest result)
                                        (make-xml-quasi-quote (coerce-to-transformation-pipeline transformation-pipeline) (mapcar 'body-of result))
@@ -163,17 +164,18 @@
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-XML-TO-~A" name))
                     (&key-position (position '&key args)))
-               `(define-syntax ,syntax-name (,@(subseq args 0 (or &key-position (length args)))
-                                               &key
-                                               (with-inline-emitting #f)
-                                               (declarations '())
-                                               (indentation-width nil)
-                                               (start-character #\<)
-                                               (end-character #\>)
-                                               (unquote-character #\,)
-                                               (splice-character #\@)
-                                               (destructive-splice-character #\.)
-                                               ,@(when &key-position (subseq args (1+ &key-position))))
+               `(define-syntax (,syntax-name :export t)
+                    (,@(subseq args 0 (or &key-position (length args)))
+                       &key
+                       (with-inline-emitting #f)
+                       (declarations '())
+                       (indentation-width nil)
+                       (start-character #\<)
+                       (end-character #\>)
+                       (unquote-character #\,)
+                       (splice-character #\@)
+                       (destructive-splice-character #\.)
+                       ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-xml-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                             :start-character start-character
                                                             :end-character end-character

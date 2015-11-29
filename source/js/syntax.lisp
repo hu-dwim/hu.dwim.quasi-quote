@@ -9,15 +9,15 @@
 (def (special-variable e :documentation "The default variable that holds the JavaScript output stream.")
   *js-stream*)
 
-(define-syntax quasi-quoted-js (&key start-character
-                                     end-character
-                                     dispatch-character
-                                     (unquote-character #\,)
-                                     (splice-character #\@)
-                                     (destructive-splice-character #\.)
-                                     (transformation-pipeline nil)
-                                     (dispatched-quasi-quote-name "js")
-                                     (toplevel-reader-wrapper #'identity))
+(define-syntax (quasi-quoted-js :export t) (&key start-character
+                                                 end-character
+                                                 dispatch-character
+                                                 (unquote-character #\,)
+                                                 (splice-character #\@)
+                                                 (destructive-splice-character #\.)
+                                                 (transformation-pipeline nil)
+                                                 (dispatched-quasi-quote-name "js")
+                                                 (toplevel-reader-wrapper #'identity))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -43,20 +43,21 @@
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-JS-TO-~A" name))
                     (&key-position (position '&key args)))
-               `(define-syntax ,syntax-name (,@(subseq args 0 (or &key-position (length args)))
-                                               &key
-                                               (with-inline-emitting #f)
-                                               (declarations '())
-                                               (output-prefix nil)
-                                               (output-postfix nil)
-                                               (indentation-width nil)
-                                               (start-character #\<)
-                                               (end-character #\>)
-                                               (unquote-character #\,)
-                                               (splice-character #\@)
-                                               (destructive-splice-character #\.)
-                                               (dispatched-quasi-quote-name "js")
-                                               ,@(when &key-position (subseq args (1+ &key-position))))
+               `(define-syntax (,syntax-name :export t)
+                    (,@(subseq args 0 (or &key-position (length args)))
+                       &key
+                       (with-inline-emitting #f)
+                       (declarations '())
+                       (output-prefix nil)
+                       (output-postfix nil)
+                       (indentation-width nil)
+                       (start-character #\<)
+                       (end-character #\>)
+                       (unquote-character #\,)
+                       (splice-character #\@)
+                       (destructive-splice-character #\.)
+                       (dispatched-quasi-quote-name "js")
+                       ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-js-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                            :start-character start-character
                                                            :end-character end-character

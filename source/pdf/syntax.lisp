@@ -11,12 +11,12 @@
 ;;;;;;
 ;;; Parse
 
-(define-syntax quasi-quoted-pdf (&key (start-character #\[)
-                                      (end-character #\])
-                                      (unquote-character #\,)
-                                      (splice-character #\@)
-                                      (destructive-splice-character #\.)
-                                      (transformation nil))
+(define-syntax (quasi-quoted-pdf :export t) (&key (start-character #\[)
+                                                  (end-character #\])
+                                                  (unquote-character #\,)
+                                                  (splice-character #\@)
+                                                  (destructive-splice-character #\.)
+                                                  (transformation nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -34,16 +34,16 @@
    ;;:readtable-case :preserve
    ))
 
-(define-syntax quasi-quoted-pdf-to-pdf-emitting-form ()
+(define-syntax (quasi-quoted-pdf-to-pdf-emitting-form :export t) ()
   (set-quasi-quoted-pdf-syntax-in-readtable :transformation '(pdf-emitting-form)))
 
-(define-syntax quasi-quoted-pdf-to-binary ()
+(define-syntax (quasi-quoted-pdf-to-binary :export t) ()
   (set-quasi-quoted-pdf-syntax-in-readtable :transformation '(quasi-quoted-bivalent quasi-quoted-binary binary)))
 
-(define-syntax quasi-quoted-pdf-to-binary-emitting-form ()
+(define-syntax (quasi-quoted-pdf-to-binary-emitting-form :export t) ()
   (set-quasi-quoted-pdf-syntax-in-readtable :transformation '(quasi-quoted-bivalent quasi-quoted-binary binary-emitting-form)))
 
-(define-syntax quasi-quoted-pdf-to-binary-stream-emitting-form (stream-name)
+(define-syntax (quasi-quoted-pdf-to-binary-stream-emitting-form :export t) (stream-name)
   (set-quasi-quoted-pdf-syntax-in-readtable :transformation `(quasi-quoted-bivalent quasi-quoted-binary (binary-emitting-form :stream-name ,stream-name))))
 
 (def function parse-pdf-reader-body (form)

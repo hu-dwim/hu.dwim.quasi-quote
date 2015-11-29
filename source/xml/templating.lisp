@@ -9,7 +9,10 @@
 (def (special-variable e :documentation "This special variable is bound to NIL while emitting document templates. No more, no less.")
     *document-template-context*)
 
-(define-syntax xml-template (&key (stream-variable-name '*xml-stream*) (binary #t) (with-inline-emitting #t) indentation-width)
+(define-syntax (xml-template :export t) (&key (stream-variable-name '*xml-stream*)
+                                              (binary #t)
+                                              (with-inline-emitting #t)
+                                              indentation-width)
   (set-quasi-quoted-list-to-list-emitting-form-syntax-in-readtable)
   (if binary
       (progn

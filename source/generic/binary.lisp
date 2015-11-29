@@ -12,13 +12,13 @@
 ;;;;;;
 ;;; Parse
 
-(define-syntax quasi-quoted-binary (&key start-character
-                                         end-character
-                                         (unquote-character #\,)
-                                         (splice-character #\@)
-                                         (destructive-splice-character #\.)
-                                         (dispatched-quasi-quote-name "bin")
-                                         (transformation-pipeline nil))
+(define-syntax (quasi-quoted-binary :export t) (&key start-character
+                                                     end-character
+                                                     (unquote-character #\,)
+                                                     (splice-character #\@)
+                                                     (destructive-splice-character #\.)
+                                                     (dispatched-quasi-quote-name "bin")
+                                                     (transformation-pipeline nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -43,15 +43,16 @@
 
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-BINARY-TO-~A" name)))
-               `(define-syntax ,syntax-name (,@args &key
-                                                    (with-inline-emitting #f)
-                                                    (declarations '())
-                                                    start-character
-                                                    end-character
-                                                    (unquote-character #\,)
-                                                    (splice-character #\@)
-                                                    (destructive-splice-character #\.)
-                                                    (dispatched-quasi-quote-name "bin"))
+               `(define-syntax (,syntax-name :export t)
+                    (,@args &key
+                            (with-inline-emitting #f)
+                            (declarations '())
+                            start-character
+                            end-character
+                            (unquote-character #\,)
+                            (splice-character #\@)
+                            (destructive-splice-character #\.)
+                            (dispatched-quasi-quote-name "bin"))
                   (set-quasi-quoted-binary-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                                :dispatched-quasi-quote-name dispatched-quasi-quote-name
                                                                :start-character start-character

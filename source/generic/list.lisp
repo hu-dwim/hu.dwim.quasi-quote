@@ -6,13 +6,13 @@
 
 (in-package :hu.dwim.quasi-quote)
 
-(define-syntax quasi-quoted-list (&key (start-character #\`)
-                                       end-character
-                                       (unquote-character #\,)
-                                       (splice-character #\@)
-                                       (destructive-splice-character #\.)
-                                       transformation-pipeline
-                                       dispatched-quasi-quote-name)
+(define-syntax (quasi-quoted-list :export t) (&key (start-character #\`)
+                                                   end-character
+                                                   (unquote-character #\,)
+                                                   (splice-character #\@)
+                                                   (destructive-splice-character #\.)
+                                                   transformation-pipeline
+                                                   dispatched-quasi-quote-name)
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -30,12 +30,12 @@
    :destructive-splice-character destructive-splice-character
    :dispatched-quasi-quote-name dispatched-quasi-quote-name))
 
-(define-syntax quasi-quoted-list-to-list-emitting-form (&key (start-character #\`)
-                                                             end-character
-                                                             (unquote-character #\,)
-                                                             (splice-character #\@)
-                                                             (destructive-splice-character #\.)
-                                                             dispatched-quasi-quote-name)
+(define-syntax (quasi-quoted-list-to-list-emitting-form :export t) (&key (start-character #\`)
+                                                                         end-character
+                                                                         (unquote-character #\,)
+                                                                         (splice-character #\@)
+                                                                         (destructive-splice-character #\.)
+                                                                         dispatched-quasi-quote-name)
   (set-quasi-quoted-list-syntax-in-readtable
    :transformation-pipeline (list (make-instance 'quasi-quoted-list-to-list-emitting-form))
    :dispatched-quasi-quote-name dispatched-quasi-quote-name

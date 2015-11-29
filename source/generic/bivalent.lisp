@@ -9,13 +9,13 @@
 ;;;;;;
 ;;; Parse
 
-(define-syntax quasi-quoted-bivalent (&key start-character
-                                           end-character
-                                           (unquote-character #\,)
-                                           (splice-character #\@)
-                                           (destructive-splice-character #\.)
-                                           (transformation-pipeline nil)
-                                           (dispatched-quasi-quote-name "biv"))
+(define-syntax (quasi-quoted-bivalent :export t) (&key start-character
+                                                       end-character
+                                                       (unquote-character #\,)
+                                                       (splice-character #\@)
+                                                       (destructive-splice-character #\.)
+                                                       (transformation-pipeline nil)
+                                                       (dispatched-quasi-quote-name "biv"))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -39,17 +39,18 @@
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-BIVALENT-TO-~A" name))
                     (&key-position (position '&key args)))
-               `(define-syntax ,syntax-name (,@(subseq args 0 (or &key-position (length args)))
-                                               &key
-                                               (with-inline-emitting #f)
-                                               (declarations '())
-                                               start-character
-                                               end-character
-                                               (unquote-character #\,)
-                                               (splice-character #\@)
-                                               (destructive-splice-character #\.)
-                                               (dispatched-quasi-quote-name "biv")
-                                               ,@(when &key-position (subseq args (1+ &key-position))))
+               `(define-syntax (,syntax-name :export t)
+                    (,@(subseq args 0 (or &key-position (length args)))
+                       &key
+                       (with-inline-emitting #f)
+                       (declarations '())
+                       start-character
+                       end-character
+                       (unquote-character #\,)
+                       (splice-character #\@)
+                       (destructive-splice-character #\.)
+                       (dispatched-quasi-quote-name "biv")
+                       ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-bivalent-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                                  :dispatched-quasi-quote-name dispatched-quasi-quote-name
                                                                  :start-character start-character

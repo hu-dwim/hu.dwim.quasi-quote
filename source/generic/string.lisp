@@ -9,13 +9,13 @@
 ;;;;;;
 ;;; Parse
 
-(define-syntax quasi-quoted-string (&key start-character
-                                         end-character
-                                         (unquote-character #\,)
-                                         (splice-character #\@)
-                                         (destructive-splice-character #\.)
-                                         (dispatched-quasi-quote-name "str")
-                                         (transformation-pipeline nil))
+(define-syntax (quasi-quoted-string :export t) (&key start-character
+                                                     end-character
+                                                     (unquote-character #\,)
+                                                     (splice-character #\@)
+                                                     (destructive-splice-character #\.)
+                                                     (dispatched-quasi-quote-name "str")
+                                                     (transformation-pipeline nil))
   (set-quasi-quote-syntax-in-readtable
    (lambda (body dispatched?)
      (declare (ignore dispatched?))
@@ -41,17 +41,18 @@
 (macrolet ((x (name transformation-pipeline &optional args)
              (bind ((syntax-name (format-symbol *package* "QUASI-QUOTED-STRING-TO-~A" name))
                     (&key-position (position '&key args)))
-               `(define-syntax ,syntax-name (,@(subseq args 0 (or &key-position (length args)))
-                                               &key
-                                               (with-inline-emitting #f)
-                                               (declarations '())
-                                               start-character
-                                               end-character
-                                               (unquote-character #\,)
-                                               (splice-character #\@)
-                                               (destructive-splice-character #\.)
-                                               (dispatched-quasi-quote-name "str")
-                                               ,@(when &key-position (subseq args (1+ &key-position))))
+               `(define-syntax (,syntax-name :export t)
+                    (,@(subseq args 0 (or &key-position (length args)))
+                       &key
+                       (with-inline-emitting #f)
+                       (declarations '())
+                       start-character
+                       end-character
+                       (unquote-character #\,)
+                       (splice-character #\@)
+                       (destructive-splice-character #\.)
+                       (dispatched-quasi-quote-name "str")
+                       ,@(when &key-position (subseq args (1+ &key-position))))
                   (set-quasi-quoted-string-syntax-in-readtable :transformation-pipeline ,transformation-pipeline
                                                                :dispatched-quasi-quote-name dispatched-quasi-quote-name
                                                                :start-character start-character
