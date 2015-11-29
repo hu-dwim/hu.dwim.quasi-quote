@@ -12,7 +12,8 @@
                :babel-streams
                :hu.dwim.common
                :hu.dwim.defclass-star+hu.dwim.def
-               :hu.dwim.syntax-sugar+hu.dwim.walker
+               :hu.dwim.syntax-sugar
+               :hu.dwim.syntax-sugar/lambda-with-bang-args
                :hu.dwim.util
                :hu.dwim.walker)
   :components ((:module "source"
