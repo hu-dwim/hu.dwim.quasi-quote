@@ -237,7 +237,3 @@
 (def function transform-quasi-quoted-binary-to-binary-emitting-form/unquote (input)
   (map-filtered-tree (form-of input) 'binary-quasi-quote
                      'transform-quasi-quoted-binary-to-binary-emitting-form))
-
-
-
-

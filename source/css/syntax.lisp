@@ -106,7 +106,7 @@
                        (collect (read-quasi-quoted-css-selector stream start-character end-character unquote-character))))
                     (finally (read-char stream #t nil #t)))))
       (setf attributes
-            (iter (for next-character = (peek-char #t stream #f :eof #t)) 
+            (iter (for next-character = (peek-char #t stream #f :eof #t))
                   (until (eq next-character :eof))
                   (switch (next-character :test #'char=)
                     (unquote-character
@@ -464,4 +464,3 @@
   (etypecase name
     (string name)
     (symbol (symbol-name name))))
-

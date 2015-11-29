@@ -417,4 +417,3 @@
     `(with-output-to-sequence (,buffer :external-format ,external-format)
        (bind ((*js-stream* ,buffer))
          (emit (progn ,@body))))))
-
