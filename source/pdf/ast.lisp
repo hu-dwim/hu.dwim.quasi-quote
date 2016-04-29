@@ -69,7 +69,7 @@
 (def pdf-ast-node object-identifier (pdf-syntax-node)
   ;; TODO atomic-incf
   ((node-identity (incf *compile-time-pdf-node-identity-counter*) :type integer)
-   (object-id nil :type integer)
+   (object-id (hu.dwim.util:mandatory-argument) :type integer)
    (generation-number 0 :type integer)))
 
 (def pdf-ast-node indirect-object (pdf-object-identifier)
