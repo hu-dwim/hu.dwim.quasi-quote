@@ -46,7 +46,7 @@
 (def function ensure-qq-template-for-xml-template (input-filename output-filename &key force automatic-style-emitter)
   (check-type automatic-style-emitter (or null symbol))
   (when (or force
-            (not (fad:file-exists-p output-filename))
+            (not (uiop:probe-file* output-filename))
             (> (file-write-date input-filename)
                (file-write-date output-filename)))
     (with-input-from-file (input input-filename :element-type :default)
