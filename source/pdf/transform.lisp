@@ -67,7 +67,7 @@
       (if (typep node 'bivalent-quasi-quote)
           (body-of node)
           node))
-  
+
     (:method ((node unquote))
       (if (typep node 'bivalent-quasi-quote)
           (body-of node)
@@ -175,7 +175,7 @@
     (:method ((node pdf-typed-dictionary))
       (list (bind ((class-name (class-name (class-of node))))
               (unless (eq 'pdf-dictionary class-name)
-                (format nil "/Type /~A~%" (string-capitalize (subseq (string-downcase (symbol-name class-name)) 4))))) 
+                (format nil "/Type /~A~%" (string-capitalize (subseq (string-downcase (symbol-name class-name)) 4)))))
             (call-next-method)))
 
     (:method ((node pdf-indirect-object))
@@ -222,7 +222,7 @@
     (:method ((node pdf-xref-entry))
       (format nil "~10,'0D ~5,'0D ~A ~%" (position-of node) (generation-number-of node)
               (if (free-p node) "f" "n")))
-    
+
     (:method ((node pdf-xref-section))
       (bind ((entries (entries-of node)))
         (list
