@@ -305,7 +305,7 @@
 (def (js-walker e) |catch|
   (when (< (length (rest -form-)) 2)
     (js-compile-error nil "Invalid 'catch' form, needs at least two elements: ~S" -form-))
-  (bind (((nil (variable-name &rest condition) &body body) -form-))
+  (bind (((_ (variable-name &rest condition) &body body) -form-))
     (unless (and variable-name
                  (symbolp variable-name))
       (js-compile-error nil "The condition variable in a 'catch' form must be a symbol. Got ~S instead." variable-name))

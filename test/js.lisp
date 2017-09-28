@@ -26,7 +26,7 @@
     (bind ((js-script-file (temporary-file-name "qq-js-test")))
       (write-string-into-file js-script js-script-file)
       (unwind-protect
-           (bind (((:values stdout nil return-code) (run-program/local (string+ *js-executable-name* " " js-script-file))))
+           (bind (((:values stdout _ return-code) (run-program/local (string+ *js-executable-name* " " js-script-file))))
              (when (eql return-code 127)
                (unless (search "JavaScript" (run-program/local (string+ *js-executable-name* " --help")))
                  (format *debug-io* "~% *** You need a command line JavaScript interpreter for the hu.dwim.quasi-quote.js tests. On Debian the package libmozjs-24-bin or spidermonkey-bin, and you may need to adjust the executable name also in the sources...~%")))
