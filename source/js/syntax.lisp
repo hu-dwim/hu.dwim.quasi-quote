@@ -321,7 +321,7 @@
 (def (js-walker e) |while|
   (when (< (length (rest -form-)) 2)
     (js-compile-error nil "Invalid 'while' form, needs at least two elements: ~S" -form-))
-  (bind (((nil condition &body body) -form-))
+  (bind (((_ condition &body body) -form-))
     (with-form-object (node 'while-form -parent-)
       (setf (condition-of node) (hu.dwim.walker::recurse condition node))
       (setf (hu.dwim.walker:body-of node) (mapcar [hu.dwim.walker::recurse !1 node] body)))))
@@ -356,7 +356,7 @@
   (with-walker-handler-lexical-environment
     (unless (length= 2 -form-)
       (js-compile-error nil "Invalid 'type-of' form, needs exactly one argument: ~S" -form-))
-    (bind (((nil object) -form-))
+    (bind (((_ object) -form-))
       (with-form-object (node 'type-of-form -parent-)
         (setf (object-of node) (hu.dwim.walker::recurse object node))))))
 
