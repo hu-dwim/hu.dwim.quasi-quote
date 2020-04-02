@@ -154,7 +154,9 @@
 
 (define-compiler-macro bq-list-to-vector (&whole whole form)
   (if (quoted-form? form)
-      (bq-list-to-vector (second form))
+      (let ()
+        (declare (notinline bq-list-to-vector))
+        (bq-list-to-vector (second form)))
       whole))
 
 (def generic bq-process (x)
