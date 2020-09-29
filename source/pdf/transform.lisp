@@ -19,7 +19,7 @@
    (xref-position :type integer)
    (xref (make-instance 'pdf-xref) :type pdf-xref)
    (root-reference :type pdf-indirect-object-reference)
-   (info-reference nil :type pdf-indirect-object-reference)))
+   (info-reference nil :type (or null pdf-indirect-object-reference))))
 
 (def function compute-xref-size (xref)
   ;; TODO: 1+ due to the default xref
