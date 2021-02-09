@@ -64,6 +64,15 @@
            (nsubstitute #\_ #\? name)
            (hyphened-to-camel-case name))))))
 
+(def (function e) plist-to-json-string (plist)
+  (with-output-to-string (str)
+    (iter (for (name value) :on plist :by #'cddr)
+          (unless (first-time-p)
+            (write-string ", " str))
+          (write-string (lisp-name-to-js-name name) str)
+          (write-string ": " str)
+          (write-string (to-js-literal value) str))))
+
 (def function to-js-operator-name (name)
   (lisp-name-to-js-name (lisp-operator-name-to-js-operator-name name) :operator #t))
 
