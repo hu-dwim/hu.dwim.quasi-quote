@@ -5,7 +5,6 @@
 ;;; See LICENCE for details.
 
 (require 'paredit)
-(provide 'hu.dwim.quasi-quote)
 
 ;; usage example in your init.el:
 ;;
@@ -117,10 +116,10 @@
 (defun hu.dwim.quasi-quote:install-js-indentations ()
   (let ((overrides '((try unwind-protect))))
     (dolist (el overrides)
-      (put (first el) 'common-lisp-indent-function
-           (if (symbolp (second el))
-               (get (second el) 'common-lisp-indent-function)
-               (second el))))))
+      (put (cl-first el) 'common-lisp-indent-function
+           (if (symbolp (cl-second el))
+               (get (cl-second el) 'common-lisp-indent-function)
+               (cl-second el))))))
 
 (defvar hu.dwim.quasi-quote:paren-pairs
   (mapcar
@@ -192,10 +191,12 @@
         (paredit-insert-pair (or n
                                  (and (not (paredit-region-active-p))
                                       1))
-                             (first parens) (second parens)
+                             (cl-first parens) (cl-second parens)
                              'goto-char)
-      (insert (second parens))
+      (insert (cl-second parens))
       (backward-char)))
   (save-excursion
     ;; not needed, but why if it's there in paredit-wrap-sexp? (backward-up-list)
     (indent-sexp)))
+
+(provide 'hu.dwim.quasi-quote)
