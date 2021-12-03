@@ -319,11 +319,11 @@
       (macrolet ((%iterate-arguments (collect-commas? &body body)
                    `(iter (while arguments)
                           (for argument = (pop arguments))
-                          (for previous-argument :previous argument)
-                          ,(when collect-commas?
-                             `(unless (or (first-time-p)
-                                          (typep previous-argument 'rest-function-argument-form))
-                                (push ", " transformed-arguments)))
+                          ,@(when collect-commas?
+                              `((for previous-argument :previous argument)
+                                (unless (or (first-time-p)
+                                            (typep previous-argument 'rest-function-argument-form))
+                                  (push ", " transformed-arguments))))
                           (etypecase argument
                             ,@body)))
                  (iterate-arguments (&body body)
