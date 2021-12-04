@@ -153,8 +153,9 @@
     #\]))
 
 (def transform-function transform-map-like (node &key destructively-into)
+  (declare (ignore node destructively-into))
   (not-yet-implemented "the js 'map operator is rather buggy, consider using wui.map")
-  (bind ((arguments (arguments-of node))
+  #+nil(bind ((arguments (arguments-of node))
          (fn (pop arguments))
          (fn-processed (cond
                          ((typep fn 'walked-lexical-variable-reference-form)
