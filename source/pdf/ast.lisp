@@ -41,13 +41,22 @@
 
 (def definer pdf-ast-node (name supers slots)
   (bind ((class-name (format-symbol #.(find-package :hu.dwim.quasi-quote.pdf) "PDF-~A" name))
-         (defclass-form `(def class* ,class-name ,(or supers '(pdf-syntax-node)) ,slots))
-         (expanded-slots (fourth (macroexpand-1 defclass-form)))
+         (defclass*-form `(def class* ,class-name ,(or supers '(pdf-syntax-node)) ,slots))
+         ;; KLUDGE FIXME we shouldn't assume anything here about the macroexpansion of defclass*
+         (expanded-form (macroexpand-1 defclass*-form))
+         (defclass-form (if (eq 'defclass (first expanded-form))
+                            expanded-form
+                            (loop
+                              :for head = expanded-form :then (cdr head)
+                              :while head
+                              :when (eq (first head) 'defclass)
+                                :do (return head))))
+         (expanded-slots (fourth defclass-form))
          (slot-accessors (mapcar (lambda (slot-definition)
                                    (getf (rest slot-definition) :accessor))
                                  expanded-slots)))
     `(progn
-       ,defclass-form
+       ,defclass*-form
        (def pdf-ast-node-parser ,name
          (bind ((result (make-instance ',class-name)))
            (pop -sexp-) ; pop the ast node name
