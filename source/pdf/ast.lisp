@@ -160,9 +160,6 @@
    (body)
    (footer)))
 
-(def pdf-ast-node header ()
-  ())
-
 (def pdf-ast-node footer ()
   ())
 
