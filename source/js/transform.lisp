@@ -129,9 +129,12 @@
   (if value "true" "false"))
 
 (def definer transform-function (name args &body body)
-  `(def function ,name ,args
-     (with-lexical-transform-functions
-       ,@body)))
+  (bind (((:values body declarations doc-string) (parse-body body :documentation t :whole -whole-)))
+    `(def function ,name ,args
+       ,@(when doc-string (list doc-string))
+       ,@declarations
+       (with-lexical-transform-functions
+         ,@body))))
 
 (def transform-function transform-incf-like (node plus-plus plus-equal)
   (bind ((arguments (arguments-of node)))
