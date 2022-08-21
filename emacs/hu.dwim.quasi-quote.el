@@ -110,7 +110,7 @@
                (find (char-after index) hu.dwim.quasi-quote:paren-pairs :key 'second))
       (when (equal (char-after index) ?> )
         (hu.dwim.quasi-quote:mark-text-as-xml-paren index (1+ index)))
-      (incf index)))
+      (cl-incf index)))
   nil)
 
 (defun hu.dwim.quasi-quote:install-js-indentations ()
